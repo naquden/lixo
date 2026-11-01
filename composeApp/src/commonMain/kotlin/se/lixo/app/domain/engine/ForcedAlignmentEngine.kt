@@ -43,6 +43,14 @@ data class ReadingAlignmentSessionState(
             return (elapsedMillis.toFloat() / manualModeMinRequiredMillis.toFloat()).coerceIn(0f, 1f)
         }
 
+    /** Whole seconds left before the manual "done" button unlocks (0 when ready). */
+    val manualModeRemainingSeconds: Int
+        get() {
+            if (mode != ReadingMode.MANUAL) return 0
+            val remaining = (manualModeMinRequiredMillis - elapsedMillis).coerceAtLeast(0L)
+            return ((remaining + 999L) / 1000L).toInt()
+        }
+
     val isManualCompleteButtonEnabled: Boolean
         get() = mode == ReadingMode.MANUAL && elapsedMillis >= manualModeMinRequiredMillis
 }

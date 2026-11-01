@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -255,7 +256,8 @@ fun ParentGateAndDashboardScreen(
                 ) {
                     Text(
                         text = "${LixoStrings.PARENT_READING_GOAL_LABEL}: ${activeProfile.dailyReadingGoalMinutes} min",
-                        color = LixoColors.SoftTextWhite
+                        color = LixoColors.SoftTextWhite,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         BouncyButton(
@@ -266,8 +268,9 @@ fun ParentGateAndDashboardScreen(
                                     )
                                 )
                             },
-                            containerColor = LixoColors.CardSurfaceElevated
-                        ) { Text("-5", color = Color.White) }
+                            containerColor = LixoColors.CardSurfaceElevated,
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                        ) { Text("-5", color = Color.White, maxLines = 1) }
                         BouncyButton(
                             onClick = {
                                 onUpdateProfileGoalsAndSettings(
@@ -275,8 +278,9 @@ fun ParentGateAndDashboardScreen(
                                         dailyReadingGoalMinutes = (activeProfile.dailyReadingGoalMinutes + 5).coerceAtMost(60)
                                     )
                                 )
-                            }
-                        ) { Text("+5", color = Color.White) }
+                            },
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                        ) { Text("+5", color = Color.White, maxLines = 1) }
                     }
                 }
 

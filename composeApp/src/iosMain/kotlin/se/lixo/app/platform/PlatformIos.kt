@@ -101,6 +101,11 @@ class IosTextToSpeechEngine : TextToSpeechEngine {
     }
 }
 
+@androidx.compose.runtime.Composable
+actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
+    // iOS has no system back button; navigation uses on-screen controls.
+}
+
 actual fun createPlatformSpeechRecognitionEngine(): SpeechRecognitionEngine =
     IosSpeechRecognitionEngine()
 

@@ -59,6 +59,9 @@ interface SpeechRecognitionEngine {
     suspend fun startListening(languageIso: String = "sv-SE", expectedWords: List<String>)
     suspend fun stopListening()
 
+    /** Non-suspending teardown, safe to call from `onDispose`. */
+    fun cancelListening() {}
+
     /**
      * Allows feeding simulated spoken words (for emulator testing or demo mode).
      */
@@ -76,6 +79,10 @@ interface TextToSpeechEngine {
     fun speak(text: String, languageIso: String = "sv-SE", speechRate: Float = 0.92f)
     fun stop()
 }
+
+/** Handles the system back gesture/button where the platform has one (no-op on iOS). */
+@androidx.compose.runtime.Composable
+expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)
 
 expect fun createPlatformSpeechRecognitionEngine(): SpeechRecognitionEngine
 expect fun createPlatformTextToSpeechEngine(): TextToSpeechEngine

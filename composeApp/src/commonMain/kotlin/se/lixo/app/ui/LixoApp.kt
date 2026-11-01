@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -27,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.Clock
 import se.lixo.app.data.repository.LixoRepository
@@ -39,6 +43,7 @@ import se.lixo.app.domain.model.DailyActivityRecord
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.platform.EmailLinkAuthDispatcher
+import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.PlatformFeatureFlags
 import se.lixo.app.platform.createPlatformSpeechRecognitionEngine
 import se.lixo.app.platform.createPlatformTextToSpeechEngine
@@ -114,8 +119,26 @@ fun LixoApp(
     }
     var activeGameplayLevel by remember { mutableStateOf<CampaignLevel?>(null) }
 
+    // System back: close level -> back to map -> back to profile selection -> (system exits).
+    PlatformBackHandler(
+        enabled = activeGameplayLevel != null ||
+            currentDestination != LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL
+    ) {
+        when {
+            activeGameplayLevel != null -> activeGameplayLevel = null
+            currentDestination == LixoMainDestination.MAP_HOME ->
+                currentDestination = LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL
+            else -> currentDestination = LixoMainDestination.MAP_HOME
+        }
+    }
+
     LixoTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(LixoColors.SkyBackgroundBottom)
+                .safeDrawingPadding()
+        ) {
             val playingLevel = activeGameplayLevel
             val playingTask = playingLevel?.let { tasksById[it.taskId] }
 
@@ -240,40 +263,61 @@ fun LixoApp(
             } else {
                 // Main Scaffold with Bouncy Tactile Bottom Navigation (`project.md` §4 "Bottom nav")
                 Scaffold(
+                    // Root Box already applies safeDrawingPadding; avoid double insets.
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(LixoColors.CardSurface)
-                                .padding(horizontal = 10.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             BouncyButton(
                                 onClick = { currentDestination = LixoMainDestination.MAP_HOME },
                                 containerColor = if (currentDestination == LixoMainDestination.MAP_HOME)
                                     LixoColors.PrimaryActionGreen else LixoColors.CardSurfaceElevated,
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("🗺️ ${LixoStrings.NAV_MAP}", color = Color.White)
+                                Text(
+                                    text = "🗺️ ${LixoStrings.NAV_MAP}",
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                             }
                             BouncyButton(
                                 onClick = { currentDestination = LixoMainDestination.WARDROBE },
                                 containerColor = if (currentDestination == LixoMainDestination.WARDROBE)
                                     LixoColors.PrimaryActionGreen else LixoColors.CardSurfaceElevated,
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("👑 ${LixoStrings.NAV_WARDROBE}", color = Color.White)
+                                Text(
+                                    text = "👑 ${LixoStrings.NAV_WARDROBE}",
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                             }
                             BouncyButton(
                                 onClick = { currentDestination = LixoMainDestination.TROPHIES_AND_FRIENDS },
                                 containerColor = if (currentDestination == LixoMainDestination.TROPHIES_AND_FRIENDS)
                                     LixoColors.PrimaryActionGreen else LixoColors.CardSurfaceElevated,
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
-                                modifier = Modifier.weight(1f)
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                                modifier = Modifier.weight(1.2f)
                             ) {
-                                Text("🏆 ${LixoStrings.NAV_TROPHIES_FRIENDS}", color = Color.White)
+                                Text(
+                                    text = "🏆 ${LixoStrings.NAV_TROPHIES_FRIENDS}",
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                             }
                             BouncyButton(
                                 onClick = { currentDestination = LixoMainDestination.PARENT_SETTINGS },
@@ -281,7 +325,12 @@ fun LixoApp(
                                     LixoColors.SecondaryBlue else LixoColors.CardSurfaceElevated,
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
                             ) {
-                                Text("⚙️", color = Color.White)
+                                Text(
+                                    text = "⚙️",
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                             }
                         }
                     }

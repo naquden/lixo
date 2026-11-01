@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +43,7 @@ import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.ReadingMode
 import se.lixo.app.domain.model.WardrobeItem
+import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.RecognizedSpeechToken
 import se.lixo.app.platform.SpeechRecognitionEngine
 import se.lixo.app.platform.TextToSpeechEngine
@@ -241,6 +243,26 @@ fun ProfileSelectAndTutorialScreen(
         }
         val scope = rememberCoroutineScope()
 
+        // Leaving the tutorial (back, completion) must always release the microphone.
+        DisposableEffect(Unit) {
+            onDispose { sttEngine.cancelListening() }
+        }
+
+        // Feed real recognized speech into the alignment engine in AI mode.
+        LaunchedEffect(selectedMode) {
+            if (selectedMode == ReadingMode.AI_LISTENING) {
+                sttEngine.recognizedTokens.collect { tokens ->
+                    sessionState = alignmentEngine.processRecognizedTokens(sessionState, tokens)
+                }
+            }
+        }
+
+        // System back returns from the tutorial to the profile list.
+        PlatformBackHandler(enabled = true) {
+            sttEngine.cancelListening()
+            showTutorialStage = false
+        }
+
         LaunchedEffect(selectedMode, sessionState.isCompleted) {
             if (selectedMode != null && !sessionState.isCompleted) {
                 while (!sessionState.isCompleted) {
@@ -279,23 +301,7 @@ fun ProfileSelectAndTutorialScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // Zero-state avatar preview (transforms when tutorial completes!)
-            val previewAppearance = if (sessionState.isCompleted) {
-                activeProfile.appearance.copy(
-                    equippedItems = mapOf(
-                        se.lixo.app.domain.model.EquipmentSlot.HAT to BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID
-                    )
-                )
-            } else {
-                activeProfile.appearance
-            }
-
-            Avatar3DViewport(
-                appearance = previewAppearance,
-                catalogById = catalogById,
-                modifier = Modifier.size(180.dp)
-            )
-
+            // No avatar during reading: it is shown only on the profile and main (map) screens.
             if (selectedMode == null) {
                 Text(
                     text = LixoStrings.TUTORIAL_MIC_PROMPT,
@@ -427,11 +433,10 @@ fun ProfileSelectAndTutorialScreen(
                             enabled = sessionState.isManualCompleteButtonEnabled,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            val pct = (sessionState.manualModeButtonChargeFraction * 100).toInt()
                             val label = if (sessionState.isManualCompleteButtonEnabled) {
                                 LixoStrings.READING_MANUAL_DONE_BTN
                             } else {
-                                "${LixoStrings.READING_MANUAL_CHARGING_LABEL} ($pct%)"
+                                "${LixoStrings.READING_MANUAL_CHARGING_LABEL} (${sessionState.manualModeRemainingSeconds} s)"
                             }
                             Text(label, color = Color.White)
                         }

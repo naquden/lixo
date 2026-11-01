@@ -23,6 +23,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -98,20 +99,27 @@ fun ReadingActivityScreen(
 
     val scope = rememberCoroutineScope()
 
+    // Always release the microphone when leaving this screen (back button, X, or completion).
+    DisposableEffect(Unit) {
+        onDispose { sttEngine.cancelListening() }
+    }
+
     // Collect real-time STT tokens when in AI mode
     LaunchedEffect(modeLocked, chosenMode) {
         if (modeLocked && chosenMode == ReadingMode.AI_LISTENING) {
+            launch {
+                sttEngine.recognizedTokens.collect { tokens ->
+                    val prevIndex = sessionState.currentWordIndex
+                    sessionState = alignmentEngine.processRecognizedTokens(sessionState, tokens)
+                    if (sessionState.currentWordIndex > prevIndex) {
+                        millisSinceLastWordAdvance = 0L
+                    }
+                }
+            }
             sttEngine.startListening(
                 languageIso = if (level.subject == se.lixo.app.domain.model.Subject.ENGLISH) "en-US" else "sv-SE",
                 expectedWords = sessionState.words.map { it.normalizedText }
             )
-            sttEngine.recognizedTokens.collect { tokens ->
-                val prevIndex = sessionState.currentWordIndex
-                sessionState = alignmentEngine.processRecognizedTokens(sessionState, tokens)
-                if (sessionState.currentWordIndex > prevIndex) {
-                    millisSinceLastWordAdvance = 0L
-                }
-            }
         }
     }
 
@@ -458,11 +466,10 @@ fun ReadingActivityScreen(
                         enabled = sessionState.isManualCompleteButtonEnabled,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        val pct = (sessionState.manualModeButtonChargeFraction * 100).toInt()
                         val label = if (sessionState.isManualCompleteButtonEnabled) {
                             "✅ ${LixoStrings.READING_MANUAL_DONE_BTN}"
                         } else {
-                            "⏳ ${LixoStrings.READING_MANUAL_CHARGING_LABEL} ($pct%)"
+                            "⏳ ${LixoStrings.READING_MANUAL_CHARGING_LABEL} (${sessionState.manualModeRemainingSeconds} s)"
                         }
                         Text(label, color = Color.White)
                     }
