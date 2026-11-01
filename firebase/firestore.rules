@@ -1,0 +1,55 @@
+rules_version = '2';
+
+// Firestore Security Rules for Lixo (project.md §3 & §6)
+// - Static curriculum content (`courses`, `levels`, `tasks`, `dictionary`) is public read-only.
+// - Optional public friend profiles (`public_avatars/{userId}`) contain ONLY anonymous username,
+//   avatar appearance, and star count (zero PII, zero chat/DM). Users can only write/delete their own document.
+// - Child homework progress, struggled words logs, and math error logs are NEVER stored in Firestore
+//   (strictly local-only on the device per GDPR §3 & §6).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Static Curriculum & Dictionary Content (Read-Only for Clients)
+    match /courses/{courseId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /levels/{levelId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /tasks/{taskId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /dictionary/{wordId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Public Friend Avatar Directory (QR / Username Lookup)
+    match /public_avatars/{userId} {
+      // Avatarer är publika — konto behövs inte för att lägga till vänner (project.md §3)
+      allow read: if true;
+
+      // Endast inloggad ägare får skapa, uppdatera eller radera sin publika avatarprofil
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['userId', 'username', 'appearance', 'totalStars', 'updatedAt'])
+        && request.resource.data.username is string
+        && request.resource.data.username.size() >= 3
+        && request.resource.data.username.size() <= 24;
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Explicitly deny any other collection (ensures zero accidental upload of child logs)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

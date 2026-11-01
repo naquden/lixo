@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & Navigation -->
+    <string name="app_name">Lixo</string>
+    <string name="nav_map">Karta</string>
+    <string name="nav_wardrobe">Garderob</string>
+    <string name="nav_trophies_friends">Troféer &amp; Vänner</string>
+    <string name="nav_parent_settings">Föräldravy</string>
+
+    <!-- Onboarding & Profiles -->
+    <string name="profile_select_title">Vem ska ut på äventyr idag?</string>
+    <string name="profile_tap_to_start">Tryck på din avatar för att börja!</string>
+    <string name="profile_add_sibling">+ Ny syskonprofil</string>
+    <string name="tutorial_welcome_title">Välkommen till Lixo!</string>
+    <string name="tutorial_mic_prompt">Be en vuxen godkänna mikrofonen så att AI-läsassistenten kan lyssna och lysa upp orden när du läser högt!</string>
+    <string name="tutorial_allow_mic_btn">Starta med AI-röst (Mikrofon)</string>
+    <string name="tutorial_manual_fallback_btn">Kör manuellt läsläge</string>
+    <string name="tutorial_skip_btn">Hoppa över introduktion</string>
+    <string name="tutorial_completed_reward">Hurra! Du låste upp din första hatt!</string>
+
+    <!-- Campaign Map -->
+    <string name="map_header_stars">Stjärnor</string>
+    <string name="map_header_streak">Dagar i rad</string>
+    <string name="map_timed_challenge_badge">Tidsuppdrag</string>
+    <string name="map_start_level_btn">Spela bana</string>
+    <string name="map_locked_level_hint">Klara föregående bana först!</string>
+
+    <!-- Reading Activity -->
+    <string name="reading_mode_select_title">Välj läsläge innan sagan startar</string>
+    <string name="reading_mode_ai">AI-Läsassistent (1–3 stjärnor + gåvor)</string>
+    <string name="reading_mode_manual">Manuellt läsläge (Max 1 stjärna)</string>
+    <string name="reading_timed_toggle">Kör som Tidsuppdrag (kräver AI-läge)</string>
+    <string name="reading_simulate_voice_btn">Simulera högläsning (Nästa ord)</string>
+    <string name="reading_manual_done_btn">Jag har läst klart</string>
+    <string name="reading_manual_charging_hint">Läser i lugn takt...</string>
+    <string name="reading_stuck_prompt_title">Behöver du lite hjälp med ordet?</string>
+    <string name="reading_help_listen">Lyssna</string>
+    <string name="reading_help_syllables">Stavelser</string>
+    <string name="reading_help_dictionary">Ordförklaring</string>
+    <string name="reading_help_continue">Gå vidare utan avdrag</string>
+
+    <!-- Math & English Activity -->
+    <string name="math_check_answer_btn">Svara</string>
+    <string name="math_hint_btn">Visa ledtråd</string>
+    <string name="math_growth_encourage">Nästan! Kolla på ledtråden så löser vi det tillsammans.</string>
+    <string name="english_glosa_header">Engelska glosor &amp; läsning</string>
+
+    <!-- Wardrobe & Avatars -->
+    <string name="wardrobe_title">Universell Garderob</string>
+    <string name="wardrobe_mystery_hint">Fler hemliga föremål dyker upp när du låser upp dem!</string>
+    <string name="wardrobe_customize_traits">Uttryck &amp; Färg</string>
+    <string name="avatar_cat">Katt</string>
+    <string name="avatar_dog">Hund</string>
+    <string name="avatar_knight">Riddare</string>
+    <string name="avatar_princess">Prinsessa</string>
+    <string name="avatar_wizard">Trollkarl</string>
+    <string name="avatar_witch">Häxa</string>
+
+    <!-- 9 Equipment Slots -->
+    <string name="slot_hat">Hatt</string>
+    <string name="slot_shoulders_back">Axlar / Rygg</string>
+    <string name="slot_arms_gloves">Armar / Handskar</string>
+    <string name="slot_armor_shirt">Rustning / Tröja</string>
+    <string name="slot_pants">Byxor</string>
+    <string name="slot_shoes">Skor</string>
+    <string name="slot_hand_right">Höger hand</string>
+    <string name="slot_hand_left">Vänster hand</string>
+    <string name="slot_tail">Svans</string>
+
+    <!-- Fortnite Rarity Scale -->
+    <string name="rarity_common">Vanlig</string>
+    <string name="rarity_uncommon">Ovanlig</string>
+    <string name="rarity_rare">Sällsynt</string>
+    <string name="rarity_epic">Episk</string>
+    <string name="rarity_legendary">Legendarisk</string>
+
+    <!-- Trophies & Friends -->
+    <string name="tab_trophies">Troféer</string>
+    <string name="tab_friends">Kompisgalleri</string>
+    <string name="friends_add_placeholder">Användarnamn eller QR-kod</string>
+    <string name="friends_add_btn">Lägg till vän</string>
+    <string name="friends_my_qr_label">Min QR-kod</string>
+
+    <!-- Parent View & GDPR -->
+    <string name="parent_gate_title">Föräldravy — Lös mattetalet för att öppna</string>
+    <string name="parent_gate_unlock_btn">Öppna Föräldravy</string>
+    <string name="parent_dashboard_title">Föräldravy &amp; Insikter</string>
+    <string name="parent_struggled_words_title">Ord som kan behöva övas (Endast lokalt)</string>
+    <string name="parent_math_patterns_title">Matte-mönster &amp; Ledtrådar (Endast lokalt)</string>
+    <string name="parent_gdpr_section_title">Data och integritet (GDPR)</string>
+    <string name="parent_local_only_mode_label">Lokal-only-läge (Inget konto, allt stannar på telefonen)</string>
+    <string name="parent_send_email_link_btn">Skicka inloggningslänk via e-post (Lösenordsfri)</string>
+    <string name="parent_email_link_sent_banner">Inloggningslänk skickad! Öppna länken i mejlet på den här enheten.</string>
+    <string name="parent_complete_email_link_btn">Slutför inloggning med e-postlänk</string>
+    <string name="parent_delete_account_btn">Radera konto och molndata</string>
+    <string name="crashlytics_consent_title">Hjälp oss förbättra Lixo?</string>
+    <string name="crashlytics_consent_body">Vill du dela anonyma kraschrapporter (Firebase Crashlytics)? Inget ljud och ingen läxdata skickas någonsin.</string>
+</resources>

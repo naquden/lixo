@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Microphone permission for real-time AI reading assistant (requested during tutorial via parent) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Optional network access for delta content sync & friend avatar gallery -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+</manifest>
