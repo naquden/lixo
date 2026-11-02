@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "880449701000",
+    "project_id": "lixo-fd45d",
+    "storage_bucket": "lixo-fd45d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:880449701000:android:79e018b45b6c05d5cb4b3d",
+        "android_client_info": {
+          "package_name": "se.lixo.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSk-jH6-pBryuYsJpMsns9hBzX-jW62MA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

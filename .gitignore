@@ -1,0 +1,48 @@
+# Gradle & Build Output
+.gradle/
+**/.gradle/
+build/
+**/build/
+.kotlin/
+**/.kotlin/
+*.iml
+
+# Local Configuration & Secrets
+local.properties
+**/local.properties
+*.keystore
+*.jks
+*.pepk
+
+# C/C++ Native Output
+.cxx/
+**/.cxx/
+.externalNativeBuild/
+**/.externalNativeBuild/
+
+# Android Studio & IntelliJ IDEA
+.idea/
+*.iws
+*.ipr
+*.out
+
+# Android Studio Outputs & Logs
+captures/
+.navigation/
+
+# iOS & Xcode (Kotlin Multiplatform)
+**/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+DerivedData/
+.swiftpm/
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
