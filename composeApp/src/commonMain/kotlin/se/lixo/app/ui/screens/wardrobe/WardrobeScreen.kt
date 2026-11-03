@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.ChildProfile
@@ -40,19 +41,22 @@ import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
-import se.lixo.app.ui.theme.BouncyButton
+import se.lixo.app.ui.theme.LixoButton
+import se.lixo.app.ui.theme.LixoButtonVariant
+import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoColors
+import se.lixo.app.ui.theme.LixoIcon
+import se.lixo.app.ui.theme.LixoIcons
 import se.lixo.app.ui.theme.LixoStrings
 import se.lixo.app.ui.theme.TtsIconButton
 
 /**
- * Universal 3D Wardrobe Screen (`project.md` §2 "Avatarsystem & Anpassning"):
- * - 6 MVP Avatars: Katt, Hund, Riddare, Prinsessa, Trollkarl, Häxa.
- * - 9 Equipment Slots: Hatt, Axlar/rygg, Armar/handskar, Rustning/tröja, Byxor, Skor,
- *   Handhållet höger, Handhållet vänster, Svans.
- * - Universal Wardrobe: All unlocked items are in a shared pool usable by any avatar.
- * - Mystery Rule: "Ej upplåsta föremål visas inte (mysterium)" — only unlocked items are shown!
- * - Fortnite 2D Rarity background color scale (Gray, Green, Blue, Purple, Gold-Orange).
+ * Duolingo-styled 3D Wardrobe Screen:
+ * - Clean 3D avatar viewport stage.
+ * - Simple color swatches for base avatar customization.
+ * - Horizontal avatar character picker with locked star costs.
+ * - Equipment slot category pills.
+ * - Fortnite rarity-accented item cards with clear equip/unequip states.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -69,7 +73,6 @@ fun WardrobeScreen(
     var selectedSlot by remember { mutableStateOf(EquipmentSlot.HAT) }
     val catalogById = remember(allWardrobeItems) { allWardrobeItems.associateBy { it.id } }
 
-    // Filter strictly to unlocked items for the selected slot ("Ej upplåsta föremål visas inte (mysterium)")
     val unlockedItemsForSlot = remember(allWardrobeItems, unlockedItemIds, selectedSlot) {
         allWardrobeItems.filter { it.slot == selectedSlot && unlockedItemIds.contains(it.id) }
     }
@@ -79,42 +82,47 @@ fun WardrobeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LixoColors.SkyBackgroundBottom)
+            .background(LixoColors.Background)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = LixoStrings.WARDROBE_TITLE,
-                style = MaterialTheme.typography.headlineMedium,
-                color = LixoColors.SoftTextWhite
-            )
+        // Header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = LixoStrings.WARDROBE_TITLE,
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = LixoColors.TextPrimary
+                )
+                Text(
+                    text = LixoStrings.WARDROBE_SUBTITLE,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LixoColors.TextSecondary
+                )
+            }
             if (showSwedishTtsButtons) {
-                Spacer(Modifier.width(10.dp))
                 TtsIconButton(
                     textToSpeak = "${LixoStrings.WARDROBE_TITLE}. ${LixoStrings.WARDROBE_SUBTITLE}",
                     ttsEngine = ttsEngine
                 )
             }
         }
-        Text(
-            text = LixoStrings.WARDROBE_SUBTITLE,
-            style = MaterialTheme.typography.bodyMedium,
-            color = LixoColors.MutedText
-        )
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // Interactive 3D Avatar Stage (rotatable by horizontal drag)
-        Box(
+        // 3D Avatar Viewport Stage
+        LixoCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(235.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(LixoColors.CardSurface)
-                .border(2.dp, Color(0xFF334155), RoundedCornerShape(24.dp)),
-            contentAlignment = Alignment.Center
+                .height(240.dp),
+            cornerRadius = 24.dp,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)
         ) {
             Avatar3DViewport(
                 appearance = profile.appearance,
@@ -124,86 +132,97 @@ fun WardrobeScreen(
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
 
         // Base Trait & Expression Customization Bar
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 text = LixoStrings.WARDROBE_TRAITS_COLOR_LABEL,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LixoColors.SoftTextWhite
+                style = MaterialTheme.typography.labelMedium,
+                color = LixoColors.TextSecondary
             )
-            tintChoices.forEach { hex ->
-                val isSelected = profile.appearance.primaryTintHex == hex
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .background(Color(hex))
-                        .border(
-                            width = if (isSelected) 3.dp else 1.dp,
-                            color = if (isSelected) Color.White else Color.Transparent,
-                            shape = CircleShape
-                        )
-                        .clickable {
-                            onCustomizeBaseTraits(
-                                hex,
-                                (profile.appearance.eyeExpressionIndex + 1) % 2,
-                                profile.appearance.smileExpressionIndex
+            Spacer(Modifier.width(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                tintChoices.forEach { hex ->
+                    val isSelected = profile.appearance.primaryTintHex == hex
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color(hex))
+                            .border(
+                                width = if (isSelected) 3.dp else 1.dp,
+                                color = if (isSelected) LixoColors.TextPrimary else Color.Transparent,
+                                shape = CircleShape
                             )
-                        }
-                )
+                            .clickable {
+                                onCustomizeBaseTraits(
+                                    hex,
+                                    (profile.appearance.eyeExpressionIndex + 1) % 2,
+                                    profile.appearance.smileExpressionIndex
+                                )
+                            }
+                    )
+                }
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(20.dp))
 
-        // 6 MVP Avatars Switcher
+        // 6 Avatars Character Picker
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             AvatarType.entries.forEach { type ->
                 val isUnlocked = profile.unlockedAvatars.contains(type)
                 val isActive = profile.appearance.avatarType == type
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(
                             when {
-                                isActive -> LixoColors.PrimaryActionGreen
-                                isUnlocked -> LixoColors.CardSurface
-                                else -> Color(0xFF162032)
+                                isActive -> LixoColors.BlueTint
+                                isUnlocked -> LixoColors.Surface
+                                else -> LixoColors.SurfaceElevated
                             }
                         )
                         .border(
                             width = if (isActive) 2.dp else 1.dp,
-                            color = if (isActive) LixoColors.StarGold else Color(0xFF334155),
-                            shape = RoundedCornerShape(16.dp)
+                            color = if (isActive) LixoColors.Blue else LixoColors.Border,
+                            shape = RoundedCornerShape(14.dp)
                         )
                         .clickable(enabled = isUnlocked) {
                             onSelectAvatarType(type)
                         }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        text = if (isUnlocked) LixoStrings.avatarName(type)
-                        else "🔒 ${LixoStrings.avatarName(type)} (${type.unlockStarsRequired}⭐)",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (isUnlocked) Color.White else LixoColors.MutedText
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (!isUnlocked) {
+                            LixoIcon(icon = LixoIcons.Lock, tint = LixoColors.TextMuted, size = 16.dp)
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Text(
+                            text = if (isUnlocked) LixoStrings.avatarName(type)
+                            else "${LixoStrings.avatarName(type)} (${type.unlockStarsRequired}⭐)",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Bold,
+                            color = if (isActive) LixoColors.Blue else if (isUnlocked) LixoColors.TextPrimary else LixoColors.TextMuted
+                        )
+                    }
                 }
             }
         }
 
         Spacer(Modifier.height(14.dp))
 
-        // 9 Equipment Slots Selector
+        // Equipment Slot Category Selector
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -214,16 +233,20 @@ fun WardrobeScreen(
                 val isSelected = slot == selectedSlot
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (isSelected) LixoColors.SecondaryBlue else LixoColors.CardSurfaceElevated)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) LixoColors.Green else LixoColors.Surface)
+                        .then(
+                            if (!isSelected) Modifier.border(1.dp, LixoColors.Border, RoundedCornerShape(12.dp))
+                            else Modifier
+                        )
                         .clickable { selectedSlot = slot }
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Text(
                         text = LixoStrings.slotName(slot),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = Color.White
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                        color = if (isSelected) Color.White else LixoColors.TextSecondary
                     )
                 }
             }
@@ -231,33 +254,43 @@ fun WardrobeScreen(
 
         Spacer(Modifier.height(14.dp))
 
-        // Equipped item unequip button
+        // Unequip current slot item button (if equipped)
         if (profile.appearance.equippedItems.containsKey(selectedSlot)) {
-            BouncyButton(
+            LixoButton(
                 onClick = { onEquipSlotItem(selectedSlot, null) },
-                containerColor = LixoColors.CardSurfaceElevated,
-                lipColor = LixoColors.CardSurface
-            ) {
-                Text(LixoStrings.WARDROBE_UNEQUIP_BTN, color = LixoColors.SoftTextWhite)
-            }
-            Spacer(Modifier.height(10.dp))
-        }
-
-        // Unlocked Item Cards styled with Fortnite 2D Rarity Colors
-        if (unlockedItemsForSlot.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(LixoColors.CardSurface)
-                    .padding(20.dp),
-                contentAlignment = Alignment.Center
+                variant = LixoButtonVariant.OUTLINE,
+                height = 42.dp,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "✨ ${LixoStrings.WARDROBE_MYSTERY_FOOTER}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = LixoColors.MutedText
+                    text = LixoStrings.WARDROBE_UNEQUIP_BTN,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = LixoColors.Red
                 )
+            }
+            Spacer(Modifier.height(14.dp))
+        }
+
+        // Unlocked Item Cards
+        if (unlockedItemsForSlot.isEmpty()) {
+            LixoCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 16.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LixoIcon(icon = LixoIcons.Gift, tint = LixoColors.TextMuted, size = 32.dp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = LixoStrings.WARDROBE_MYSTERY_FOOTER,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LixoColors.TextMuted,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         } else {
             FlowRow(
@@ -267,39 +300,65 @@ fun WardrobeScreen(
             ) {
                 unlockedItemsForSlot.forEach { item ->
                     val isEquipped = profile.appearance.equippedItems[selectedSlot] == item.id
-                    Column(
-                        modifier = Modifier
-                            .width(155.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(LixoColors.rarityBrush(item.rarity))
-                            .border(
-                                width = if (isEquipped) 3.dp else 1.dp,
-                                color = if (isEquipped) Color.White else Color.White.copy(alpha = 0.35f),
-                                shape = RoundedCornerShape(20.dp)
-                            )
-                            .clickable {
+                    val rarityColor = LixoColors.rarityColor(item.rarity)
+
+                    LixoCard(
+                        modifier = Modifier.width(160.dp),
+                        selected = isEquipped,
+                        cornerRadius = 18.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
+                        onClick = {
+                            if (isEquipped) {
+                                onEquipSlotItem(selectedSlot, null)
+                            } else {
                                 onEquipSlotItem(selectedSlot, item.id)
                             }
-                            .padding(14.dp)
+                        }
                     ) {
-                        Text(
-                            text = LixoStrings.rarityName(item.rarity).uppercase(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White.copy(alpha = 0.9f)
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = item.nameSv,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = if (isEquipped) "✓ Utrustad" else "Tryck för att bära",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
+                        Column {
+                            // Rarity badge
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(rarityColor.copy(alpha = 0.15f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = LixoStrings.rarityName(item.rarity).uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = rarityColor
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = item.nameSv,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = LixoColors.TextPrimary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isEquipped) {
+                                    LixoIcon(icon = LixoIcons.Check, tint = LixoColors.GreenLip, size = 16.dp)
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        text = "Utrustad",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = LixoColors.GreenLip
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Välj",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = LixoColors.TextMuted
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

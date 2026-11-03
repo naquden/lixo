@@ -2,23 +2,27 @@ package se.lixo.app.ui.screens.parent
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import se.lixo.app.data.repository.AppPrivacySettings
@@ -41,21 +46,20 @@ import se.lixo.app.domain.model.DailyActivityRecord
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.MathErrorLog
 import se.lixo.app.domain.model.StruggledWordLog
-import se.lixo.app.ui.theme.BouncyButton
+import se.lixo.app.ui.theme.LixoButton
+import se.lixo.app.ui.theme.LixoButtonVariant
+import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoColors
+import se.lixo.app.ui.theme.LixoIcon
+import se.lixo.app.ui.theme.LixoIcons
 import se.lixo.app.ui.theme.LixoStrings
 
 /**
- * Parent View & GDPR Controls (`project.md` §4, §5 & §6):
- * - Accessed via Settings behind a **hard multi-step math problem** (`(a × b) + c = ?`).
- * - Dashboard: Reading time, math problems solved, streaks, sibling profile selector.
- * - Local-only Pedagogical Logs:
- *   - "Ord som kan behöva övas" (`StruggledWordLog`, text + syllables, zero audio stored, never uploaded).
- *   - "Matte-mönster" (`MathErrorLog`, problem type & hint usage, never uploaded).
- * - Adjustable daily goals & tutorial skip toggle. No push notifications, no parent bonus gifts.
- * - Friend list oversight.
- * - GDPR "Data och integritet" section: Local-Only mode toggle, optional email account for public friend avatar,
- *   one-tap account & cloud data deletion, and Crashlytics consent control.
+ * Duolingo-styled Parent Gate & Dashboard:
+ * - Clean math security gate for adults.
+ * - 2x2 clear metric tiles for learning progress.
+ * - Single-line aligned stepper controls for daily goals.
+ * - GDPR and pedagogical logs presented in clean white cards without clutter.
  */
 @Composable
 fun ParentGateAndDashboardScreen(
@@ -100,440 +104,700 @@ fun ParentGateAndDashboardScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LixoColors.SkyBackgroundBottom)
+            .background(LixoColors.Background)
             .verticalScroll(rememberScrollState())
-            .padding(18.dp)
+            .padding(horizontal = 20.dp, vertical = 20.dp)
     ) {
         if (!isGateUnlocked) {
-            // Hard Math Gate protecting Parent View
+            // Parent Math Gate
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(LixoColors.CardSurface)
-                    .border(2.dp, LixoColors.StarGold, RoundedCornerShape(24.dp))
-                    .padding(22.dp),
+                    .padding(top = 40.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(LixoColors.BlueTint),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LixoIcon(icon = LixoIcons.Lock, tint = LixoColors.Blue, size = 32.dp)
+                }
+
+                Spacer(Modifier.height(16.dp))
+
                 Text(
-                    text = "🔐 ${LixoStrings.PARENT_GATE_TITLE}",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = LixoColors.SoftTextWhite
+                    text = LixoStrings.PARENT_GATE_TITLE,
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = LixoColors.TextPrimary
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     text = LixoStrings.PARENT_GATE_SUBTITLE,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = LixoColors.MutedText
+                    color = LixoColors.TextSecondary,
+                    textAlign = TextAlign.Center
                 )
-                Spacer(Modifier.height(18.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF0F172A))
-                        .padding(horizontal = 24.dp, vertical = 14.dp)
+
+                Spacer(Modifier.height(28.dp))
+
+                LixoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp)
                 ) {
-                    Text(
-                        text = challengePrompt,
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = LixoColors.StarGold
-                    )
-                }
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = gateInput,
-                    onValueChange = {
-                        gateInput = it
-                        gateError = false
-                    },
-                    label = { Text(LixoStrings.PARENT_GATE_INPUT_LABEL) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                if (gateError) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = LixoStrings.PARENT_GATE_WRONG_MSG,
-                        color = Color(0xFFE74C3C),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                Spacer(Modifier.height(14.dp))
-                BouncyButton(
-                    onClick = {
-                        if (gateInput.trim().toIntOrNull() == challengeAnswer) {
-                            isGateUnlocked = true
-                        } else {
-                            gateError = true
-                            challengeSeed++
-                            gateInput = ""
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(LixoColors.Surface)
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = challengePrompt,
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LixoColors.TextPrimary
+                            )
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(LixoStrings.PARENT_GATE_OPEN_BTN, color = Color.White)
+
+                        Spacer(Modifier.height(18.dp))
+
+                        OutlinedTextField(
+                            value = gateInput,
+                            onValueChange = {
+                                gateInput = it
+                                gateError = false
+                            },
+                            label = { Text(LixoStrings.PARENT_GATE_INPUT_LABEL) },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LixoColors.Blue,
+                                unfocusedBorderColor = LixoColors.Border
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (gateError) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = LixoStrings.PARENT_GATE_WRONG_MSG,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = LixoColors.Red
+                            )
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+
+                        LixoButton(
+                            onClick = {
+                                if (gateInput.trim().toIntOrNull() == challengeAnswer) {
+                                    isGateUnlocked = true
+                                } else {
+                                    gateError = true
+                                    challengeSeed++
+                                    gateInput = ""
+                                }
+                            },
+                            variant = LixoButtonVariant.PRIMARY,
+                            height = 52.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = LixoStrings.PARENT_GATE_OPEN_BTN,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
+                        }
+                    }
                 }
             }
         } else {
             // Unlocked Parent Dashboard
             Text(
                 text = LixoStrings.PARENT_DASHBOARD_TITLE,
-                style = MaterialTheme.typography.headlineLarge,
-                color = LixoColors.SoftTextWhite
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = LixoColors.TextPrimary
             )
-            Spacer(Modifier.height(12.dp))
 
-            // Sibling Profile Switcher
+            Spacer(Modifier.height(14.dp))
+
+            // Sibling profile switcher
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 profiles.forEach { child ->
-                    BouncyButton(
-                        onClick = { onSelectProfile(child) },
-                        containerColor = if (child.id == activeProfile.id) LixoColors.PrimaryActionGreen
-                        else LixoColors.CardSurfaceElevated
+                    val isSelected = child.id == activeProfile.id
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) LixoColors.Green else LixoColors.Surface)
+                            .then(
+                                if (!isSelected) Modifier.border(1.dp, LixoColors.Border, RoundedCornerShape(12.dp))
+                                else Modifier
+                            )
+                            .clickable { onSelectProfile(child) }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        Text(child.displayName, color = Color.White)
+                        Text(
+                            text = child.displayName,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                            color = if (isSelected) Color.White else LixoColors.TextPrimary
+                        )
                     }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // Overview Metrics Card (Reading minutes, Math solved, Streaks)
+            // 2x2 Metric Tiles
             val totalReadingSeconds = dailyActivity.values.sumOf { it.readingSecondsCompleted }
             val totalReadingMinutes = (totalReadingSeconds / 60).coerceAtLeast(if (totalReadingSeconds > 0) 1 else 0)
             val totalMathProblems = dailyActivity.values.sumOf { it.mathProblemsCompleted }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(LixoColors.CardSurface)
-                    .padding(18.dp)
-            ) {
-                Text(
-                    text = "${activeProfile.displayName} — Statistik",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = LixoColors.StarGold
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "📖 Lästid totalt: $totalReadingMinutes min (Mål: ${activeProfile.dailyReadingGoalMinutes} min/dag)",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = LixoColors.SoftTextWhite
-                )
-                Text(
-                    text = "🧮 Lösta mattetal: $totalMathProblems st (Mål: ${activeProfile.dailyMathGoalMinutesOrProblemsLabel()})",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = LixoColors.SoftTextWhite
-                )
-                Text(
-                    text = "🔥 Nuvarande streak: ${activeProfile.currentStreakDays} dagar (Bästa: ${activeProfile.bestStreakDays} dagar)",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = LixoColors.SoftTextWhite
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // Adjustable Daily Goals & Tutorial Toggle
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(LixoColors.CardSurface)
-                    .padding(18.dp)
-            ) {
-                Text(
-                    text = LixoStrings.PARENT_DAILY_GOALS_TITLE,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LixoColors.StarGold
-                )
-                Spacer(Modifier.height(10.dp))
-
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = "${LixoStrings.PARENT_READING_GOAL_LABEL}: ${activeProfile.dailyReadingGoalMinutes} min",
-                        color = LixoColors.SoftTextWhite,
-                        modifier = Modifier.weight(1f).padding(end = 8.dp)
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BouncyButton(
-                            onClick = {
-                                onUpdateProfileGoalsAndSettings(
-                                    activeProfile.copy(
-                                        dailyReadingGoalMinutes = (activeProfile.dailyReadingGoalMinutes - 5).coerceAtLeast(5)
-                                    )
-                                )
-                            },
-                            containerColor = LixoColors.CardSurfaceElevated,
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
-                        ) { Text("-5", color = Color.White, maxLines = 1) }
-                        BouncyButton(
-                            onClick = {
-                                onUpdateProfileGoalsAndSettings(
-                                    activeProfile.copy(
-                                        dailyReadingGoalMinutes = (activeProfile.dailyReadingGoalMinutes + 5).coerceAtMost(60)
-                                    )
-                                )
-                            },
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
-                        ) { Text("+5", color = Color.White, maxLines = 1) }
-                    }
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = activeProfile.tutorialSkippableByParent,
-                        onCheckedChange = { checked ->
-                            onUpdateProfileGoalsAndSettings(
-                                activeProfile.copy(tutorialSkippableByParent = checked)
+                    // Metric 1: Reading
+                    LixoCard(
+                        modifier = Modifier.weight(1f),
+                        cornerRadius = 16.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                    ) {
+                        Column {
+                            LixoIcon(icon = LixoIcons.Book, tint = LixoColors.Blue, size = 22.dp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "$totalReadingMinutes min",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LixoColors.TextPrimary
+                            )
+                            Text(
+                                text = "Mål: ${activeProfile.dailyReadingGoalMinutes} min/dag",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LixoColors.TextSecondary
                             )
                         }
-                    )
-                    Text(
-                        text = LixoStrings.PARENT_SKIP_TUTORIAL_TOGGLE,
-                        color = LixoColors.SoftTextWhite
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // Local-Only Struggled Words ("Ord som kan behöva övas")
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(LixoColors.CardSurface)
-                    .padding(18.dp)
-            ) {
-                Text(
-                    text = "📝 ${LixoStrings.PARENT_STRUGGLED_WORDS_TITLE}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LixoColors.StarGold
-                )
-                Spacer(Modifier.height(8.dp))
-                if (struggledWords.isEmpty()) {
-                    Text(LixoStrings.PARENT_STRUGGLED_WORDS_EMPTY, color = LixoColors.MutedText)
-                } else {
-                    struggledWords.forEach { log ->
-                        Text(
-                            text = "• ${log.wordNormalized} (${log.syllables}) — Övat ${log.encounterCount} ggr",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = LixoColors.SoftTextWhite
-                        )
                     }
-                }
-            }
 
-            Spacer(Modifier.height(16.dp))
-
-            // Local-Only Math Error Patterns ("Matte-mönster")
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(LixoColors.CardSurface)
-                    .padding(18.dp)
-            ) {
-                Text(
-                    text = "📐 ${LixoStrings.PARENT_MATH_PATTERNS_TITLE}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LixoColors.StarGold
-                )
-                Spacer(Modifier.height(8.dp))
-                if (mathErrors.isEmpty()) {
-                    Text(LixoStrings.PARENT_MATH_PATTERNS_EMPTY, color = LixoColors.MutedText)
-                } else {
-                    mathErrors.take(10).forEach { err ->
-                        Text(
-                            text = "• ${LixoStrings.mathTypeName(err.problemType)}: \"${err.problemPrompt}\" (${err.hintsUsedCount} ledtrådar)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LixoColors.SoftTextWhite
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // Friend List Oversight
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(LixoColors.CardSurface)
-                    .padding(18.dp)
-            ) {
-                Text(
-                    text = "🤝 ${LixoStrings.PARENT_FRIENDS_OVERSIGHT_TITLE} (${friends.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LixoColors.StarGold
-                )
-                Spacer(Modifier.height(8.dp))
-                friends.forEach { friend ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Metric 2: Math
+                    LixoCard(
+                        modifier = Modifier.weight(1f),
+                        cornerRadius = 16.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
                     ) {
-                        Text("@${friend.username}", color = LixoColors.SoftTextWhite)
-                        BouncyButton(
-                            onClick = { onRemoveFriend(friend.userId) },
-                            containerColor = LixoColors.CardSurfaceElevated
-                        ) {
-                            Text(LixoStrings.FRIENDS_REMOVE_BTN, color = Color.White)
+                        Column {
+                            LixoIcon(icon = LixoIcons.Calculator, tint = LixoColors.GreenLip, size = 22.dp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "$totalMathProblems st",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LixoColors.TextPrimary
+                            )
+                            Text(
+                                text = "Mål: ${activeProfile.dailyMathGoalProblems}/dag",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LixoColors.TextSecondary
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Metric 3: Streak
+                    LixoCard(
+                        modifier = Modifier.weight(1f),
+                        cornerRadius = 16.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                    ) {
+                        Column {
+                            LixoIcon(icon = LixoIcons.Flame, tint = LixoColors.Orange, size = 22.dp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "${activeProfile.currentStreakDays} dagar",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LixoColors.TextPrimary
+                            )
+                            Text(
+                                text = "Bästa: ${activeProfile.bestStreakDays} dagar",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LixoColors.TextSecondary
+                            )
+                        }
+                    }
+
+                    // Metric 4: Stars
+                    LixoCard(
+                        modifier = Modifier.weight(1f),
+                        cornerRadius = 16.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                    ) {
+                        Column {
+                            LixoIcon(icon = LixoIcons.Star, tint = LixoColors.GoldLip, size = 22.dp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "${activeProfile.totalStars}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LixoColors.TextPrimary
+                            )
+                            Text(
+                                text = "Stjärnor totalt",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LixoColors.TextSecondary
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // GDPR "Data och integritet" Section (`project.md` §3 & §6)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(LixoColors.CardSurface)
-                    .border(1.5.dp, LixoColors.SecondaryBlue, RoundedCornerShape(20.dp))
-                    .padding(18.dp)
+            // Daily Goals Steppers
+            LixoCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 18.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)
             ) {
-                Text(
-                    text = "🛡️ ${LixoStrings.PARENT_GDPR_TITLE}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LixoColors.StarGold
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = LixoStrings.PARENT_GDPR_PRIVACY_NOTE,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LixoColors.MutedText
-                )
-                Spacer(Modifier.height(12.dp))
-
-                Text(
-                    text = if (privacySettings.isLocalOnlyMode) {
-                        "✓ ${LixoStrings.PARENT_LOCAL_ONLY_ACTIVE}"
-                    } else {
-                        "${LixoStrings.PARENT_CLOUD_ACCOUNT_ACTIVE} ${privacySettings.optionalAccountEmail}"
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = LixoColors.PrimaryActionGreen
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                if (privacySettings.isLocalOnlyMode) {
-                    OutlinedTextField(
-                        value = emailInput,
-                        onValueChange = { emailInput = it },
-                        label = { Text(LixoStrings.PARENT_EMAIL_INPUT_LABEL) },
-                        modifier = Modifier.fillMaxWidth()
+                Column {
+                    Text(
+                        text = LixoStrings.PARENT_DAILY_GOALS_TITLE,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = LixoColors.TextPrimary
                     )
-                    Spacer(Modifier.height(8.dp))
-                    BouncyButton(
-                        onClick = {
-                            scope.launch {
-                                onSendEmailSignInLink(emailInput)
-                            }
-                        },
-                        containerColor = LixoColors.PrimaryActionGreen,
+                    Spacer(Modifier.height(14.dp))
+
+                    // Reading Goal Stepper
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("✉️ ${LixoStrings.PARENT_SEND_EMAIL_LINK_BTN}", color = Color.White)
-                    }
-                    if (privacySettings.emailLinkSent || privacySettings.pendingIncomingEmailLink != null) {
-                        Spacer(Modifier.height(8.dp))
                         Text(
-                            text = LixoStrings.PARENT_EMAIL_LINK_SENT_BANNER,
+                            text = LixoStrings.PARENT_READING_GOAL_LABEL,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = LixoColors.TextPrimary
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(LixoColors.Surface)
+                                    .border(1.dp, LixoColors.Border, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        onUpdateProfileGoalsAndSettings(
+                                            activeProfile.copy(
+                                                dailyReadingGoalMinutes = (activeProfile.dailyReadingGoalMinutes - 5).coerceAtLeast(5)
+                                            )
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LixoIcon(icon = LixoIcons.Minus, tint = LixoColors.TextPrimary, size = 18.dp)
+                            }
+                            Text(
+                                text = "${activeProfile.dailyReadingGoalMinutes} min",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = LixoColors.TextPrimary,
+                                modifier = Modifier.width(60.dp),
+                                textAlign = TextAlign.Center
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(LixoColors.Surface)
+                                    .border(1.dp, LixoColors.Border, RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        onUpdateProfileGoalsAndSettings(
+                                            activeProfile.copy(
+                                                dailyReadingGoalMinutes = (activeProfile.dailyReadingGoalMinutes + 5).coerceAtMost(60)
+                                            )
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LixoIcon(icon = LixoIcons.Plus, tint = LixoColors.TextPrimary, size = 18.dp)
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Tutorial Skip Switch
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = LixoStrings.PARENT_SKIP_TUTORIAL_TOGGLE,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = LixoColors.StarGold
+                            color = LixoColors.TextPrimary,
+                            modifier = Modifier.weight(1f).padding(end = 8.dp)
                         )
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = emailLinkInput,
-                            onValueChange = { emailLinkInput = it },
-                            label = { Text(LixoStrings.PARENT_EMAIL_LINK_INPUT_LABEL) },
-                            modifier = Modifier.fillMaxWidth()
+                        Switch(
+                            checked = activeProfile.tutorialSkippableByParent,
+                            onCheckedChange = { checked ->
+                                onUpdateProfileGoalsAndSettings(
+                                    activeProfile.copy(tutorialSkippableByParent = checked)
+                                )
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = LixoColors.Green
+                            )
                         )
-                        Spacer(Modifier.height(8.dp))
-                        BouncyButton(
-                            onClick = {
-                                scope.launch {
-                                    onCompleteEmailLinkSignIn(
-                                        emailLinkInput,
-                                        emailInput.takeIf { it.isNotBlank() }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Local-Only Struggled Words
+            LixoCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 18.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)
+            ) {
+                Column {
+                    Text(
+                        text = LixoStrings.PARENT_STRUGGLED_WORDS_TITLE,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = LixoColors.TextPrimary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    if (struggledWords.isEmpty()) {
+                        Text(
+                            text = LixoStrings.PARENT_STRUGGLED_WORDS_EMPTY,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextMuted
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            struggledWords.forEach { log ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = log.wordNormalized,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = LixoColors.TextPrimary
+                                        )
+                                        Text(
+                                            text = log.syllables,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = LixoColors.TextSecondary
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(LixoColors.Surface)
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Övat ${log.encounterCount} ggr",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = LixoColors.TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Local-Only Math Errors
+            LixoCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 18.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)
+            ) {
+                Column {
+                    Text(
+                        text = LixoStrings.PARENT_MATH_PATTERNS_TITLE,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = LixoColors.TextPrimary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    if (mathErrors.isEmpty()) {
+                        Text(
+                            text = LixoStrings.PARENT_MATH_PATTERNS_EMPTY,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextMuted
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            mathErrors.take(8).forEach { err ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = LixoStrings.mathTypeName(err.problemType),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = LixoColors.Blue
+                                        )
+                                        Text(
+                                            text = err.problemPrompt,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = LixoColors.TextPrimary
+                                        )
+                                    }
+                                    Text(
+                                        text = "${err.hintsUsedCount} ledtrådar",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = LixoColors.TextMuted
                                     )
                                 }
-                            },
-                            containerColor = LixoColors.SecondaryBlue,
-                            lipColor = LixoColors.SecondaryBlueLip,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(LixoStrings.PARENT_COMPLETE_EMAIL_LINK_BTN, color = Color.White)
+                            }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
-                    BouncyButton(
-                        onClick = {
-                            scope.launch {
-                                onConnectOptionalEmailAccount(emailInput, "lixo_optional_auth")
-                            }
-                        },
-                        containerColor = LixoColors.CardSurfaceElevated,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(LixoStrings.PARENT_CONNECT_ACCOUNT_BTN, color = Color.White)
-                    }
-                } else {
-                    BouncyButton(
-                        onClick = onSwitchToLocalOnly,
-                        containerColor = LixoColors.CardSurfaceElevated,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(LixoStrings.PARENT_SWITCH_LOCAL_ONLY_BTN, color = Color.White)
-                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Friends Oversight
+            LixoCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 18.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "${LixoStrings.PARENT_FRIENDS_OVERSIGHT_TITLE} (${friends.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = LixoColors.TextPrimary
+                    )
                     Spacer(Modifier.height(10.dp))
-                    BouncyButton(
-                        onClick = {
-                            scope.launch {
-                                onDeleteCloudAccount()
-                                emailInput = ""
+                    if (friends.isEmpty()) {
+                        Text(
+                            text = "Inga kompisar tillagda ännu",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextMuted
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            friends.forEach { friend ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "@${friend.username}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = LixoColors.TextPrimary
+                                    )
+                                    LixoButton(
+                                        onClick = { onRemoveFriend(friend.userId) },
+                                        variant = LixoButtonVariant.GHOST,
+                                        height = 36.dp
+                                    ) {
+                                        Text(
+                                            text = LixoStrings.FRIENDS_REMOVE_BTN,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = LixoColors.Red
+                                        )
+                                    }
+                                }
                             }
-                        },
-                        containerColor = Color(0xFFE74C3C),
-                        lipColor = Color(0xFFC0392B),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("🗑️ ${LixoStrings.PARENT_DELETE_ACCOUNT_BTN}", color = Color.White)
+                        }
                     }
                 }
+            }
 
-                Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(20.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = privacySettings.crashlyticsConsentGranted,
-                        onCheckedChange = { onToggleCrashlyticsConsent(it) }
-                    )
+            // GDPR & Data Security
+            LixoCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 18.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)
+            ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        LixoIcon(icon = LixoIcons.Shield, tint = LixoColors.Blue, size = 20.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = LixoStrings.PARENT_GDPR_TITLE,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = LixoColors.TextPrimary
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "Firebase Crashlytics (Samtycke efter 3:e appstarten)",
-                        color = LixoColors.SoftTextWhite
+                        text = LixoStrings.PARENT_GDPR_PRIVACY_NOTE,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LixoColors.TextSecondary
                     )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    Text(
+                        text = if (privacySettings.isLocalOnlyMode) LixoStrings.PARENT_LOCAL_ONLY_ACTIVE
+                        else "${LixoStrings.PARENT_CLOUD_ACCOUNT_ACTIVE} ${privacySettings.optionalAccountEmail}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = LixoColors.GreenLip
+                    )
+
+                    Spacer(Modifier.height(14.dp))
+
+                    if (privacySettings.isLocalOnlyMode) {
+                        OutlinedTextField(
+                            value = emailInput,
+                            onValueChange = { emailInput = it },
+                            placeholder = { Text(LixoStrings.PARENT_EMAIL_INPUT_LABEL) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LixoColors.Blue,
+                                unfocusedBorderColor = LixoColors.Border
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        LixoButton(
+                            onClick = {
+                                scope.launch { onSendEmailSignInLink(emailInput) }
+                            },
+                            variant = LixoButtonVariant.PRIMARY,
+                            height = 48.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = LixoStrings.PARENT_SEND_EMAIL_LINK_BTN,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White
+                            )
+                        }
+
+                        if (privacySettings.emailLinkSent || privacySettings.pendingIncomingEmailLink != null) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                text = LixoStrings.PARENT_EMAIL_LINK_SENT_BANNER,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = LixoColors.GoldLip
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = emailLinkInput,
+                                onValueChange = { emailLinkInput = it },
+                                placeholder = { Text(LixoStrings.PARENT_EMAIL_LINK_INPUT_LABEL) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            LixoButton(
+                                onClick = {
+                                    scope.launch {
+                                        onCompleteEmailLinkSignIn(
+                                            emailLinkInput,
+                                            emailInput.takeIf { it.isNotBlank() }
+                                        )
+                                    }
+                                },
+                                variant = LixoButtonVariant.SECONDARY,
+                                height = 48.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = LixoStrings.PARENT_COMPLETE_EMAIL_LINK_BTN,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    } else {
+                        LixoButton(
+                            onClick = onSwitchToLocalOnly,
+                            variant = LixoButtonVariant.OUTLINE,
+                            height = 48.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = LixoStrings.PARENT_SWITCH_LOCAL_ONLY_BTN,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = LixoColors.TextPrimary
+                            )
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        LixoButton(
+                            onClick = {
+                                scope.launch {
+                                    onDeleteCloudAccount()
+                                    emailInput = ""
+                                }
+                            },
+                            variant = LixoButtonVariant.DANGER,
+                            height = 48.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = LixoStrings.PARENT_DELETE_ACCOUNT_BTN,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Crashlytics samtycke",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextPrimary
+                        )
+                        Switch(
+                            checked = privacySettings.crashlyticsConsentGranted,
+                            onCheckedChange = { onToggleCrashlyticsConsent(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = LixoColors.Green
+                            )
+                        )
+                    }
                 }
             }
         }
     }
 }
-
-private fun ChildProfile.dailyMathGoalMinutesOrProblemsLabel(): String =
-    "$dailyMathGoalProblems tal/dag"

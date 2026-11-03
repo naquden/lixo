@@ -1,5 +1,10 @@
 package se.lixo.app.ui.screens.math
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +42,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 import kotlin.math.cos
@@ -51,17 +57,23 @@ import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.platform.TextToSpeechEngine
-import se.lixo.app.ui.theme.BouncyButton
+import se.lixo.app.ui.theme.ChoiceCard
+import se.lixo.app.ui.theme.LixoButton
+import se.lixo.app.ui.theme.LixoButtonVariant
+import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoColors
+import se.lixo.app.ui.theme.LixoIcon
+import se.lixo.app.ui.theme.LixoIcons
+import se.lixo.app.ui.theme.LixoProgressBar
 import se.lixo.app.ui.theme.LixoStrings
-import se.lixo.app.ui.theme.ParticleProgressBar
 import se.lixo.app.ui.theme.TtsIconButton
 
 /**
- * Fullscreen Math & English Vocabulary Activity View (`project.md` §2 & §4):
- * - Covers Addition, Subtraction, Ten-Crossing, Multiplication, Division, Clock (`Klockan`),
- *   Money (`Pengar` in Swedish kronor), Word Problems, and English Glosor.
- * - Growth mindset: supportive visual breakdowns & step-by-step hints on wrong attempts.
+ * Duolingo-inspired Math & English Activity Screen:
+ * - Clean progress bar and ghost close button at top.
+ * - Prominent typography on white surfaces with crisp visual contrast.
+ * - Choice tiles that select (blue) before confirmation.
+ * - Bottom tactile feedback bar (Green = Correct, Red = Growth Mindset hint).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -82,11 +94,11 @@ fun MathActivityScreen(
                 se.lixo.app.domain.model.MathProblem(
                     id = item.id,
                     type = MathProblemType.WORD_PROBLEM,
-                    promptSv = "Vad betyder det engelska ordet \"${item.englishWord}\" på svenska?\n(${item.simpleSentenceEn})",
+                    promptSv = "Vad betyder ordet \"${item.englishWord}\"?\n(${item.simpleSentenceEn})",
                     correctAnswer = item.swedishTranslation,
                     choices = listOf(item.swedishTranslation, "sköld", "drake", "stjärna").distinct(),
-                    hintStep1Sv = "Läs hela meningen: \"${item.simpleSentenceEn}\" = \"${item.simpleSentenceSv}\".",
-                    hintStep2Sv = "Ordet \"${item.englishWord}\" betyder \"${item.swedishTranslation}\"!"
+                    hintStep1Sv = "\"${item.simpleSentenceEn}\" = \"${item.simpleSentenceSv}\"",
+                    hintStep2Sv = "\"${item.englishWord}\" betyder \"${item.swedishTranslation}\""
                 )
             }
         } else {
@@ -99,7 +111,8 @@ fun MathActivityScreen(
         mutableStateOf(problems.map { MathProblemAttemptState(it) })
     }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
-    var showEncouragementBanner by remember { mutableStateOf(false) }
+    var selectedChoice by remember { mutableStateOf<String?>(null) }
+    var lastCheckResult by remember { mutableStateOf<Boolean?>(null) }
     var completedResult by remember { mutableStateOf<Pair<MathSessionScoreResult, LevelCompletionOutcome>?>(null) }
 
     val allSolved = attemptStates.all { it.isSolved }
@@ -126,53 +139,65 @@ fun MathActivityScreen(
         attemptStates.count { it.isSolved }.toFloat() / attemptStates.size.toFloat()
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(LixoColors.SkyBackgroundBottom)
-            .verticalScroll(rememberScrollState())
-            .padding(18.dp)
+            .background(LixoColors.Background)
     ) {
-        // Top Header with Close (X) and Particle Progress Bar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = if (completedResult != null) 0.dp else 100.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(LixoColors.CardSurfaceElevated)
-                    .clickable { onCloseToMap() }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            // Top Bar: Ghost Close Button + Progress Bar + Timer Pill
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("✕", style = MaterialTheme.typography.titleMedium, color = LixoColors.SoftTextWhite)
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .clickable { onCloseToMap() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    LixoIcon(
+                        icon = LixoIcons.Close,
+                        tint = LixoColors.TextSecondary,
+                        size = 22.dp
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                LixoProgressBar(
+                    progress = progress,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(LixoColors.Surface)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    LixoIcon(icon = LixoIcons.Timer, tint = LixoColors.Orange, size = 16.dp)
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "${elapsedSeconds}s",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = LixoColors.Orange
+                    )
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            ParticleProgressBar(
-                progress = progress,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = "⏱️ ${elapsedSeconds}s",
-                style = MaterialTheme.typography.titleMedium,
-                color = LixoColors.StarGold
-            )
-        }
 
-        Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(20.dp))
 
-        if (currentAttempt != null && !allSolved) {
-            val problem = currentAttempt.problem
+            if (currentAttempt != null && !allSolved) {
+                val problem = currentAttempt.problem
 
-            // Problem Prompt Card + Swedish TTS button
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(LixoColors.CardSurface)
-                    .padding(20.dp)
-            ) {
+                // Category pill
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -180,9 +205,9 @@ fun MathActivityScreen(
                 ) {
                     Text(
                         text = if (isEnglishTask) LixoStrings.ENGLISH_SECTION_TITLE
-                        else LixoStrings.mathTypeName(problem.type),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = LixoColors.StarGold
+                        else LixoStrings.mathTypeName(problem.type).uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LixoColors.Blue
                     )
                     if (showSwedishTtsButtons) {
                         TtsIconButton(
@@ -192,19 +217,26 @@ fun MathActivityScreen(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
 
+                // Problem Question Prompt
                 Text(
                     text = problem.promptSv,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = LixoColors.SoftTextWhite
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = LixoColors.TextPrimary
                 )
 
-                // Visual Manipulative: Analog Clock (`Klockan`)
+                // Visual Manipulative: Clock Face
                 if (problem.visualClockHour != null && problem.visualClockMinute != null) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
                     Box(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(LixoColors.Surface)
+                            .border(1.5.dp, LixoColors.Border, RoundedCornerShape(18.dp))
+                            .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         AnalogClockFace(
@@ -215,9 +247,9 @@ fun MathActivityScreen(
                     }
                 }
 
-                // Visual Manipulative: Swedish Kronor Coins/Notes (`Pengar`)
+                // Visual Manipulative: Swedish Kronor
                 if (problem.visualMoneyBreakdownKr.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(18.dp))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -225,164 +257,287 @@ fun MathActivityScreen(
                         problem.visualMoneyBreakdownKr.forEach { kr ->
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(if (kr >= 20) Color(0xFF8E44AD) else Color(0xFFF39C12))
-                                    .border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(14.dp))
-                                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (kr >= 20) LixoColors.PurpleTint else LixoColors.GoldTint)
+                                    .border(
+                                        1.5.dp,
+                                        if (kr >= 20) LixoColors.PurpleLip else LixoColors.GoldLip,
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
                             ) {
                                 Text(
                                     text = "$kr kr",
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (kr >= 20) LixoColors.PurpleLip else LixoColors.GoldLip
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(Modifier.height(16.dp))
+                // Active Hints
+                if (currentAttempt.activeHints.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    LixoCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        backgroundColor = LixoColors.GoldTint,
+                        borderColor = LixoColors.GoldLip,
+                        cornerRadius = 14.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                LixoIcon(icon = LixoIcons.Bulb, tint = LixoColors.GoldLip, size = 18.dp)
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "Ledtråd",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = LixoColors.GoldLip
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            currentAttempt.activeHints.forEachIndexed { idx, hintText ->
+                                Text(
+                                    text = "${idx + 1}. $hintText",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = LixoColors.TextPrimary
+                                )
+                            }
+                        }
+                    }
+                }
 
-            // Growth Mindset Hint Drawer
-            if (showEncouragementBanner || currentAttempt.activeHints.isNotEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(LixoColors.CardSurfaceElevated)
-                        .border(2.dp, LixoColors.StarGold, RoundedCornerShape(20.dp))
-                        .padding(16.dp)
-                ) {
-                    if (showEncouragementBanner) {
-                        Text(
-                            text = "💡 ${LixoStrings.MATH_GROWTH_MINDSET_BANNER}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = LixoColors.StarGold
+                Spacer(Modifier.height(24.dp))
+
+                // Multiple Choice Answers
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    problem.choices.forEachIndexed { index, choice ->
+                        val isSelected = selectedChoice == choice
+                        ChoiceCard(
+                            text = choice,
+                            selected = isSelected,
+                            badgeNumber = "${index + 1}",
+                            onClick = {
+                                if (lastCheckResult == null) {
+                                    selectedChoice = choice
+                                }
+                            }
                         )
-                        Spacer(Modifier.height(6.dp))
-                    }
-                    currentAttempt.activeHints.forEachIndexed { idx, hintText ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "${idx + 1}. $hintText",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = LixoColors.SoftTextWhite,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (showSwedishTtsButtons) {
-                                Spacer(Modifier.width(8.dp))
-                                TtsIconButton(
-                                    textToSpeak = hintText,
-                                    ttsEngine = ttsEngine
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(6.dp))
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+
+                Spacer(Modifier.height(12.dp))
+
+                // Request Hint Text Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    LixoButton(
+                        onClick = {
+                            val copyList = attemptStates.toMutableList()
+                            copyList[currentIndex] = mathEngine.requestHint(currentAttempt)
+                            attemptStates = copyList
+                        },
+                        variant = LixoButtonVariant.GHOST
+                    ) {
+                        LixoIcon(icon = LixoIcons.Bulb, tint = LixoColors.Blue, size = 18.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = LixoStrings.MATH_HINT_BTN,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = LixoColors.Blue
+                        )
+                    }
+                }
             }
 
-            // Multiple-Choice Tactile Answer Buttons
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                problem.choices.forEach { choice ->
-                    BouncyButton(
-                        onClick = {
-                            val (updatedState, isCorrect) = mathEngine.checkAnswer(currentAttempt, choice)
-                            val copyList = attemptStates.toMutableList()
-                            copyList[currentIndex] = updatedState
-                            attemptStates = copyList
-
-                            if (isCorrect) {
-                                showEncouragementBanner = false
-                                if (updatedState.wrongAttempts > 0 || updatedState.hintsRevealed > 0) {
-                                    onLogMathError(
-                                        problem.type,
-                                        problem.promptSv,
-                                        updatedState.wrongAttempts,
-                                        updatedState.hintsRevealed
-                                    )
-                                }
-                                if (currentIndex < attemptStates.size - 1) {
-                                    currentIndex++
-                                }
-                            } else {
-                                showEncouragementBanner = true
-                            }
-                        },
+            // End of Session Celebration
+            completedResult?.let { (score, completion) ->
+                Spacer(Modifier.height(24.dp))
+                LixoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColor = LixoColors.Green,
+                    backgroundColor = LixoColors.GreenTint,
+                    cornerRadius = 24.dp,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp)
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = choice,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White
+                            text = LixoStrings.ACTIVITY_FINISH_CELEBRATION_TITLE,
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = LixoColors.GreenLip
                         )
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.Center) {
+                            for (i in 1..3) {
+                                LixoIcon(
+                                    icon = LixoIcons.Star,
+                                    tint = if (i <= score.starsEarned) LixoColors.Gold else LixoColors.BorderDarker,
+                                    size = 36.dp,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "+${completion.netNewStarsAwarded} ${LixoStrings.MAP_STARS_LABEL}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = LixoColors.TextPrimary
+                        )
+
+                        if (completion.newlyUnlockedItems.isNotEmpty()) {
+                            Spacer(Modifier.height(14.dp))
+                            completion.newlyUnlockedItems.forEach { item ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    LixoIcon(icon = LixoIcons.Gift, tint = LixoColors.GreenLip, size = 20.dp)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = "${item.nameSv} (${LixoStrings.rarityName(item.rarity)})",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = LixoColors.GreenLip
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+                        LixoButton(
+                            onClick = onCloseToMap,
+                            variant = LixoButtonVariant.PRIMARY,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = LixoStrings.ACTIVITY_BACK_TO_MAP_BTN,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            BouncyButton(
-                onClick = {
-                    val copyList = attemptStates.toMutableList()
-                    copyList[currentIndex] = mathEngine.requestHint(currentAttempt)
-                    attemptStates = copyList
-                },
-                containerColor = LixoColors.SecondaryBlue,
-                lipColor = LixoColors.SecondaryBlueLip,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("💡 ${LixoStrings.MATH_HINT_BTN}", color = Color.White)
             }
         }
 
-        // End-of-Level Celebration Card
-        completedResult?.let { (score, completion) ->
-            Spacer(Modifier.height(20.dp))
-            Column(
+        // Duolingo-style Bottom Action / Feedback Sheet
+        if (currentAttempt != null && !allSolved && completedResult == null) {
+            Box(
                 modifier = Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(LixoColors.CardSurfaceElevated)
-                    .border(3.dp, LixoColors.StarGold, RoundedCornerShape(24.dp))
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .background(
+                        when (lastCheckResult) {
+                            true -> LixoColors.GreenTint
+                            false -> LixoColors.RedTint
+                            null -> LixoColors.Background
+                        }
+                    )
+                    .border(
+                        1.dp,
+                        when (lastCheckResult) {
+                            true -> LixoColors.GreenLip
+                            false -> LixoColors.RedLip
+                            null -> LixoColors.Border
+                        }
+                    )
+                    .padding(16.dp)
             ) {
-                Text(
-                    text = LixoStrings.ACTIVITY_FINISH_CELEBRATION_TITLE,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = LixoColors.StarGold
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = (1..3).joinToString(" ") { if (it <= score.starsEarned) "⭐" else "☆" },
-                    style = MaterialTheme.typography.headlineLarge
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "+${completion.netNewStarsAwarded} ${LixoStrings.MAP_STARS_LABEL}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = LixoColors.SoftTextWhite
-                )
+                Column {
+                    if (lastCheckResult == true) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LixoIcon(icon = LixoIcons.Check, tint = LixoColors.GreenLip, size = 24.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Snyggt jobbat!",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LixoColors.GreenLip
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        LixoButton(
+                            onClick = {
+                                lastCheckResult = null
+                                selectedChoice = null
+                                if (currentIndex < attemptStates.size - 1) {
+                                    currentIndex++
+                                }
+                            },
+                            variant = LixoButtonVariant.PRIMARY,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "FORTSÄTT",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
+                        }
+                    } else if (lastCheckResult == false) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LixoIcon(icon = LixoIcons.Close, tint = LixoColors.RedLip, size = 24.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Inte riktigt — prova igen!",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LixoColors.RedLip
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        LixoButton(
+                            onClick = {
+                                lastCheckResult = null
+                                selectedChoice = null
+                            },
+                            variant = LixoButtonVariant.DANGER,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "FÖRSÖK IGEN",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
+                        }
+                    } else {
+                        // "KONTROLLERA" (Check) button
+                        LixoButton(
+                            onClick = {
+                                val choice = selectedChoice ?: return@LixoButton
+                                val (updatedState, isCorrect) = mathEngine.checkAnswer(currentAttempt, choice)
+                                val copyList = attemptStates.toMutableList()
+                                copyList[currentIndex] = updatedState
+                                attemptStates = copyList
+                                lastCheckResult = isCorrect
 
-                if (completion.newlyUnlockedItems.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
-                    completion.newlyUnlockedItems.forEach { item ->
-                        Text(
-                            text = "🎁 ${item.nameSv} (${LixoStrings.rarityName(item.rarity)})",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = LixoColors.PrimaryActionGreen
-                        )
+                                if (isCorrect) {
+                                    if (updatedState.wrongAttempts > 0 || updatedState.hintsRevealed > 0) {
+                                        onLogMathError(
+                                            currentAttempt.problem.type,
+                                            currentAttempt.problem.promptSv,
+                                            updatedState.wrongAttempts,
+                                            updatedState.hintsRevealed
+                                        )
+                                    }
+                                }
+                            },
+                            enabled = selectedChoice != null,
+                            variant = LixoButtonVariant.PRIMARY,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = LixoStrings.MATH_SUBMIT_BTN.uppercase(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
+                        }
                     }
-                }
-
-                Spacer(Modifier.height(16.dp))
-                BouncyButton(
-                    onClick = onCloseToMap,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(LixoStrings.ACTIVITY_BACK_TO_MAP_BTN, color = Color.White)
                 }
             }
         }
@@ -401,52 +556,49 @@ private fun AnalogClockFace(
 
         drawCircle(color = Color.White, radius = radius, center = center)
         drawCircle(
-            color = Color(0xFF2C3E50),
+            color = LixoColors.BorderDarker,
             radius = radius,
             center = center,
-            style = Stroke(width = 8f)
+            style = Stroke(width = 6f)
         )
 
-        // 12 hour tick marks
         for (h in 0 until 12) {
             val angleRad = ((h * 30.0 - 90.0) * PI / 180.0).toFloat()
-            val inner = radius * 0.80f
+            val inner = radius * 0.82f
             val outer = radius * 0.92f
             drawLine(
-                color = Color(0xFF2C3E50),
+                color = LixoColors.TextSecondary,
                 start = Offset(center.x + cos(angleRad) * inner, center.y + sin(angleRad) * inner),
                 end = Offset(center.x + cos(angleRad) * outer, center.y + sin(angleRad) * outer),
-                strokeWidth = 4f,
+                strokeWidth = 3f,
                 cap = StrokeCap.Round
             )
         }
 
-        // Hour hand
         val hourAngleRad = (((hour % 12 + minute / 60f) * 30f - 90f) * (PI / 180.0)).toFloat()
         drawLine(
-            color = Color(0xFFE74C3C),
+            color = LixoColors.Red,
             start = center,
             end = Offset(
                 center.x + cos(hourAngleRad) * radius * 0.50f,
                 center.y + sin(hourAngleRad) * radius * 0.50f
             ),
-            strokeWidth = 9f,
+            strokeWidth = 8f,
             cap = StrokeCap.Round
         )
 
-        // Minute hand
         val minAngleRad = ((minute * 6f - 90f) * (PI / 180.0)).toFloat()
         drawLine(
-            color = Color(0xFF2980B9),
+            color = LixoColors.Blue,
             start = center,
             end = Offset(
                 center.x + cos(minAngleRad) * radius * 0.75f,
                 center.y + sin(minAngleRad) * radius * 0.75f
             ),
-            strokeWidth = 6f,
+            strokeWidth = 5f,
             cap = StrokeCap.Round
         )
 
-        drawCircle(color = Color(0xFF2C3E50), radius = 6f, center = center)
+        drawCircle(color = LixoColors.TextPrimary, radius = 5f, center = center)
     }
 }

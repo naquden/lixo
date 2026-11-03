@@ -1,36 +1,12 @@
 package se.lixo.app.ui.theme
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -38,224 +14,214 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import lixo.composeapp.generated.resources.Res
+import lixo.composeapp.generated.resources.lexend_bold
+import lixo.composeapp.generated.resources.lexend_extrabold
+import lixo.composeapp.generated.resources.lexend_medium
+import lixo.composeapp.generated.resources.lexend_regular
+import lixo.composeapp.generated.resources.lexend_semibold
+import org.jetbrains.compose.resources.Font
 import se.lixo.app.domain.model.Rarity
-import se.lixo.app.platform.TextToSpeechEngine
 
+/**
+ * Lixo design tokens inspired by Duolingo:
+ * Clean white surfaces, subtle 2dp borders, 3D tactile buttons with distinct 4dp lips,
+ * high-contrast legible typography, and zero emoji clutter in the chrome.
+ */
 object LixoColors {
-    val SkyBackgroundTop = Color(0xFF1A2942)
-    val SkyBackgroundBottom = Color(0xFF0F172A)
-    val CardSurface = Color(0xFF1E293B)
-    val CardSurfaceElevated = Color(0xFF334155)
+    // Surfaces
+    val Background = Color(0xFFFFFFFF)
+    val Surface = Color(0xFFF7F7F7)
+    val SurfaceElevated = Color(0xFFEEEEEE)
+    val Border = Color(0xFFE5E5E5)
+    val BorderDarker = Color(0xFFCECECE)
 
-    val PrimaryActionGreen = Color(0xFF2ECC71)
-    val PrimaryActionGreenLip = Color(0xFF27AE60)
+    // Text
+    val TextPrimary = Color(0xFF2B2B2B)
+    val TextSecondary = Color(0xFF6B7280)
+    val TextMuted = Color(0xFF9CA3AF)
+    val TextDisabled = Color(0xFFAFAFAF)
+    val OnColor = Color(0xFFFFFFFF)
 
-    val SecondaryBlue = Color(0xFF3498DB)
-    val SecondaryBlueLip = Color(0xFF2980B9)
+    // Brand accents
+    val Green = Color(0xFF58CC02)
+    val GreenLip = Color(0xFF46A302)
+    val GreenTint = Color(0xFFD7FFB8)
 
-    val StarGold = Color(0xFFFFD54F)
-    val AccentOrange = Color(0xFFF39C12)
-    val SoftTextWhite = Color(0xFFF8FAFC)
-    val MutedText = Color(0xFF94A3B8)
+    val Blue = Color(0xFF1CB0F6)
+    val BlueLip = Color(0xFF1899D6)
+    val BlueTint = Color(0xFFDDF4FF)
+    val BlueBorder = Color(0xFF84D8FF)
 
-    /**
-     * Fortnite 2D Rarity background gradient (`project.md` §2 "Sällsynthet: Bakgrundsfärg i 2D enligt Fortnites färgskala").
-     */
+    val Gold = Color(0xFFFFC800)
+    val GoldLip = Color(0xFFE5B400)
+    val GoldTint = Color(0xFFFFF7D6)
+
+    val Orange = Color(0xFFFF9600)
+    val OrangeLip = Color(0xFFCC7800)
+    val OrangeTint = Color(0xFFFFEAD1)
+
+    val Red = Color(0xFFFF4B4B)
+    val RedLip = Color(0xFFEA2B2B)
+    val RedTint = Color(0xFFFFDFE0)
+
+    val Purple = Color(0xFFCE82FF)
+    val PurpleLip = Color(0xFFA560E8)
+    val PurpleTint = Color(0xFFF6E8FF)
+
+    // Disabled / Locked
+    val LockedFace = Color(0xFFE5E7EB)
+    val LockedLip = Color(0xFFD1D5DB)
+
+    val Scrim = Color(0x66000000)
+
+    // Compatibility aliases for legacy screen references during refactoring
+    val SkyBackgroundTop = Color(0xFFF7F7F7)
+    val SkyBackgroundBottom = Color(0xFFF7F7F7)
+    val CardSurface = Color(0xFFFFFFFF)
+    val CardSurfaceElevated = Color(0xFFF3F4F6)
+    val PrimaryActionGreen = Green
+    val PrimaryActionGreenLip = GreenLip
+    val SecondaryBlue = Blue
+    val SecondaryBlueLip = BlueLip
+    val StarGold = Gold
+    val AccentOrange = Orange
+    val SoftTextWhite = TextPrimary
+    val MutedText = TextSecondary
+
+    fun rarityColor(rarity: Rarity): Color = Color(rarity.hexColorPrimary)
+
     fun rarityBrush(rarity: Rarity): Brush = Brush.verticalGradient(
-        colors = listOf(
-            Color(rarity.hexColorPrimary),
-            Color(rarity.hexColorAccent)
-        )
+        colors = listOf(Color(rarity.hexColorPrimary), Color(rarity.hexColorAccent))
     )
 }
 
-/**
- * Dyslexia-friendly Lexend-inspired typography with generous letter spacing, clear line height,
- * and dynamic text scaling support (`project.md` §4 "dyslexivänligt typsnitt (t.ex. Lexend)").
- */
-val LixoDyslexiaFriendlyTypography = Typography(
-    headlineLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp,
-        letterSpacing = 0.6.sp
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        lineHeight = 30.sp,
-        letterSpacing = 0.5.sp
-    ),
-    titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 18.sp,
-        lineHeight = 26.sp,
-        letterSpacing = 0.4.sp
-    ),
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 20.sp,
-        lineHeight = 32.sp,
-        letterSpacing = 0.6.sp
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.4.sp
-    )
-)
+/** 4pt-based spacing scale */
+object LixoSpacing {
+    val XXS = 4.dp
+    val XS = 8.dp
+    val S = 12.dp
+    val M = 16.dp
+    val L = 20.dp
+    val XL = 24.dp
+    val XXL = 32.dp
+
+    val Screen = 16.dp
+}
+
+@Composable
+private fun rememberLexend(): FontFamily {
+    val regular = Font(Res.font.lexend_regular, FontWeight.Normal)
+    val medium = Font(Res.font.lexend_medium, FontWeight.Medium)
+    val semi = Font(Res.font.lexend_semibold, FontWeight.SemiBold)
+    val bold = Font(Res.font.lexend_bold, FontWeight.Bold)
+    val extra = Font(Res.font.lexend_extrabold, FontWeight.ExtraBold)
+    return remember(regular, medium, semi, bold, extra) {
+        FontFamily(regular, medium, semi, bold, extra)
+    }
+}
+
+@Composable
+private fun rememberLixoTypography(): Typography {
+    val f = rememberLexend()
+    return remember(f) {
+        Typography(
+            displayLarge = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 32.sp,
+                lineHeight = 40.sp,
+                letterSpacing = 0.sp
+            ),
+            headlineLarge = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 24.sp,
+                lineHeight = 32.sp,
+                letterSpacing = 0.sp
+            ),
+            headlineMedium = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                lineHeight = 28.sp,
+                letterSpacing = 0.sp
+            ),
+            titleLarge = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
+                letterSpacing = 0.sp
+            ),
+            titleMedium = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+                letterSpacing = 0.sp
+            ),
+            bodyLarge = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                lineHeight = 26.sp,
+                letterSpacing = 0.15.sp
+            ),
+            bodyMedium = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                letterSpacing = 0.15.sp
+            ),
+            labelLarge = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                letterSpacing = 0.6.sp
+            ),
+            labelMedium = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                letterSpacing = 0.4.sp
+            ),
+            labelSmall = TextStyle(
+                fontFamily = f,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                lineHeight = 14.sp,
+                letterSpacing = 0.3.sp
+            )
+        )
+    }
+}
 
 @Composable
 fun LixoTheme(content: @Composable () -> Unit) {
     val colorScheme = lightColorScheme(
-        primary = LixoColors.PrimaryActionGreen,
-        secondary = LixoColors.SecondaryBlue,
-        tertiary = LixoColors.AccentOrange,
-        background = LixoColors.SkyBackgroundBottom,
-        surface = LixoColors.CardSurface,
-        onPrimary = Color.White,
-        onSecondary = Color.White,
-        onBackground = LixoColors.SoftTextWhite,
-        onSurface = LixoColors.SoftTextWhite
+        primary = LixoColors.Green,
+        secondary = LixoColors.Blue,
+        tertiary = LixoColors.Orange,
+        background = LixoColors.Background,
+        surface = LixoColors.Surface,
+        surfaceVariant = LixoColors.SurfaceElevated,
+        onPrimary = LixoColors.OnColor,
+        onSecondary = LixoColors.OnColor,
+        onBackground = LixoColors.TextPrimary,
+        onSurface = LixoColors.TextPrimary,
+        error = LixoColors.Red
     )
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = LixoDyslexiaFriendlyTypography,
-        content = content
-    )
-}
-
-/**
- * Tactile child-friendly button with spring bounce animation and 3D lip (`project.md` §4:
- * "Tactile knappar, mikroanimationer... rymliga touch-ytor").
- */
-@Composable
-fun BouncyButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    containerColor: Color = LixoColors.PrimaryActionGreen,
-    lipColor: Color = LixoColors.PrimaryActionGreenLip,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
-    content: @Composable RowScope.() -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.94f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "bouncy_btn_scale"
-    )
-
-    val effectiveContainer = if (enabled) containerColor else Color(0xFF475569)
-    val effectiveLip = if (enabled) lipColor else Color(0xFF334155)
-
-    Box(
-        modifier = modifier
-            .scale(scale)
-            .clip(RoundedCornerShape(18.dp))
-            .background(effectiveLip)
-            .padding(bottom = if (isPressed && enabled) 1.dp else 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(effectiveContainer)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = enabled,
-                onClick = onClick
-            )
-            .padding(contentPadding),
-        contentAlignment = Alignment.Center
+        typography = rememberLixoTypography()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+        CompositionLocalProvider(
+            LocalContentColor provides LixoColors.TextPrimary,
             content = content
         )
-    }
-}
-
-/**
- * Universal Swedish TTS Speaker Icon Button (`project.md` §2 & §4:
- * "TTS: Appen måste ha svensk röst/tal (högtalarikoner för instruktioner, UI och ordförklaringar)").
- * Gracefully hides itself if Swedish TTS is unavailable on the current platform (`PlatformFeatureFlags`).
- */
-@Composable
-fun TtsIconButton(
-    textToSpeak: String,
-    ttsEngine: TextToSpeechEngine,
-    languageIso: String = "sv-SE",
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(42.dp)
-            .clip(CircleShape)
-            .background(LixoColors.SecondaryBlue)
-            .border(2.dp, Color.White.copy(alpha = 0.6f), CircleShape)
-            .clickable {
-                ttsEngine.speak(textToSpeak, languageIso = languageIso)
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "🔊",
-            fontSize = 18.sp
-        )
-    }
-}
-
-/**
- * Animated progress bar with star sparkles (`project.md` §4: "framstegsmätare med partiklar").
- */
-@Composable
-fun ParticleProgressBar(
-    progress: Float,
-    modifier: Modifier = Modifier
-) {
-    val clamped = progress.coerceIn(0f, 1f)
-    val animatedProgress by animateFloatAsState(
-        targetValue = clamped,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "particle_progress"
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(22.dp)
-            .clip(RoundedCornerShape(11.dp))
-            .background(Color(0xFF0F172A))
-            .border(2.dp, Color(0xFF334155), RoundedCornerShape(11.dp))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(animatedProgress)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(11.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(LixoColors.PrimaryActionGreen, LixoColors.StarGold)
-                    )
-                )
-        )
-        if (animatedProgress > 0.05f) {
-            Text(
-                text = "✨",
-                fontSize = 13.sp,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 6.dp)
-            )
-        }
     }
 }

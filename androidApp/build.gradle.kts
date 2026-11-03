@@ -16,6 +16,7 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0.0-mvp"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -44,4 +45,15 @@ dependencies {
     implementation(projects.composeApp)
     implementation(libs.androidx.activity.compose)
     implementation(compose.preview)
+    androidTestImplementation(compose.ui)
+    androidTestImplementation(compose.foundation)
+    androidTestImplementation(compose.material3)
+    androidTestImplementation(project.dependencies.platform(libs.firebase.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.gitlive.firebase.auth)
+    androidTestImplementation(libs.kotlinx.datetime)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

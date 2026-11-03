@@ -2,6 +2,7 @@ package se.lixo.app.ui.screens.social
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +15,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,16 +41,22 @@ import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
-import se.lixo.app.ui.theme.BouncyButton
+import se.lixo.app.ui.theme.LixoButton
+import se.lixo.app.ui.theme.LixoButtonVariant
+import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoColors
+import se.lixo.app.ui.theme.LixoIcon
+import se.lixo.app.ui.theme.LixoIcons
+import se.lixo.app.ui.theme.LixoProgressBar
 import se.lixo.app.ui.theme.LixoStrings
-import se.lixo.app.ui.theme.ParticleProgressBar
+import se.lixo.app.ui.theme.SegmentedTabs
+import se.lixo.app.ui.theme.StatPill
 
 /**
- * Trophies & Friend Gallery Screen (`project.md` §2 "Sociala funktioner" & "Epic/Legendary via prestationer"):
- * - Trophies tab: Shows progress toward Epic/Legendary achievements (speed, pronunciation in AI mode, weekly streaks).
- * - Friends tab: Add/remove friends by QR code or anonymous username. Shows friends' 3D avatars.
- *   No real names, no chats or DMs.
+ * Duolingo-styled Trophies & Friends Screen:
+ * - Equal-width segmented tabs for switching between "Troféer" and "Kompisar".
+ * - Clean achievement rows with rarity badges and progress meters.
+ * - Anonymous friend gallery with 3D avatars.
  */
 @Composable
 fun TrophiesAndFriendsScreen(
@@ -70,110 +79,147 @@ fun TrophiesAndFriendsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LixoColors.SkyBackgroundBottom)
+            .background(LixoColors.Background)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        // Tab Switcher
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            BouncyButton(
-                onClick = { selectedTab = 0 },
-                containerColor = if (selectedTab == 0) LixoColors.PrimaryActionGreen else LixoColors.CardSurfaceElevated,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("🏆 ${LixoStrings.TAB_TROPHIES}", color = Color.White)
-            }
-            BouncyButton(
-                onClick = { selectedTab = 1 },
-                containerColor = if (selectedTab == 1) LixoColors.SecondaryBlue else LixoColors.CardSurfaceElevated,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("🤝 ${LixoStrings.TAB_FRIENDS}", color = Color.White)
-            }
-        }
+        // Segmented Tabs
+        SegmentedTabs(
+            tabs = listOf(LixoStrings.TAB_TROPHIES, LixoStrings.TAB_FRIENDS),
+            selectedIndex = selectedTab,
+            onTabSelected = { selectedTab = it }
+        )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
 
         if (selectedTab == 0) {
+            // Trophies / Achievements
             Text(
                 text = LixoStrings.TROPHIES_SUBTITLE,
-                style = MaterialTheme.typography.bodyLarge,
-                color = LixoColors.MutedText
+                style = MaterialTheme.typography.bodyMedium,
+                color = LixoColors.TextSecondary
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
-            achievements.forEach { ach ->
-                val frac = (ach.currentCount.toFloat() / ach.targetCount.toFloat()).coerceIn(0f, 1f)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(LixoColors.CardSurface)
-                        .border(2.dp, Color(ach.rarity.hexColorPrimary), RoundedCornerShape(20.dp))
-                        .padding(16.dp)
-                ) {
-                    Row(
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                achievements.forEach { ach ->
+                    val frac = (ach.currentCount.toFloat() / ach.targetCount.toFloat()).coerceIn(0f, 1f)
+                    val rarityColor = LixoColors.rarityColor(ach.rarity)
+
+                    LixoCard(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        cornerRadius = 18.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
                     ) {
-                        Text(
-                            text = ach.titleSv,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = LixoColors.SoftTextWhite
-                        )
-                        Text(
-                            text = LixoStrings.rarityName(ach.rarity).uppercase(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(ach.rarity.hexColorPrimary)
-                        )
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(rarityColor.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        LixoIcon(
+                                            icon = LixoIcons.Trophy,
+                                            tint = rarityColor,
+                                            size = 22.dp
+                                        )
+                                    }
+                                    Spacer(Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = ach.titleSv,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = LixoColors.TextPrimary
+                                        )
+                                        Text(
+                                            text = ach.descriptionSv,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = LixoColors.TextSecondary
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(rarityColor.copy(alpha = 0.15f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = LixoStrings.rarityName(ach.rarity).uppercase(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = rarityColor
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.height(14.dp))
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                LixoProgressBar(
+                                    progress = frac,
+                                    fillColor = rarityColor,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = "${ach.currentCount}/${ach.targetCount}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LixoColors.TextSecondary
+                                )
+                            }
+                        }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = ach.descriptionSv,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LixoColors.MutedText
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    ParticleProgressBar(progress = frac)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "${ach.currentCount} / ${ach.targetCount}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LixoColors.StarGold
-                    )
                 }
             }
         } else {
+            // Friends Tab
             Text(
                 text = LixoStrings.FRIENDS_SUBTITLE,
-                style = MaterialTheme.typography.bodyLarge,
-                color = LixoColors.MutedText
+                style = MaterialTheme.typography.bodyMedium,
+                color = LixoColors.TextSecondary
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // Shareable QR / Username Code Box
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(LixoColors.CardSurface)
-                    .padding(14.dp)
+            // My friend code card
+            LixoCard(
+                modifier = Modifier.fillMaxWidth(),
+                backgroundColor = LixoColors.BlueTint,
+                borderColor = LixoColors.BlueBorder,
+                cornerRadius = 16.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
             ) {
-                Text(
-                    text = "📲 ${LixoStrings.FRIENDS_MY_CODE_PREFIX} $myQrPayload",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = LixoColors.StarGold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LixoIcon(icon = LixoIcons.Person, tint = LixoColors.Blue, size = 20.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "${LixoStrings.FRIENDS_MY_CODE_PREFIX} @${activeProfile.publicUsername ?: activeProfile.displayName.lowercase()}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = LixoColors.Blue
+                    )
+                }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
 
+            // Add friend field & button
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -182,61 +228,88 @@ fun TrophiesAndFriendsScreen(
                 OutlinedTextField(
                     value = friendQuery,
                     onValueChange = { friendQuery = it },
-                    label = { Text(LixoStrings.FRIENDS_INPUT_PLACEHOLDER) },
+                    placeholder = { Text(LixoStrings.FRIENDS_INPUT_PLACEHOLDER) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LixoColors.Blue,
+                        unfocusedBorderColor = LixoColors.Border
+                    ),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.weight(1f)
                 )
-                BouncyButton(
+                LixoButton(
                     onClick = {
                         if (friendQuery.isNotBlank()) {
                             val q = friendQuery
                             friendQuery = ""
                             scope.launch { onAddFriendByQuery(q) }
                         }
-                    }
+                    },
+                    variant = LixoButtonVariant.PRIMARY,
+                    height = 54.dp
                 ) {
-                    Text(LixoStrings.FRIENDS_ADD_BTN, color = Color.White)
+                    Text(
+                        text = LixoStrings.FRIENDS_ADD_BTN,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White
+                    )
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // Friend 3D Avatar Gallery (Zero chat/DM)
-            friends.forEach { friend ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(LixoColors.CardSurface)
-                        .border(1.5.dp, Color(0xFF334155), RoundedCornerShape(22.dp))
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Avatar3DViewport(
-                        appearance = friend.appearance,
-                        catalogById = catalogById,
-                        modifier = Modifier.size(110.dp),
-                        interactiveRotation = true
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "@${friend.username}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = LixoColors.SoftTextWhite
-                        )
-                        Text(
-                            text = "⭐ ${friend.totalStars} ${LixoStrings.MAP_STARS_LABEL}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LixoColors.StarGold
-                        )
-                    }
-                    BouncyButton(
-                        onClick = { onRemoveFriend(friend.userId) },
-                        containerColor = LixoColors.CardSurfaceElevated,
-                        lipColor = LixoColors.CardSurface
+            // Friend 3D Avatar Gallery
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                friends.forEach { friend ->
+                    LixoCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 18.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)
                     ) {
-                        Text(LixoStrings.FRIENDS_REMOVE_BTN, color = LixoColors.SoftTextWhite)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(LixoColors.Surface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Avatar3DViewport(
+                                    appearance = friend.appearance,
+                                    catalogById = catalogById,
+                                    modifier = Modifier.size(75.dp),
+                                    interactiveRotation = true
+                                )
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "@${friend.username}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LixoColors.TextPrimary
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                StatPill(
+                                    icon = LixoIcons.Star,
+                                    value = "${friend.totalStars}",
+                                    tint = LixoColors.GoldLip
+                                )
+                            }
+                            LixoButton(
+                                onClick = { onRemoveFriend(friend.userId) },
+                                variant = LixoButtonVariant.GHOST,
+                                height = 36.dp
+                            ) {
+                                Text(
+                                    text = LixoStrings.FRIENDS_REMOVE_BTN,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = LixoColors.TextMuted
+                                )
+                            }
+                        }
                     }
                 }
             }

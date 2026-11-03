@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -48,18 +51,23 @@ import se.lixo.app.platform.RecognizedSpeechToken
 import se.lixo.app.platform.SpeechRecognitionEngine
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
-import se.lixo.app.ui.theme.BouncyButton
+import se.lixo.app.ui.theme.LixoButton
+import se.lixo.app.ui.theme.LixoButtonVariant
+import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoColors
+import se.lixo.app.ui.theme.LixoIcon
+import se.lixo.app.ui.theme.LixoIcons
+import se.lixo.app.ui.theme.LixoProgressBar
 import se.lixo.app.ui.theme.LixoStrings
-import se.lixo.app.ui.theme.ParticleProgressBar
+import se.lixo.app.ui.theme.StatPill
 import se.lixo.app.ui.theme.TtsIconButton
 
 /**
- * Screen 1 (`project.md` §2 & §4):
- * - Start & Profile Selection: Tap large animated 3D avatar to enter.
- * - Zero-State Onboarding & Interactive Tutorial: Asks parent for microphone permission early,
- *   runs a real-time AI word-highlighting reading lesson (or falls back to Manual Reading Mode if declined),
- *   and unlocks the player's very first hat in the Universal Wardrobe.
+ * Duolingo-styled Onboarding & Profile Selection:
+ * - Crisp centered title and subtitle.
+ * - Profile cards with avatar, stats, and 3D lip.
+ * - Simple "+ Ny profil" card.
+ * - Clean two-step tutorial with microphone permission and reading demo.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -84,19 +92,24 @@ fun ProfileSelectAndTutorialScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LixoColors.SkyBackgroundBottom)
+                .background(LixoColors.Background)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
+            Spacer(Modifier.height(16.dp))
+
+            // Title & Speaker
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = LixoStrings.PROFILE_SELECT_TITLE,
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = LixoColors.SoftTextWhite
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = LixoColors.TextPrimary
                 )
                 if (showSwedishTtsButtons) {
                     Spacer(Modifier.width(12.dp))
@@ -107,30 +120,28 @@ fun ProfileSelectAndTutorialScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = LixoStrings.PROFILE_TAP_TO_START,
                 style = MaterialTheme.typography.bodyLarge,
-                color = LixoColors.MutedText
+                color = LixoColors.TextSecondary
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(32.dp))
 
-            // Large animated 3D avatar cards for each sibling profile
-            profiles.forEach { profile ->
-                val isSelected = profile.id == activeProfile.id
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(LixoColors.CardSurface)
-                        .border(
-                            width = if (isSelected) 3.dp else 1.dp,
-                            color = if (isSelected) LixoColors.StarGold else Color(0xFF334155),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                        .clickable {
+            // Profile Cards
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                profiles.forEach { profile ->
+                    val isSelected = profile.id == activeProfile.id
+                    LixoCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        selected = isSelected,
+                        cornerRadius = 20.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                        onClick = {
                             onSelectProfile(profile)
                             if (profile.tutorialCompleted) {
                                 onTutorialCompleted(profile)
@@ -138,45 +149,145 @@ fun ProfileSelectAndTutorialScreen(
                                 showTutorialStage = true
                             }
                         }
-                        .padding(18.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Avatar3DViewport(
-                            appearance = profile.appearance,
-                            catalogById = catalogById,
-                            modifier = Modifier.size(150.dp),
-                            interactiveRotation = false
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = profile.displayName,
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = LixoColors.SoftTextWhite
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = "⭐ ${profile.totalStars} ${LixoStrings.MAP_STARS_LABEL}   🔥 ${profile.currentStreakDays} ${LixoStrings.MAP_STREAK_LABEL}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = LixoColors.StarGold
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            BouncyButton(
-                                onClick = {
-                                    onSelectProfile(profile)
-                                    if (profile.tutorialCompleted) {
-                                        onTutorialCompleted(profile)
-                                    } else {
-                                        showTutorialStage = true
-                                    }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(110.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(LixoColors.Surface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Avatar3DViewport(
+                                    appearance = profile.appearance,
+                                    catalogById = catalogById,
+                                    modifier = Modifier.size(100.dp),
+                                    interactiveRotation = false
+                                )
+                            }
+
+                            Spacer(Modifier.width(16.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = profile.displayName,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = LixoColors.TextPrimary
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    StatPill(
+                                        icon = LixoIcons.Star,
+                                        value = "${profile.totalStars}",
+                                        tint = LixoColors.GoldLip
+                                    )
+                                    StatPill(
+                                        icon = LixoIcons.Flame,
+                                        value = "${profile.currentStreakDays}",
+                                        tint = LixoColors.Orange
+                                    )
                                 }
+                                Spacer(Modifier.height(10.dp))
+                                LixoButton(
+                                    onClick = {
+                                        onSelectProfile(profile)
+                                        if (profile.tutorialCompleted) {
+                                            onTutorialCompleted(profile)
+                                        } else {
+                                            showTutorialStage = true
+                                        }
+                                    },
+                                    variant = LixoButtonVariant.PRIMARY,
+                                    height = 40.dp,
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = LixoStrings.MAP_PLAY_LEVEL_BTN,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+
+                            LixoIcon(
+                                icon = LixoIcons.Check,
+                                tint = if (isSelected) LixoColors.Blue else Color.Transparent,
+                                size = 24.dp
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Add Sibling Card
+            if (!showCreateSiblingForm) {
+                LixoButton(
+                    onClick = { showCreateSiblingForm = true },
+                    variant = LixoButtonVariant.OUTLINE,
+                    height = 50.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LixoIcon(icon = LixoIcons.Plus, tint = LixoColors.Blue, size = 18.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = LixoStrings.PROFILE_ADD_SIBLING.uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = LixoColors.Blue
+                    )
+                }
+            } else {
+                LixoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 18.dp
+                ) {
+                    Column {
+                        Text(
+                            text = LixoStrings.PROFILE_NEW_NAME_LABEL,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = LixoColors.TextPrimary
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = newSiblingName,
+                            onValueChange = { newSiblingName = it },
+                            placeholder = { Text("T.ex. Saga") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LixoColors.Blue,
+                                unfocusedBorderColor = LixoColors.Border
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            LixoButton(
+                                onClick = { showCreateSiblingForm = false },
+                                variant = LixoButtonVariant.GHOST,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Avbryt", style = MaterialTheme.typography.labelLarge)
+                            }
+                            LixoButton(
+                                onClick = {
+                                    if (newSiblingName.isNotBlank()) {
+                                        onCreateSiblingProfile(newSiblingName)
+                                        newSiblingName = ""
+                                        showCreateSiblingForm = false
+                                    }
+                                },
+                                enabled = newSiblingName.isNotBlank(),
+                                variant = LixoButtonVariant.PRIMARY,
+                                modifier = Modifier.weight(1f)
                             ) {
                                 Text(
-                                    text = LixoStrings.MAP_PLAY_LEVEL_BTN,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    text = LixoStrings.PROFILE_CREATE_BTN,
+                                    style = MaterialTheme.typography.labelLarge,
                                     color = Color.White
                                 )
                             }
@@ -184,52 +295,9 @@ fun ProfileSelectAndTutorialScreen(
                     }
                 }
             }
-
-            Spacer(Modifier.height(16.dp))
-
-            if (!showCreateSiblingForm) {
-                BouncyButton(
-                    onClick = { showCreateSiblingForm = true },
-                    containerColor = LixoColors.SecondaryBlue,
-                    lipColor = LixoColors.SecondaryBlueLip
-                ) {
-                    Text(
-                        text = LixoStrings.PROFILE_ADD_SIBLING,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White
-                    )
-                }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(LixoColors.CardSurface)
-                        .padding(16.dp)
-                ) {
-                    OutlinedTextField(
-                        value = newSiblingName,
-                        onValueChange = { newSiblingName = it },
-                        label = { Text(LixoStrings.PROFILE_NEW_NAME_LABEL) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    BouncyButton(
-                        onClick = {
-                            if (newSiblingName.isNotBlank()) {
-                                onCreateSiblingProfile(newSiblingName)
-                                newSiblingName = ""
-                                showCreateSiblingForm = false
-                            }
-                        }
-                    ) {
-                        Text(LixoStrings.PROFILE_CREATE_BTN, color = Color.White)
-                    }
-                }
-            }
         }
     } else {
-        // Zero-State Interactive Reading Tutorial
+        // Interactive Tutorial Stage
         val alignmentEngine = remember { ForcedAlignmentEngine() }
         var selectedMode by remember { mutableStateOf<ReadingMode?>(null) }
         var sessionState by remember {
@@ -243,12 +311,10 @@ fun ProfileSelectAndTutorialScreen(
         }
         val scope = rememberCoroutineScope()
 
-        // Leaving the tutorial (back, completion) must always release the microphone.
         DisposableEffect(Unit) {
             onDispose { sttEngine.cancelListening() }
         }
 
-        // Feed real recognized speech into the alignment engine in AI mode.
         LaunchedEffect(selectedMode) {
             if (selectedMode == ReadingMode.AI_LISTENING) {
                 sttEngine.recognizedTokens.collect { tokens ->
@@ -257,7 +323,6 @@ fun ProfileSelectAndTutorialScreen(
             }
         }
 
-        // System back returns from the tutorial to the profile list.
         PlatformBackHandler(enabled = true) {
             sttEngine.cancelListening()
             showTutorialStage = false
@@ -279,16 +344,20 @@ fun ProfileSelectAndTutorialScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LixoColors.SkyBackgroundBottom)
+                .background(LixoColors.Background)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
+                .padding(horizontal = 20.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
                 Text(
                     text = LixoStrings.TUTORIAL_WELCOME_TITLE,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = LixoColors.SoftTextWhite
+                    style = MaterialTheme.typography.displayLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = LixoColors.TextPrimary
                 )
                 if (showSwedishTtsButtons) {
                     Spacer(Modifier.width(10.dp))
@@ -299,18 +368,20 @@ fun ProfileSelectAndTutorialScreen(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // No avatar during reading: it is shown only on the profile and main (map) screens.
             if (selectedMode == null) {
                 Text(
                     text = LixoStrings.TUTORIAL_MIC_PROMPT,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = LixoColors.SoftTextWhite,
-                    modifier = Modifier.padding(vertical = 12.dp)
+                    color = LixoColors.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
 
-                BouncyButton(
+                Spacer(Modifier.height(32.dp))
+
+                LixoButton(
                     onClick = {
                         scope.launch {
                             val granted = sttEngine.requestMicrophonePermission()
@@ -329,14 +400,22 @@ fun ProfileSelectAndTutorialScreen(
                             }
                         }
                     },
+                    variant = LixoButtonVariant.PRIMARY,
+                    height = 52.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("🎤 ${LixoStrings.TUTORIAL_ALLOW_MIC_BTN}", color = Color.White)
+                    LixoIcon(icon = LixoIcons.Mic, tint = Color.White, size = 20.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = LixoStrings.TUTORIAL_ALLOW_MIC_BTN.uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White
+                    )
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                BouncyButton(
+                LixoButton(
                     onClick = {
                         selectedMode = ReadingMode.MANUAL
                         sessionState = alignmentEngine.startSession(
@@ -345,36 +424,44 @@ fun ProfileSelectAndTutorialScreen(
                             isTimedChallengeRequested = false
                         )
                     },
-                    containerColor = LixoColors.SecondaryBlue,
-                    lipColor = LixoColors.SecondaryBlueLip,
+                    variant = LixoButtonVariant.OUTLINE,
+                    height = 50.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(LixoStrings.TUTORIAL_MANUAL_FALLBACK_BTN, color = Color.White)
+                    Text(
+                        text = LixoStrings.TUTORIAL_MANUAL_FALLBACK_BTN,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = LixoColors.Blue
+                    )
                 }
 
                 if (activeProfile.tutorialSkippableByParent) {
                     Spacer(Modifier.height(12.dp))
-                    BouncyButton(
+                    LixoButton(
                         onClick = { onTutorialCompleted(activeProfile) },
-                        containerColor = LixoColors.CardSurfaceElevated,
-                        lipColor = LixoColors.CardSurface
+                        variant = LixoButtonVariant.GHOST,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(LixoStrings.TUTORIAL_SKIP_BTN, color = LixoColors.SoftTextWhite)
+                        Text(
+                            text = LixoStrings.TUTORIAL_SKIP_BTN,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = LixoColors.TextMuted
+                        )
                     }
                 }
             } else {
-                ParticleProgressBar(
+                LixoProgressBar(
                     progress = sessionState.progressFraction,
                     modifier = Modifier.padding(vertical = 12.dp)
                 )
 
+                Spacer(Modifier.height(16.dp))
+
                 // Real-time word highlighting box
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(LixoColors.CardSurface)
-                        .padding(18.dp)
+                LixoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 20.dp,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp)
                 ) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -382,33 +469,39 @@ fun ProfileSelectAndTutorialScreen(
                     ) {
                         sessionState.words.forEachIndexed { idx, token ->
                             val isCurrent = idx == sessionState.currentWordIndex && !sessionState.isCompleted
-                            val bg = when {
-                                token.isCompleted -> LixoColors.PrimaryActionGreen.copy(alpha = 0.28f)
-                                isCurrent -> LixoColors.StarGold
-                                else -> Color.Transparent
+                            val (bg, border, fg) = when {
+                                isCurrent -> Triple(LixoColors.BlueTint, LixoColors.Blue, LixoColors.Blue)
+                                token.isCompleted -> Triple(LixoColors.GreenTint, LixoColors.GreenLip, LixoColors.GreenLip)
+                                else -> Triple(Color.Transparent, Color.Transparent, LixoColors.TextPrimary)
                             }
-                            val textColor = if (isCurrent) Color(0xFF0F172A) else LixoColors.SoftTextWhite
-                            Text(
-                                text = token.displayText,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                color = textColor,
+                            Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(bg)
+                                    .then(
+                                        if (isCurrent) Modifier.border(1.5.dp, border, RoundedCornerShape(8.dp))
+                                        else Modifier
+                                    )
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
+                            ) {
+                                Text(
+                                    text = token.displayText,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Medium,
+                                    color = fg
+                                )
+                            }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
 
                 if (!sessionState.isCompleted) {
                     if (selectedMode == ReadingMode.AI_LISTENING) {
-                        BouncyButton(
+                        LixoButton(
                             onClick = {
-                                val nextWord = sessionState.currentWord?.normalizedText ?: return@BouncyButton
+                                val nextWord = sessionState.currentWord?.normalizedText ?: return@LixoButton
                                 sessionState = alignmentEngine.processRecognizedTokens(
                                     state = sessionState,
                                     spokenTokens = listOf(
@@ -421,52 +514,79 @@ fun ProfileSelectAndTutorialScreen(
                                     )
                                 )
                             },
+                            variant = LixoButtonVariant.PRIMARY,
+                            height = 52.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("🎙️ ${LixoStrings.READING_SIMULATE_VOICE_BTN}", color = Color.White)
+                            LixoIcon(icon = LixoIcons.Mic, tint = Color.White, size = 20.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = LixoStrings.READING_SIMULATE_VOICE_BTN.uppercase(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
                         }
                     } else {
-                        BouncyButton(
+                        LixoButton(
                             onClick = {
                                 sessionState = alignmentEngine.tryCompleteManualReading(sessionState)
                             },
                             enabled = sessionState.isManualCompleteButtonEnabled,
+                            variant = LixoButtonVariant.PRIMARY,
+                            height = 52.dp,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             val label = if (sessionState.isManualCompleteButtonEnabled) {
-                                LixoStrings.READING_MANUAL_DONE_BTN
+                                LixoStrings.READING_MANUAL_DONE_BTN.uppercase()
                             } else {
-                                "${LixoStrings.READING_MANUAL_CHARGING_LABEL} (${sessionState.manualModeRemainingSeconds} s)"
+                                "${LixoStrings.READING_MANUAL_CHARGING_LABEL} (${sessionState.manualModeRemainingSeconds}s)"
                             }
-                            Text(label, color = Color.White)
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
                         }
                     }
                 } else {
                     // Tutorial Completed Celebration!
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(LixoColors.rarityBrush(se.lixo.app.domain.model.Rarity.COMMON))
-                            .padding(18.dp),
-                        contentAlignment = Alignment.Center
+                    LixoCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        borderColor = LixoColors.Green,
+                        backgroundColor = LixoColors.GreenTint,
+                        cornerRadius = 24.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "🎉 ⭐⭐⭐ 🎉",
-                                style = MaterialTheme.typography.headlineLarge
-                            )
-                            Spacer(Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.Center) {
+                                for (i in 1..3) {
+                                    LixoIcon(
+                                        icon = LixoIcons.Star,
+                                        tint = LixoColors.Gold,
+                                        size = 36.dp,
+                                        modifier = Modifier.padding(horizontal = 4.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
                             Text(
                                 text = LixoStrings.TUTORIAL_REWARD_BANNER,
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White
+                                fontWeight = FontWeight.Bold,
+                                color = LixoColors.GreenLip,
+                                textAlign = TextAlign.Center
                             )
-                            Spacer(Modifier.height(14.dp))
-                            BouncyButton(
-                                onClick = { onTutorialCompleted(activeProfile) }
+                            Spacer(Modifier.height(18.dp))
+                            LixoButton(
+                                onClick = { onTutorialCompleted(activeProfile) },
+                                variant = LixoButtonVariant.PRIMARY,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(LixoStrings.TUTORIAL_CONTINUE_TO_MAP_BTN, color = Color.White)
+                                Text(
+                                    text = LixoStrings.TUTORIAL_CONTINUE_TO_MAP_BTN.uppercase(),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = Color.White
+                                )
                             }
                         }
                     }

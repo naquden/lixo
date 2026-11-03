@@ -55,7 +55,13 @@ import se.lixo.app.ui.screens.reading.ReadingActivityScreen
 import se.lixo.app.ui.screens.social.TrophiesAndFriendsScreen
 import se.lixo.app.ui.screens.wardrobe.WardrobeScreen
 import se.lixo.app.ui.theme.BouncyButton
+import se.lixo.app.ui.theme.LixoBottomNavBar
+import se.lixo.app.ui.theme.LixoButton
+import se.lixo.app.ui.theme.LixoButtonVariant
+import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoColors
+import se.lixo.app.ui.theme.LixoIcons
+import se.lixo.app.ui.theme.LixoNavItem
 import se.lixo.app.ui.theme.LixoStrings
 import se.lixo.app.ui.theme.LixoTheme
 
@@ -266,73 +272,34 @@ fun LixoApp(
                     // Root Box already applies safeDrawingPadding; avoid double insets.
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(LixoColors.CardSurface)
-                                .padding(horizontal = 8.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            BouncyButton(
-                                onClick = { currentDestination = LixoMainDestination.MAP_HOME },
-                                containerColor = if (currentDestination == LixoMainDestination.MAP_HOME)
-                                    LixoColors.PrimaryActionGreen else LixoColors.CardSurfaceElevated,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "🗺️ ${LixoStrings.NAV_MAP}",
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelLarge
+                        LixoBottomNavBar(
+                            items = listOf(
+                                LixoNavItem(
+                                    icon = LixoIcons.Home,
+                                    label = LixoStrings.NAV_MAP,
+                                    selected = currentDestination == LixoMainDestination.MAP_HOME,
+                                    onClick = { currentDestination = LixoMainDestination.MAP_HOME }
+                                ),
+                                LixoNavItem(
+                                    icon = LixoIcons.Shirt,
+                                    label = LixoStrings.NAV_WARDROBE,
+                                    selected = currentDestination == LixoMainDestination.WARDROBE,
+                                    onClick = { currentDestination = LixoMainDestination.WARDROBE }
+                                ),
+                                LixoNavItem(
+                                    icon = LixoIcons.Trophy,
+                                    label = LixoStrings.NAV_TROPHIES_FRIENDS,
+                                    selected = currentDestination == LixoMainDestination.TROPHIES_AND_FRIENDS,
+                                    onClick = { currentDestination = LixoMainDestination.TROPHIES_AND_FRIENDS }
+                                ),
+                                LixoNavItem(
+                                    icon = LixoIcons.Shield,
+                                    label = LixoStrings.NAV_PARENT_SETTINGS,
+                                    selected = currentDestination == LixoMainDestination.PARENT_SETTINGS,
+                                    onClick = { currentDestination = LixoMainDestination.PARENT_SETTINGS }
                                 )
-                            }
-                            BouncyButton(
-                                onClick = { currentDestination = LixoMainDestination.WARDROBE },
-                                containerColor = if (currentDestination == LixoMainDestination.WARDROBE)
-                                    LixoColors.PrimaryActionGreen else LixoColors.CardSurfaceElevated,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "👑 ${LixoStrings.NAV_WARDROBE}",
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                            BouncyButton(
-                                onClick = { currentDestination = LixoMainDestination.TROPHIES_AND_FRIENDS },
-                                containerColor = if (currentDestination == LixoMainDestination.TROPHIES_AND_FRIENDS)
-                                    LixoColors.PrimaryActionGreen else LixoColors.CardSurfaceElevated,
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
-                                modifier = Modifier.weight(1.2f)
-                            ) {
-                                Text(
-                                    text = "🏆 ${LixoStrings.NAV_TROPHIES_FRIENDS}",
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                            BouncyButton(
-                                onClick = { currentDestination = LixoMainDestination.PARENT_SETTINGS },
-                                containerColor = if (currentDestination == LixoMainDestination.PARENT_SETTINGS)
-                                    LixoColors.SecondaryBlue else LixoColors.CardSurfaceElevated,
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
-                            ) {
-                                Text(
-                                    text = "⚙️",
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                        }
+                            )
+                        )
                     }
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
@@ -417,43 +384,51 @@ fun LixoApp(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xAA000000))
+                        .background(LixoColors.Scrim)
                         .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(LixoColors.CardSurface)
-                            .border(2.dp, LixoColors.StarGold, RoundedCornerShape(24.dp))
-                            .padding(22.dp)
+                    LixoCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 24.dp,
+                        contentPadding = PaddingValues(24.dp)
                     ) {
-                        Text(
-                            text = LixoStrings.CRASHLYTICS_DIALOG_TITLE,
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = LixoColors.StarGold
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = LixoStrings.CRASHLYTICS_DIALOG_BODY,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = LixoColors.SoftTextWhite
-                        )
-                        Spacer(Modifier.height(18.dp))
-                        BouncyButton(
-                            onClick = { repository.setCrashlyticsConsent(true) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(LixoStrings.CRASHLYTICS_ACCEPT_BTN, color = Color.White)
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        BouncyButton(
-                            onClick = { repository.setCrashlyticsConsent(false) },
-                            containerColor = LixoColors.CardSurfaceElevated,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(LixoStrings.CRASHLYTICS_DECLINE_BTN, color = Color.White)
+                        Column {
+                            Text(
+                                text = LixoStrings.CRASHLYTICS_DIALOG_TITLE,
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = LixoColors.TextPrimary
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                text = LixoStrings.CRASHLYTICS_DIALOG_BODY,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = LixoColors.TextSecondary
+                            )
+                            Spacer(Modifier.height(20.dp))
+                            LixoButton(
+                                onClick = { repository.setCrashlyticsConsent(true) },
+                                variant = LixoButtonVariant.PRIMARY,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = LixoStrings.CRASHLYTICS_ACCEPT_BTN,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = Color.White
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            LixoButton(
+                                onClick = { repository.setCrashlyticsConsent(false) },
+                                variant = LixoButtonVariant.GHOST,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = LixoStrings.CRASHLYTICS_DECLINE_BTN,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = LixoColors.TextSecondary
+                                )
+                            }
                         }
                     }
                 }

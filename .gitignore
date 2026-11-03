@@ -46,3 +46,6 @@ DerivedData/
 ehthumbs.db
 Thumbs.db
 Desktop.ini
+
+# Generated screenshots
+screenshots/
