@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 import unittest
 
@@ -7,10 +8,16 @@ from tools.asset_pipeline.blender_avatar_pipeline import (
     inject_modular_sockets_into_gltf_dict,
     inspect_glb_file,
 )
-from tools.content_pipeline.generate_content import (
-    generate_seed_bundle,
-    validate_seed_bundle,
+
+SEED_BUNDLE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "composeApp/src/commonMain/composeResources/files/seed_campaign_content.json"
 )
+
+
+def load_seed_bundle() -> dict:
+    # The bundled JSON is the source of truth for curriculum content (the generator script was removed).
+    return json.loads(SEED_BUNDLE_PATH.read_text(encoding="utf-8"))
 
 
 class LixoPipelineAndSpecificationTests(unittest.TestCase):
@@ -19,12 +26,38 @@ class LixoPipelineAndSpecificationTests(unittest.TestCase):
         cls.repo_root = Path(__file__).resolve().parents[2]
 
     def test_seed_bundle_passes_all_mvp_constraints(self) -> None:
-        bundle = generate_seed_bundle()
-        errors = validate_seed_bundle(bundle)
-        self.assertEqual(errors, [], f"Seed validation failed: {errors}")
+        bundle = load_seed_bundle()
         self.assertEqual(len(bundle["levels"]), 100)
         self.assertEqual(len(bundle["tasks"]), 100)
+        self.assertEqual([lvl["order"] for lvl in bundle["levels"]], list(range(1, 101)))
         self.assertGreaterEqual(len(bundle["wardrobeItems"]), 100)
+        task_ids = {t["id"] for t in bundle["tasks"]}
+        for lvl in bundle["levels"]:
+            self.assertIn(lvl["taskId"], task_ids)
+        riddarvagn = next(d for d in bundle["dictionary"] if d["wordNormalized"] == "riddarvagn")
+        self.assertEqual(riddarvagn["syllables"], "rid-dar-vagn")
+
+    def test_swedish_stories_are_unique_and_progress_in_difficulty(self) -> None:
+        bundle = load_seed_bundle()
+        tasks_by_id = {t["id"]: t for t in bundle["tasks"]}
+        sv_levels = sorted(
+            (lvl for lvl in bundle["levels"] if lvl["subject"] == "SWEDISH"), key=lambda lvl: lvl["order"]
+        )
+        self.assertEqual(len(sv_levels), 40)
+        texts = [tasks_by_id[lvl["taskId"]]["textContent"] for lvl in sv_levels]
+        self.assertEqual(len(set(texts)), 40, "Every Swedish level must have its own story")
+
+        def avg_words_per_sentence(course_id: str) -> float:
+            course_texts = [
+                tasks_by_id[lvl["taskId"]]["textContent"] for lvl in sv_levels if lvl["courseId"] == course_id
+            ]
+            words = sum(len(re.findall(r"\w+", t)) for t in course_texts)
+            sentences = sum(len([s for s in re.split(r"[.!?]+", t) if re.search(r"\w", s)]) for t in course_texts)
+            return words / sentences
+
+        sv1, sv2, sv3 = (avg_words_per_sentence(c) for c in ("course_sv_1", "course_sv_2", "course_sv_3"))
+        self.assertLess(sv1, sv2)
+        self.assertLess(sv2, sv3)
 
     def test_3d_sample_glb_binary_inspection(self) -> None:
         glb_path = self.repo_root / "3d_sample.glb"
