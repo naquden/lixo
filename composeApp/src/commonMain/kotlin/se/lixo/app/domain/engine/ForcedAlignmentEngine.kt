@@ -12,7 +12,7 @@ data class StoryWordToken(
     val displayText: String,
     val normalizedText: String,
     val isCompleted: Boolean = false,
-    val wasSupportedOrSkipped: Boolean = false
+    val needsPractice: Boolean = false
 )
 
 data class ReadingAlignmentSessionState(
@@ -24,7 +24,8 @@ data class ReadingAlignmentSessionState(
     val struggledWordsNormalized: Set<String> = emptySet(),
     val elapsedMillis: Long = 0L,
     val manualModeMinRequiredMillis: Long = 0L,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val isAwaitingUnreadWords: Boolean = false
 ) {
     val progressFraction: Float
         get() = if (words.isEmpty()) 1f else (currentWordIndex.toFloat() / words.size.toFloat()).coerceIn(0f, 1f)
@@ -132,15 +133,47 @@ class ForcedAlignmentEngine {
         // Mode switch mid-session is disallowed; Manual mode ignores STT tokens
         if (state.mode != ReadingMode.AI_LISTENING || state.isCompleted) return state
 
-        var workingWords = state.words.toMutableList()
+        val workingWords = state.words.toMutableList()
         var cursor = state.currentWordIndex
         var clearedStuck = state.isWordStuckSupportVisible
+        var struggled = state.struggledWordsNormalized
 
         for (spoken in spokenTokens) {
-            if (cursor >= workingWords.size) break
             val spokenNorm = normalizeForAlignment(spoken.normalizedWord.ifBlank { spoken.rawWord })
             if (spokenNorm.isEmpty()) continue
 
+            // 1. The current cursor word takes priority: a child correctly reading the word they're
+            // actually on must never be credited to an earlier yellow word just because it repeats
+            // elsewhere in the story (e.g. "en", "i", "och").
+            val cursorMatched = cursor < workingWords.size &&
+                isMatch(spokenNorm, workingWords[cursor].normalizedText, spoken.confidence, confidenceThreshold)
+            if (cursorMatched) {
+                workingWords[cursor] = workingWords[cursor].copy(isCompleted = true)
+                clearedStuck = false
+                cursor = (cursor + 1 until workingWords.size).firstOrNull { !workingWords[it].isCompleted }
+                    ?: workingWords.size
+                continue
+            }
+
+            // 2. The child can go back and read an earlier yellow (needsPractice, unread) word at any time.
+            var yellowMatchedIndex = -1
+            for (i in workingWords.indices) {
+                val candidate = workingWords[i]
+                if (!candidate.needsPractice || candidate.isCompleted) continue
+                if (isMatch(spokenNorm, candidate.normalizedText, spoken.confidence, confidenceThreshold)) {
+                    yellowMatchedIndex = i
+                    break
+                }
+            }
+            if (yellowMatchedIndex != -1) {
+                // Keep needsPractice so it still shows up (soft yellow) as "read, but was flagged" in review.
+                workingWords[yellowMatchedIndex] = workingWords[yellowMatchedIndex].copy(isCompleted = true)
+                continue
+            }
+
+            if (cursor >= workingWords.size) continue
+
+            // 3. Lookahead: the child may have skipped ahead past the cursor word.
             val maxLookaheadIndex = min(
                 workingWords.size - 1,
                 cursor + BalanceConfig.STT_LOOKAHEAD_WINDOW_WORDS - 1
@@ -149,30 +182,50 @@ class ForcedAlignmentEngine {
             var matchedIndex = -1
             for (candidateIdx in cursor..maxLookaheadIndex) {
                 val targetNorm = workingWords[candidateIdx].normalizedText
-                val similarity = computeSwedishPhoneticSimilarity(spokenNorm, targetNorm)
-                val weightedScore = similarity * spoken.confidence.coerceIn(0.6f, 1.0f)
-                if (similarity >= confidenceThreshold || weightedScore >= confidenceThreshold) {
+                if (isMatch(spokenNorm, targetNorm, spoken.confidence, confidenceThreshold)) {
                     matchedIndex = candidateIdx
                     break
                 }
             }
 
             if (matchedIndex != -1) {
-                for (i in cursor..matchedIndex) {
-                    workingWords[i] = workingWords[i].copy(isCompleted = true)
+                // Words between the cursor and the match were skipped over (misread/not heard): flag them
+                // yellow, but they stay unread (not completed) so the child is never blocked.
+                if (matchedIndex > cursor) {
+                    for (i in cursor until matchedIndex) {
+                        workingWords[i] = workingWords[i].copy(needsPractice = true)
+                        struggled = struggled + workingWords[i].normalizedText
+                    }
                 }
-                cursor = matchedIndex + 1
+                workingWords[matchedIndex] = workingWords[matchedIndex].copy(isCompleted = true)
                 clearedStuck = false
+                // Cursor advances to the next word that still needs to be read (skipping already-completed ones).
+                cursor = (matchedIndex + 1 until workingWords.size).firstOrNull { !workingWords[it].isCompleted }
+                    ?: workingWords.size
             }
         }
 
-        val finished = cursor >= workingWords.size
+        val allCompleted = workingWords.all { it.isCompleted }
+        val reachedEnd = cursor >= workingWords.size
         return state.copy(
             words = workingWords,
             currentWordIndex = cursor,
-            isWordStuckSupportVisible = if (finished) false else clearedStuck,
-            isCompleted = finished
+            isWordStuckSupportVisible = if (allCompleted) false else clearedStuck,
+            struggledWordsNormalized = struggled,
+            isCompleted = allCompleted,
+            isAwaitingUnreadWords = reachedEnd && !allCompleted
         )
+    }
+
+    /**
+     * Shared similarity check used by the cursor, yellow-word, and lookahead match passes in
+     * [processRecognizedTokens]: true when the spoken token is close enough (raw or confidence-weighted)
+     * to the target word.
+     */
+    private fun isMatch(spokenNorm: String, targetNorm: String, confidence: Float, confidenceThreshold: Float): Boolean {
+        val similarity = computeSwedishPhoneticSimilarity(spokenNorm, targetNorm)
+        val weightedScore = similarity * confidence.coerceIn(0.6f, 1.0f)
+        return similarity >= confidenceThreshold || weightedScore >= confidenceThreshold
     }
 
     /**
@@ -194,35 +247,20 @@ class ForcedAlignmentEngine {
             state.struggledWordsNormalized
         }
 
+        // Hesitation only flags the word yellow (still has to be read); it never skips it.
+        val nextWords = if (showSupport && state.currentWord != null) {
+            state.words.mapIndexed { idx, word ->
+                if (idx == state.currentWordIndex) word.copy(needsPractice = true) else word
+            }
+        } else {
+            state.words
+        }
+
         return state.copy(
+            words = nextWords,
             elapsedMillis = nextElapsed,
             isWordStuckSupportVisible = showSupport || state.isWordStuckSupportVisible,
             struggledWordsNormalized = nextStruggled
-        )
-    }
-
-    /**
-     * Called when the child taps "Gå vidare" / uses gentle support on a tricky word.
-     * No star deduction is applied (`project.md` §2: "Ingen hård underkänning... barnet kan alltid
-     * gå vidare utan avdrag. Fall loggas till föräldravyn som 'ord som kan behöva övas'").
-     */
-    fun advanceCurrentWordWithGentleSupport(
-        state: ReadingAlignmentSessionState
-    ): ReadingAlignmentSessionState {
-        if (state.mode != ReadingMode.AI_LISTENING || state.isCompleted) return state
-        val idx = state.currentWordIndex
-        val word = state.words.getOrNull(idx) ?: return state
-
-        val updatedWords = state.words.toMutableList()
-        updatedWords[idx] = word.copy(isCompleted = true, wasSupportedOrSkipped = true)
-        val nextIdx = idx + 1
-
-        return state.copy(
-            words = updatedWords,
-            currentWordIndex = nextIdx,
-            isWordStuckSupportVisible = false,
-            struggledWordsNormalized = state.struggledWordsNormalized + word.normalizedText,
-            isCompleted = nextIdx >= updatedWords.size
         )
     }
 
@@ -277,7 +315,7 @@ class ForcedAlignmentEngine {
             else -> 1
         }
 
-        val noSkippedWords = state.words.none { it.wasSupportedOrSkipped }
+        val noStruggledWords = state.words.none { it.needsPractice }
         val beatTimeChallenge = state.isTimedChallenge && safeSeconds <= timeRequirementSeconds
 
         return ReadingScoreResult(
@@ -285,7 +323,7 @@ class ForcedAlignmentEngine {
             achievedWpm = achievedWpm,
             referenceWpm = referenceWpm,
             eligibleForGift = true,
-            eligibleForPronunciationAchievement = noSkippedWords,
+            eligibleForPronunciationAchievement = noStruggledWords,
             eligibleForTimedChallengeReward = beatTimeChallenge,
             struggledWordsToLog = state.struggledWordsNormalized.toList()
         )

@@ -25,6 +25,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +43,7 @@ import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.DailyActivityRecord
 import se.lixo.app.domain.model.EquipmentSlot
+import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.platform.EmailLinkAuthDispatcher
 import se.lixo.app.platform.PlatformBackHandler
@@ -125,6 +128,11 @@ fun LixoApp(
     }
     var activeGameplayLevel by remember { mutableStateOf<CampaignLevel?>(null) }
 
+    // Selected subject "world" on the campaign map (plan: "Ämnesväljare med tre världar").
+    // Survives tab switches/rotation; after finishing a level the child returns to the same world.
+    val subjectSaver = remember { Saver<Subject, String>(save = { it.name }, restore = { Subject.valueOf(it) }) }
+    var selectedWorld by rememberSaveable(stateSaver = subjectSaver) { mutableStateOf(Subject.SWEDISH) }
+
     // System back: close level -> back to map -> back to profile selection -> (system exits).
     PlatformBackHandler(
         enabled = activeGameplayLevel != null ||
@@ -158,6 +166,7 @@ fun LixoApp(
                         sttEngine = sttEngine,
                         ttsEngine = ttsEngine,
                         showSwedishTtsButtons = showSwedishTts,
+                        showDebugSimulationControls = featureFlags.isDebugBuild,
                         lookupDictionary = { repository.lookupDictionaryWord(it) },
                         onFinishReadingSession = { scoreResult, elapsedSeconds ->
                             scoreResult.struggledWordsToLog.forEach { word ->
@@ -313,6 +322,8 @@ fun LixoApp(
                                     progressionEngine = progressionEngine,
                                     ttsEngine = ttsEngine,
                                     showSwedishTtsButtons = showSwedishTts,
+                                    selectedSubject = selectedWorld,
+                                    onSelectSubject = { selectedWorld = it },
                                     onSelectLevel = { activeGameplayLevel = it },
                                     onSwitchProfileClick = {
                                         currentDestination = LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL

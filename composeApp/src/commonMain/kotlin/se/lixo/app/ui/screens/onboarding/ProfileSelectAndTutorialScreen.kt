@@ -468,7 +468,9 @@ fun ProfileSelectAndTutorialScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         sessionState.words.forEachIndexed { idx, token ->
-                            val isCurrent = idx == sessionState.currentWordIndex && !sessionState.isCompleted
+                            val isCurrent = idx == sessionState.currentWordIndex &&
+                                sessionState.mode == ReadingMode.AI_LISTENING &&
+                                !sessionState.isCompleted
                             val (bg, border, fg) = when {
                                 isCurrent -> Triple(LixoColors.BlueTint, LixoColors.Blue, LixoColors.Blue)
                                 token.isCompleted -> Triple(LixoColors.GreenTint, LixoColors.GreenLip, LixoColors.GreenLip)

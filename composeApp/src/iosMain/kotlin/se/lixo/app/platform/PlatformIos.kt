@@ -18,12 +18,14 @@ import platform.Foundation.NSUserDefaults
  * as required by project.md §1 ("Om en funktion inte är tillgänglig på en plattform
  * inaktiveras den funktionen på den plattformen (graceful degradation via expect/actual + feature flags)").
  */
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class)
 actual class PlatformFeatureFlags actual constructor() {
     actual val platformName: String = "iOS"
     actual val isSwedishTtsSupported: Boolean =
         AVSpeechSynthesisVoice.voiceWithLanguage("sv-SE") != null
     actual val isOnDeviceSttSupported: Boolean = true
     actual val isNative3DSceneViewSupported: Boolean = true
+    actual val isDebugBuild: Boolean = kotlin.native.Platform.isDebugBinary
 }
 
 class IosSpeechRecognitionEngine : SpeechRecognitionEngine {

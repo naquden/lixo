@@ -3,6 +3,7 @@ package se.lixo.app.platform
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -77,6 +78,9 @@ actual class PlatformFeatureFlags actual constructor() {
     actual val isSwedishTtsSupported: Boolean = true
     actual val isOnDeviceSttSupported: Boolean = true
     actual val isNative3DSceneViewSupported: Boolean = true
+    actual val isDebugBuild: Boolean =
+        (AndroidPlatformContext.applicationContext?.applicationInfo?.flags ?: 0) and
+            ApplicationInfo.FLAG_DEBUGGABLE != 0
 }
 
 @Composable

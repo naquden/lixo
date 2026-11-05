@@ -21,8 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -36,10 +34,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
@@ -66,9 +68,26 @@ import se.lixo.app.ui.theme.TtsIconButton
  * Duolingo-styled Reading Activity Screen:
  * - Two distinct cards for mode selection (AI speech recognition vs. self-reading).
  * - Story card on clean white surface with legible Lexend typography.
- * - Word tracking with soft rounded chips.
- * - Gentle syllable & dictionary support card when tapping any word.
+ * - Word tracking with soft rounded chips (blue = current, yellow = flagged/needs practice, green = done).
+ * - Tap-any-word help popup (syllables, explanation, listen) that never blocks reading.
  */
+private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: Dp = 1.5.dp): Modifier =
+    this.drawWithCache {
+        val stroke = Stroke(
+            width = strokeWidth.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f)
+        )
+        val radiusPx = cornerRadius.toPx()
+        onDrawWithContent {
+            drawContent()
+            drawRoundRect(
+                color = color,
+                cornerRadius = CornerRadius(radiusPx, radiusPx),
+                style = stroke
+            )
+        }
+    }
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReadingActivityScreen(
@@ -78,6 +97,7 @@ fun ReadingActivityScreen(
     sttEngine: SpeechRecognitionEngine,
     ttsEngine: TextToSpeechEngine,
     showSwedishTtsButtons: Boolean,
+    showDebugSimulationControls: Boolean,
     lookupDictionary: (String) -> DictionaryEntry,
     onFinishReadingSession: (ReadingScoreResult, Int) -> LevelCompletionOutcome,
     onCloseToMap: () -> Unit
@@ -85,7 +105,6 @@ fun ReadingActivityScreen(
     val storyText = task.textContent ?: ""
     var modeLocked by remember { mutableStateOf(false) }
     var chosenMode by remember { mutableStateOf(ReadingMode.AI_LISTENING) }
-    var timedChallengeChecked by remember { mutableStateOf(false) }
 
     var sessionState by remember {
         mutableStateOf(
@@ -98,8 +117,7 @@ fun ReadingActivityScreen(
     }
 
     var millisSinceLastWordAdvance by remember { mutableLongStateOf(0L) }
-    var inspectedDictionaryEntry by remember { mutableStateOf<DictionaryEntry?>(null) }
-    var showSyllablesInline by remember { mutableStateOf(false) }
+    var helpPopupWordIndex by remember { mutableStateOf<Int?>(null) }
     var finalOutcome by remember { mutableStateOf<Pair<ReadingScoreResult, LevelCompletionOutcome>?>(null) }
 
     val scope = rememberCoroutineScope()
@@ -198,8 +216,14 @@ fun ReadingActivityScreen(
                 ) {
                     LixoIcon(icon = LixoIcons.Timer, tint = LixoColors.Orange, size = 16.dp)
                     Spacer(Modifier.width(4.dp))
+                    val elapsedSecondsLabel = (sessionState.elapsedMillis / 1000L).toString()
+                    val timerText = if (sessionState.mode == ReadingMode.AI_LISTENING) {
+                        "${elapsedSecondsLabel}s / ${level.timeRequirementSeconds}s"
+                    } else {
+                        "${elapsedSecondsLabel}s"
+                    }
                     Text(
-                        text = "${(sessionState.elapsedMillis / 1000L)}s",
+                        text = timerText,
                         style = MaterialTheme.typography.labelMedium,
                         color = LixoColors.Orange
                     )
@@ -271,7 +295,7 @@ fun ReadingActivityScreen(
                                 color = LixoColors.TextPrimary
                             )
                             Text(
-                                text = "Lyssna och följ med i realtid · 1–3 stjärnor",
+                                text = "Lyssna och följ med i realtid · 1–3 stjärnor · Mål ${level.timeRequirementSeconds}s",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = LixoColors.TextSecondary
                             )
@@ -286,10 +310,7 @@ fun ReadingActivityScreen(
                     modifier = Modifier.fillMaxWidth(),
                     selected = chosenMode == ReadingMode.MANUAL,
                     cornerRadius = 18.dp,
-                    onClick = {
-                        chosenMode = ReadingMode.MANUAL
-                        timedChallengeChecked = false
-                    }
+                    onClick = { chosenMode = ReadingMode.MANUAL }
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -322,40 +343,6 @@ fun ReadingActivityScreen(
                     }
                 }
 
-                // Timed Challenge Switch
-                if (chosenMode == ReadingMode.AI_LISTENING) {
-                    Spacer(Modifier.height(16.dp))
-                    LixoCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 14.dp,
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 10.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                LixoIcon(icon = LixoIcons.Bolt, tint = LixoColors.Orange, size = 20.dp)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = "${LixoStrings.READING_TIMED_CHALLENGE_TOGGLE} (${level.timeRequirementSeconds}s)",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = LixoColors.TextPrimary
-                                )
-                            }
-                            Switch(
-                                checked = timedChallengeChecked,
-                                onCheckedChange = { timedChallengeChecked = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = LixoColors.Green
-                                )
-                            )
-                        }
-                    }
-                }
-
                 Spacer(Modifier.height(24.dp))
 
                 LixoButton(
@@ -363,7 +350,7 @@ fun ReadingActivityScreen(
                         sessionState = alignmentEngine.startSession(
                             storyText = storyText,
                             mode = chosenMode,
-                            isTimedChallengeRequested = timedChallengeChecked
+                            isTimedChallengeRequested = chosenMode == ReadingMode.AI_LISTENING
                         )
                         modeLocked = true
                     },
@@ -392,16 +379,18 @@ fun ReadingActivityScreen(
                             val isCurrent = idx == sessionState.currentWordIndex &&
                                 sessionState.mode == ReadingMode.AI_LISTENING &&
                                 !sessionState.isCompleted
+                            val isCurrentStuck = isCurrent && sessionState.isWordStuckSupportVisible
+                            val isYellowUnread = token.needsPractice && !token.isCompleted && !isCurrent
+                            val isYellowRead = token.needsPractice && token.isCompleted
 
                             val dict = lookupDictionary(token.normalizedText)
-                            val renderedText = if (showSyllablesInline && isCurrent) {
-                                dict.syllables
-                            } else {
-                                token.displayText
-                            }
+                            val renderedText = if (isCurrentStuck) dict.syllables else token.displayText
 
                             val (bg, border, fg) = when {
+                                isCurrentStuck -> Triple(LixoColors.GoldTint, LixoColors.Gold, LixoColors.GoldLip)
                                 isCurrent -> Triple(LixoColors.BlueTint, LixoColors.Blue, LixoColors.Blue)
+                                isYellowUnread -> Triple(LixoColors.GoldTint, LixoColors.Gold, LixoColors.GoldLip)
+                                isYellowRead -> Triple(LixoColors.GoldTint, Color.Transparent, LixoColors.GoldLip)
                                 token.isCompleted -> Triple(LixoColors.GreenTint, LixoColors.GreenLip, LixoColors.GreenLip)
                                 else -> Triple(Color.Transparent, Color.Transparent, LixoColors.TextPrimary)
                             }
@@ -411,12 +400,13 @@ fun ReadingActivityScreen(
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(bg)
                                     .then(
-                                        if (isCurrent) Modifier.border(1.5.dp, border, RoundedCornerShape(8.dp))
-                                        else Modifier
+                                        when {
+                                            isYellowUnread -> Modifier.dashedBorder(border, 8.dp)
+                                            isCurrent -> Modifier.border(1.5.dp, border, RoundedCornerShape(8.dp))
+                                            else -> Modifier
+                                        }
                                     )
-                                    .clickable {
-                                        inspectedDictionaryEntry = dict
-                                    }
+                                    .clickable { helpPopupWordIndex = idx }
                                     .padding(horizontal = 6.dp, vertical = 3.dp)
                             ) {
                                 Text(
@@ -437,83 +427,24 @@ fun ReadingActivityScreen(
                     color = LixoColors.TextMuted
                 )
 
-                // Word Help Card when stuck or tapped
-                val currentWordEntry = sessionState.currentWord?.let { lookupDictionary(it.normalizedText) }
-                val activeSupportEntry = inspectedDictionaryEntry ?: if (sessionState.isWordStuckSupportVisible) currentWordEntry else null
-
-                if (activeSupportEntry != null && !sessionState.isCompleted) {
+                if (sessionState.isAwaitingUnreadWords) {
                     Spacer(Modifier.height(14.dp))
                     LixoCard(
                         modifier = Modifier.fillMaxWidth(),
                         backgroundColor = LixoColors.GoldTint,
                         borderColor = LixoColors.GoldLip,
-                        cornerRadius = 16.dp,
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                        cornerRadius = 14.dp,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                     ) {
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "${LixoStrings.READING_STUCK_TITLE} \"${activeSupportEntry.displayWord}\"",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = LixoColors.TextPrimary
-                                    )
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(
-                                        text = "Stavelser: ${activeSupportEntry.syllables}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = LixoColors.TextPrimary
-                                    )
-                                    Text(
-                                        text = activeSupportEntry.explanationSv,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = LixoColors.TextSecondary
-                                    )
-                                }
-                                if (showSwedishTtsButtons) {
-                                    TtsIconButton(
-                                        textToSpeak = "${activeSupportEntry.displayWord}. ${activeSupportEntry.explanationSv}",
-                                        ttsEngine = ttsEngine
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.height(12.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                LixoButton(
-                                    onClick = { showSyllablesInline = !showSyllablesInline },
-                                    variant = LixoButtonVariant.SECONDARY,
-                                    height = 42.dp
-                                ) {
-                                    Text(
-                                        text = LixoStrings.READING_HELP_SYLLABLES,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White
-                                    )
-                                }
-                                if (sessionState.mode == ReadingMode.AI_LISTENING) {
-                                    LixoButton(
-                                        onClick = {
-                                            sessionState = alignmentEngine.advanceCurrentWordWithGentleSupport(sessionState)
-                                            millisSinceLastWordAdvance = 0L
-                                            inspectedDictionaryEntry = null
-                                        },
-                                        variant = LixoButtonVariant.PRIMARY,
-                                        height = 42.dp
-                                    ) {
-                                        Text(
-                                            text = LixoStrings.READING_HELP_SKIP_NO_PENALTY,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White
-                                        )
-                                    }
-                                }
-                            }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LixoIcon(icon = LixoIcons.Star, tint = LixoColors.GoldLip, size = 20.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = LixoStrings.READING_READ_YELLOW_WORDS,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = LixoColors.TextPrimary
+                            )
                         }
                     }
                 }
@@ -523,60 +454,64 @@ fun ReadingActivityScreen(
                 // Action Controls during reading
                 if (!sessionState.isCompleted) {
                     if (sessionState.mode == ReadingMode.AI_LISTENING) {
-                        LixoButton(
-                            onClick = {
-                                val word = sessionState.currentWord?.normalizedText ?: return@LixoButton
-                                sessionState = alignmentEngine.processRecognizedTokens(
-                                    state = sessionState,
-                                    spokenTokens = listOf(
-                                        RecognizedSpeechToken(
-                                            rawWord = word,
-                                            normalizedWord = word,
-                                            confidence = 0.96f,
-                                            timestampMillis = sessionState.elapsedMillis
+                        if (showDebugSimulationControls) {
+                            LixoButton(
+                                onClick = {
+                                    val word = sessionState.currentWord?.normalizedText ?: return@LixoButton
+                                    sessionState = alignmentEngine.processRecognizedTokens(
+                                        state = sessionState,
+                                        spokenTokens = listOf(
+                                            RecognizedSpeechToken(
+                                                rawWord = word,
+                                                normalizedWord = word,
+                                                confidence = 0.96f,
+                                                timestampMillis = sessionState.elapsedMillis
+                                            )
                                         )
                                     )
+                                    millisSinceLastWordAdvance = 0L
+                                },
+                                variant = LixoButtonVariant.PRIMARY,
+                                height = 52.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                LixoIcon(icon = LixoIcons.Mic, tint = Color.White, size = 20.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = LixoStrings.READING_SIMULATE_VOICE_BTN.uppercase(),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = Color.White
                                 )
-                                millisSinceLastWordAdvance = 0L
-                            },
-                            variant = LixoButtonVariant.PRIMARY,
-                            height = 52.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            LixoIcon(icon = LixoIcons.Mic, tint = Color.White, size = 20.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = LixoStrings.READING_SIMULATE_VOICE_BTN.uppercase(),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = Color.White
-                            )
-                        }
+                            }
 
-                        Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(10.dp))
 
-                        LixoButton(
-                            onClick = {
-                                val remainingTokens = sessionState.words
-                                    .drop(sessionState.currentWordIndex)
-                                    .map {
-                                        RecognizedSpeechToken(
-                                            rawWord = it.displayText,
-                                            normalizedWord = it.normalizedText,
-                                            confidence = 0.95f,
-                                            timestampMillis = sessionState.elapsedMillis
-                                        )
-                                    }
-                                sessionState = alignmentEngine.processRecognizedTokens(sessionState, remainingTokens)
-                            },
-                            variant = LixoButtonVariant.OUTLINE,
-                            height = 46.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = LixoStrings.READING_SIMULATE_FULL_SENTENCE_BTN,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = LixoColors.Blue
-                            )
+                            LixoButton(
+                                onClick = {
+                                    // Feeds every unread word (including yellow/flagged ones) so the debug
+                                    // simulator can also finish a story that is awaiting yellow words.
+                                    val unreadTokens = sessionState.words
+                                        .filter { !it.isCompleted }
+                                        .map {
+                                            RecognizedSpeechToken(
+                                                rawWord = it.displayText,
+                                                normalizedWord = it.normalizedText,
+                                                confidence = 0.95f,
+                                                timestampMillis = sessionState.elapsedMillis
+                                            )
+                                        }
+                                    sessionState = alignmentEngine.processRecognizedTokens(sessionState, unreadTokens)
+                                },
+                                variant = LixoButtonVariant.OUTLINE,
+                                height = 46.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = LixoStrings.READING_SIMULATE_FULL_SENTENCE_BTN,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = LixoColors.Blue
+                                )
+                            }
                         }
                     } else {
                         LixoButton(
@@ -641,6 +576,69 @@ fun ReadingActivityScreen(
                                 color = LixoColors.TextPrimary
                             )
 
+                            if (sessionState.mode == ReadingMode.AI_LISTENING) {
+                                Spacer(Modifier.height(10.dp))
+                                Text(
+                                    text = "${LixoStrings.READING_TIME_ROW_PREFIX} ${(sessionState.elapsedMillis / 1000L)}s · " +
+                                        "${LixoStrings.READING_TIME_ROW_BEST_PREFIX} ${completion.updatedLevelProgress.bestTimeSeconds}s",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = LixoColors.TextSecondary
+                                )
+                                if (scoreResult.eligibleForTimedChallengeReward) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = LixoStrings.READING_TIMED_CHALLENGE_COMPLETED,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = LixoColors.OrangeLip
+                                    )
+                                }
+                                if (completion.netNewStarsAwarded == 0 && completion.updatedLevelProgress.starsEarned == 3) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = LixoStrings.READING_TIME_RECORD_AT_MAX_STARS_NOTE,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = LixoColors.TextMuted
+                                    )
+                                }
+                            }
+
+                            val practiceWords = sessionState.words
+                                .filter { it.needsPractice }
+                                .distinctBy { it.normalizedText }
+                            if (practiceWords.isNotEmpty()) {
+                                Spacer(Modifier.height(16.dp))
+                                Text(
+                                    text = LixoStrings.READING_PRACTICE_WORDS_TITLE,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LixoColors.TextPrimary
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    practiceWords.forEach { word ->
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(LixoColors.GoldTint)
+                                                .border(1.5.dp, LixoColors.Gold, RoundedCornerShape(8.dp))
+                                                .clickable { helpPopupWordIndex = word.index }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = word.displayText,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = LixoColors.GoldLip
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             if (completion.newlyUnlockedItems.isNotEmpty()) {
                                 Spacer(Modifier.height(14.dp))
                                 completion.newlyUnlockedItems.forEach { item ->
@@ -676,6 +674,76 @@ fun ReadingActivityScreen(
                                     color = Color.White
                                 )
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Tap-any-word help popup: works during and after the session, never touches sttEngine.
+        val popupEntry = helpPopupWordIndex
+            ?.let { idx -> sessionState.words.getOrNull(idx) }
+            ?.let { word -> lookupDictionary(word.normalizedText) }
+        if (popupEntry != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(LixoColors.Scrim)
+                    .clickable { helpPopupWordIndex = null },
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                LixoCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    backgroundColor = LixoColors.GoldTint,
+                    borderColor = LixoColors.GoldLip,
+                    cornerRadius = 22.dp,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+                    onClick = { /* absorb taps so they don't fall through to the dismiss scrim */ }
+                ) {
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "${LixoStrings.READING_STUCK_TITLE} \"${popupEntry.displayWord}\"",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = LixoColors.TextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .clickable { helpPopupWordIndex = null },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LixoIcon(icon = LixoIcons.Close, tint = LixoColors.TextSecondary, size = 18.dp)
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = popupEntry.syllables,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = LixoColors.GoldLip
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = popupEntry.explanationSv,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextSecondary
+                        )
+                        if (showSwedishTtsButtons) {
+                            Spacer(Modifier.height(14.dp))
+                            TtsIconButton(
+                                textToSpeak = "${popupEntry.displayWord}. ${popupEntry.explanationSv}",
+                                ttsEngine = ttsEngine
+                            )
                         }
                     }
                 }

@@ -48,17 +48,42 @@ class ProgressionAndGiftEngine(
 
     /**
      * Checks whether a campaign level is unlocked for the given profile.
-     * Level 1 is always unlocked; Level N requires Level N-1 to have >= 1 star.
+     * Unlocking is per-subject "world" (plan: "Ämnesväljare med tre världar"): a level requires
+     * the previous level *in the same subject* (largest `order` < levelOrder with the same subject)
+     * to have >= 1 star. The first level of each subject is always unlocked.
      */
     fun isLevelUnlocked(
         levelOrder: Int,
         progressByLevelId: Map<String, LevelProgress>,
         levels: List<CampaignLevel>
     ): Boolean {
-        if (levelOrder <= 1) return true
-        val prevLevel = levels.find { it.order == levelOrder - 1 } ?: return levelOrder <= 1
+        val currentLevel = levels.find { it.order == levelOrder } ?: return levelOrder <= 1
+        val prevLevel = levels
+            .filter { it.subject == currentLevel.subject && it.order < levelOrder }
+            .maxByOrNull { it.order }
+            ?: return true
         val prevProgress = progressByLevelId[prevLevel.id]
         return (prevProgress?.starsEarned ?: 0) >= 1
+    }
+
+    /**
+     * The level the child should land on when entering a subject's world: the first unlocked
+     * level in that subject with 0 stars, or the last level of that subject if all are starred.
+     */
+    fun currentLevelForSubject(
+        subject: Subject,
+        levels: List<CampaignLevel>,
+        progressByLevelId: Map<String, LevelProgress>
+    ): CampaignLevel? {
+        val subjectLevels = levels.filter { it.subject == subject }.sortedBy { it.order }
+        if (subjectLevels.isEmpty()) return null
+
+        for (level in subjectLevels) {
+            val isUnlocked = isLevelUnlocked(level.order, progressByLevelId, levels)
+            val stars = progressByLevelId[level.id]?.starsEarned ?: 0
+            if (isUnlocked && stars == 0) return level
+        }
+        return subjectLevels.last()
     }
 
     /**

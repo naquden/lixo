@@ -1,10 +1,25 @@
 package se.lixo.app.ui.screens.map
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +27,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,13 +40,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,11 +58,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.absoluteValue
 import kotlin.math.sin
+import kotlinx.coroutines.delay
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.ChildProfile
@@ -63,12 +86,13 @@ import se.lixo.app.ui.theme.StatPill
 import se.lixo.app.ui.theme.TtsIconButton
 
 /**
- * Duolingo-style Campaign Map:
+ * Duolingo-style Campaign Map with three subject "worlds" (plan: "Ämnesväljare med tre världar"):
  * - Clean top HUD with avatar badge, stars, and streak.
- * - Unit header card introducing the current module.
- * - Snaking path of circular 3D lesson nodes with stars, locks, and mascot placement.
+ * - WorldSelector: tactile 3D world picker synced with a HorizontalPager.
+ * - Per-world snaking path of circular 3D lesson nodes with stars, locks, and mascot placement.
  * - Interactive bottom sheet popup on node tap for starting the level without cluttering the map.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CampaignMapScreen(
     profile: ChildProfile,
@@ -78,15 +102,53 @@ fun CampaignMapScreen(
     progressionEngine: ProgressionAndGiftEngine,
     ttsEngine: TextToSpeechEngine,
     showSwedishTtsButtons: Boolean,
+    selectedSubject: Subject,
+    onSelectSubject: (Subject) -> Unit,
     onSelectLevel: (CampaignLevel) -> Unit,
     onSwitchProfileClick: () -> Unit
 ) {
     var selectedLevelForSheet by remember { mutableStateOf<CampaignLevel?>(null) }
 
+    val worlds = SubjectWorlds
+    val initialPage = worlds.indexOfFirst { it.subject == selectedSubject }.coerceAtLeast(0)
+    val pagerState = rememberPagerState(initialPage = initialPage) { worlds.size }
+
+    // Keep pager in sync when the selected subject changes from outside (e.g. after finishing a level).
+    LaunchedEffect(selectedSubject) {
+        val targetPage = worlds.indexOfFirst { it.subject == selectedSubject }
+        if (targetPage >= 0 && targetPage != pagerState.currentPage) {
+            pagerState.animateScrollToPage(targetPage)
+        }
+    }
+
+    // Report the settled page back up so LixoApp always knows the active world.
+    LaunchedEffect(pagerState.settledPage) {
+        val settledWorld = worlds.getOrNull(pagerState.settledPage)?.subject
+        if (settledWorld != null && settledWorld != selectedSubject) {
+            onSelectSubject(settledWorld)
+        }
+    }
+
+    val currentWorld = worlds.getOrNull(pagerState.currentPage) ?: worlds.first()
+    val animatedBackground by animateColorAsState(
+        targetValue = currentWorld.tintColor,
+        animationSpec = tween(durationMillis = 400),
+        label = "lixo_map_background"
+    )
+
+    // Track which worlds have already played their staggered node pop-in once settled on.
+    val worldsAlreadyRevealed = remember { mutableStateMapOf<Subject, Boolean>() }
+    LaunchedEffect(pagerState.settledPage) {
+        val settledSubject = worlds.getOrNull(pagerState.settledPage)?.subject
+        if (settledSubject != null) {
+            worldsAlreadyRevealed[settledSubject] = true
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(LixoColors.Background)
+            .background(animatedBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Top HUD Bar: Avatar profile selector (left) | Stars & Streak (right)
@@ -135,146 +197,92 @@ fun CampaignMapScreen(
                 }
             }
 
-            // Scrollable Adventure Path
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp, start = 16.dp, end = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+            // World selector: three tactile 3D "buttons" with a sliding indicator pill.
+            WorldSelector(
+                worlds = worlds,
+                selectedIndex = pagerState.currentPage,
+                levels = levels,
+                progressByLevelId = progressByLevelId,
+                onWorldClick = { index ->
+                    onSelectSubject(worlds[index].subject)
+                }
+            )
+
+            // Header card for the active world - animates color + title on swipe.
+            LixoCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                backgroundColor = currentWorld.faceColor,
+                borderColor = currentWorld.lipColor,
+                cornerRadius = 18.dp,
+                contentPadding = PaddingValues(16.dp)
             ) {
-                // Duolingo Unit Header Card
-                item(key = "unit_header") {
-                    LixoCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = LixoColors.Green,
-                        borderColor = LixoColors.GreenLip,
-                        cornerRadius = 18.dp,
-                        contentPadding = PaddingValues(16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "AVSNITT 1",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = Color.White.copy(alpha = 0.85f)
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    text = "Lixos Magiska Skogsstig",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    text = "Läsning, matematik & grundläggande ord",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.9f)
-                                )
-                            }
-                            if (showSwedishTtsButtons) {
-                                TtsIconButton(
-                                    textToSpeak = "Avsnitt 1: Lixos Magiska Skogsstig",
-                                    ttsEngine = ttsEngine,
-                                    tint = LixoColors.Green
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Level Nodes in a Gentle Sine-Waved Path
-                items(levels, key = { it.id }) { level ->
-                    val isUnlocked = progressionEngine.isLevelUnlocked(
-                        levelOrder = level.order,
-                        progressByLevelId = progressByLevelId,
-                        levels = levels
-                    )
-                    val progress = progressByLevelId[level.id]
-                    val stars = progress?.starsEarned ?: 0
-                    val isCurrentActiveNode = level.order == profile.currentLevelOrder
-
-                    // Gentle sine wave offset (max +/- 56dp)
-                    val waveOffsetDp = (sin(level.order * 0.7) * 56.0).toInt().dp
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .offset(x = waveOffsetDp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        // Current level mascot placed beside the active node
-                        if (isCurrentActiveNode) {
-                            Box(
-                                modifier = Modifier
-                                    .align(if (waveOffsetDp >= 0.dp) Alignment.CenterStart else Alignment.CenterEnd)
-                                    .padding(horizontal = 8.dp)
-                            ) {
-                                Avatar3DViewport(
-                                    appearance = profile.appearance,
-                                    catalogById = catalogById,
-                                    modifier = Modifier.size(90.dp),
-                                    interactiveRotation = false
-                                )
-                            }
-                        }
-
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // "START" Speech Bubble above active node
-                            if (isCurrentActiveNode) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(LixoColors.Surface)
-                                        .border(2.dp, LixoColors.Green, RoundedCornerShape(10.dp))
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = "START",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = LixoColors.GreenLip
-                                    )
-                                }
-                                Spacer(Modifier.height(6.dp))
-                            }
-
-                            // 3D Circular Level Node
-                            CampaignLevelNode(
-                                level = level,
-                                isUnlocked = isUnlocked,
-                                isCurrent = isCurrentActiveNode,
-                                stars = stars,
-                                onClick = {
-                                    if (isUnlocked) {
-                                        selectedLevelForSheet = level
-                                    }
-                                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "${LixoStrings.WORLD_SELECTOR_HEADER_PREFIX} ${pagerState.currentPage + 1}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        AnimatedContent(
+                            targetState = currentWorld.title,
+                            transitionSpec = {
+                                (slideInHorizontally { width -> width / 3 } + fadeIn()) togetherWith
+                                    (slideOutHorizontally { width -> -width / 3 } + fadeOut())
+                            },
+                            label = "lixo_world_title"
+                        ) { title ->
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White
                             )
-
-                            // Stars under completed node
-                            if (isUnlocked && stars > 0) {
-                                Spacer(Modifier.height(6.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    for (i in 1..3) {
-                                        LixoIcon(
-                                            icon = LixoIcons.Star,
-                                            tint = if (i <= stars) LixoColors.Gold else LixoColors.BorderDarker,
-                                            size = 14.dp,
-                                            modifier = Modifier.padding(horizontal = 1.dp)
-                                        )
-                                    }
-                                }
-                            }
                         }
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = currentWorld.tagline,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
+                    if (showSwedishTtsButtons) {
+                        TtsIconButton(
+                            textToSpeak = "${LixoStrings.WORLD_SELECTOR_HEADER_PREFIX} ${pagerState.currentPage + 1}: ${currentWorld.title}",
+                            ttsEngine = ttsEngine,
+                            tint = currentWorld.faceColor
+                        )
                     }
                 }
+            }
+
+            // Swipeable world pages.
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val world = worlds[page]
+                val pageOffset = pagerState.currentPageOffsetFraction + (pagerState.currentPage - page)
+                val alreadyRevealed = worldsAlreadyRevealed[world.subject] == true
+
+                WorldPage(
+                    world = world,
+                    levels = levels.filter { it.subject == world.subject }.sortedBy { it.order },
+                    progressByLevelId = progressByLevelId,
+                    progressionEngine = progressionEngine,
+                    profile = profile,
+                    catalogById = catalogById,
+                    renderAvatar = pagerState.settledPage == page,
+                    playPopInAnimation = !alreadyRevealed,
+                    pageOffset = pageOffset,
+                    onNodeClick = { level -> selectedLevelForSheet = level }
+                )
             }
         }
 
@@ -438,11 +446,307 @@ fun CampaignMapScreen(
 }
 
 /**
- * Circular 72dp 3D lesson node with distinct bottom lip.
+ * Three tactile 3D "buttons", one per world, with a sliding selection indicator pill and
+ * per-world star progress. The selected card scales up with a spring and bounces its icon.
+ */
+@Composable
+private fun WorldSelector(
+    worlds: List<SubjectWorld>,
+    selectedIndex: Int,
+    levels: List<CampaignLevel>,
+    progressByLevelId: Map<String, LevelProgress>,
+    onWorldClick: (Int) -> Unit
+) {
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        val totalGapWidth = 8.dp * (worlds.size - 1)
+        val cardWidth = (maxWidth - totalGapWidth) / worlds.size
+        val indicatorOffset by animateDpAsState(
+            targetValue = (cardWidth + 8.dp) * selectedIndex,
+            animationSpec = spring(stiffness = Spring.StiffnessMedium),
+            label = "lixo_world_indicator"
+        )
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Sliding indicator pill underneath the selected card.
+            Box(
+                modifier = Modifier
+                    .offset(x = indicatorOffset)
+                    .width(cardWidth)
+                    .height(86.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(LixoColors.Border.copy(alpha = 0.25f))
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                worlds.forEachIndexed { index, world ->
+                    val totalStarsPossible = levels.count { it.subject == world.subject } * 3
+                    val starsEarned = levels
+                        .filter { it.subject == world.subject }
+                        .sumOf { progressByLevelId[it.id]?.starsEarned ?: 0 }
+
+                    WorldSelectorCard(
+                        world = world,
+                        isSelected = index == selectedIndex,
+                        starsEarned = starsEarned,
+                        totalStarsPossible = totalStarsPossible,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onWorldClick(index) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorldSelectorCard(
+    world: SubjectWorld,
+    isSelected: Boolean,
+    starsEarned: Int,
+    totalStarsPossible: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.12f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "lixo_world_card_scale"
+    )
+    val iconScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.2f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioHighBouncy, stiffness = Spring.StiffnessMedium),
+        label = "lixo_world_icon_bounce"
+    )
+    val pressOffset = if (isPressed) 2.dp else 0.dp
+
+    val faceColor = if (isSelected) world.faceColor else LixoColors.Surface
+    val lipColor = if (isSelected) world.lipColor else LixoColors.BorderDarker
+    val iconTint = if (isSelected) Color.White else LixoColors.TextSecondary
+    val textColor = if (isSelected) Color.White else LixoColors.TextSecondary
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .offset(y = pressOffset)
+            .clip(RoundedCornerShape(18.dp))
+            .background(lipColor)
+            .padding(bottom = 3.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(faceColor)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            LixoIcon(
+                icon = world.icon,
+                tint = iconTint,
+                size = 26.dp,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                }
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = world.title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "$starsEarned/$totalStarsPossible ⭐",
+                style = MaterialTheme.typography.labelSmall,
+                color = textColor.copy(alpha = 0.9f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+/**
+ * One page of the HorizontalPager: a world's snaking path of lesson nodes.
+ * Applies a subtle parallax/3D page-transition effect via [pageOffset].
+ */
+@Composable
+private fun WorldPage(
+    world: SubjectWorld,
+    levels: List<CampaignLevel>,
+    progressByLevelId: Map<String, LevelProgress>,
+    progressionEngine: ProgressionAndGiftEngine,
+    profile: ChildProfile,
+    catalogById: Map<String, WardrobeItem>,
+    renderAvatar: Boolean,
+    playPopInAnimation: Boolean,
+    pageOffset: Float,
+    onNodeClick: (CampaignLevel) -> Unit
+) {
+    val currentLevel = remember(levels, progressByLevelId) {
+        progressionEngine.currentLevelForSubject(
+            subject = world.subject,
+            levels = levels,
+            progressByLevelId = progressByLevelId
+        )
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                val absOffset = pageOffset.absoluteValue.coerceIn(0f, 1f)
+                scaleY = 1f - (absOffset * 0.1f)
+                alpha = 1f - (absOffset * 0.5f)
+                rotationY = pageOffset * -12f
+                cameraDistance = 12f * density
+            },
+        contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp, start = 16.dp, end = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        itemsIndexed(levels, key = { _, level -> level.id }) { localIndex, level ->
+            val isUnlocked = progressionEngine.isLevelUnlocked(
+                levelOrder = level.order,
+                progressByLevelId = progressByLevelId,
+                levels = levels
+            )
+            val progress = progressByLevelId[level.id]
+            val stars = progress?.starsEarned ?: 0
+            val isCurrentActiveNode = level.id == currentLevel?.id
+
+            // Gentle sine wave offset (max +/- 56dp), numbered locally within this world's path.
+            val waveOffsetDp = (sin(localIndex * 0.7) * 56.0).toInt().dp
+
+            // Decide once, at first composition of this node, whether it should stagger-pop-in.
+            // Keying only on level.id (not on playPopInAnimation) stops the effect from restarting
+            // and snapping all nodes to full scale when the world "settles" mid-animation.
+            val shouldStagger = remember(level.id) { playPopInAnimation }
+            val popInScale = remember(level.id) { mutableStateOf(if (shouldStagger) 0f else 1f) }
+            val animatedPopInScale by animateFloatAsState(
+                targetValue = popInScale.value,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "lixo_node_pop_in"
+            )
+            LaunchedEffect(level.id) {
+                if (shouldStagger) {
+                    delay((localIndex * 35L).coerceAtMost(900L))
+                    popInScale.value = 1f
+                } else {
+                    popInScale.value = 1f
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(x = waveOffsetDp)
+                    .graphicsLayer {
+                        scaleX = animatedPopInScale
+                        scaleY = animatedPopInScale
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                // Current level mascot placed beside the active node
+                if (isCurrentActiveNode && renderAvatar) {
+                    Box(
+                        modifier = Modifier
+                            .align(if (waveOffsetDp >= 0.dp) Alignment.CenterStart else Alignment.CenterEnd)
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        Avatar3DViewport(
+                            appearance = profile.appearance,
+                            catalogById = catalogById,
+                            modifier = Modifier.size(90.dp),
+                            interactiveRotation = false
+                        )
+                    }
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // "START" Speech Bubble above active node
+                    if (isCurrentActiveNode) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(LixoColors.Surface)
+                                .border(2.dp, world.faceColor, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "START",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = world.lipColor
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                    }
+
+                    // 3D Circular Level Node
+                    CampaignLevelNode(
+                        level = level,
+                        world = world,
+                        isUnlocked = isUnlocked,
+                        isCurrent = isCurrentActiveNode,
+                        stars = stars,
+                        onClick = {
+                            if (isUnlocked) {
+                                onNodeClick(level)
+                            }
+                        }
+                    )
+
+                    // Stars under completed node
+                    if (isUnlocked && stars > 0) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            for (i in 1..3) {
+                                LixoIcon(
+                                    icon = LixoIcons.Star,
+                                    tint = if (i <= stars) LixoColors.Gold else LixoColors.BorderDarker,
+                                    size = 14.dp,
+                                    modifier = Modifier.padding(horizontal = 1.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Circular 72dp 3D lesson node with distinct bottom lip. Pulses gently while it's the active node.
  */
 @Composable
 private fun CampaignLevelNode(
     level: CampaignLevel,
+    world: SubjectWorld,
     isUnlocked: Boolean,
     isCurrent: Boolean,
     stars: Int,
@@ -455,7 +759,7 @@ private fun CampaignLevelNode(
     val (faceColor, lipColor, iconColor) = when {
         !isUnlocked -> Triple(LixoColors.LockedFace, LixoColors.LockedLip, LixoColors.TextDisabled)
         stars == 3 -> Triple(LixoColors.Gold, LixoColors.GoldLip, Color.White)
-        isCurrent -> Triple(LixoColors.Green, LixoColors.GreenLip, Color.White)
+        isCurrent -> Triple(world.faceColor, world.lipColor, Color.White)
         else -> when (level.subject) {
             Subject.SWEDISH -> Triple(LixoColors.Green, LixoColors.GreenLip, Color.White)
             Subject.MATH -> Triple(LixoColors.Blue, LixoColors.BlueLip, Color.White)
@@ -470,9 +774,24 @@ private fun CampaignLevelNode(
         else -> LixoIcons.Star
     }
 
+    val infiniteTransition = rememberInfiniteTransition(label = "lixo_node_pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (isCurrent && isUnlocked) 1.06f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "lixo_node_pulse_scale"
+    )
+
     Box(
         modifier = Modifier
             .size(72.dp)
+            .graphicsLayer {
+                scaleX = pulseScale
+                scaleY = pulseScale
+            }
             .clip(CircleShape)
             .background(lipColor)
             .clickable(

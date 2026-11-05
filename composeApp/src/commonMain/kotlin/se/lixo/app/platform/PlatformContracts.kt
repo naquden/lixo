@@ -16,6 +16,7 @@ expect class PlatformFeatureFlags() {
     val isSwedishTtsSupported: Boolean
     val isOnDeviceSttSupported: Boolean
     val isNative3DSceneViewSupported: Boolean
+    val isDebugBuild: Boolean
 }
 
 enum class SttEngineState {

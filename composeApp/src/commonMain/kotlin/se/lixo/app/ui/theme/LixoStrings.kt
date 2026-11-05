@@ -45,12 +45,20 @@ object LixoStrings {
     const val MAP_MAXED_STARS_HINT = "Klarad · Spela igen för gåva"
     const val MAP_LOCKED_HINT = "Klara banan innan först"
 
+    // Campaign Map - Subject Worlds (ämnesväljare)
+    const val WORLD_SWEDISH_TITLE = "Sagoskogen"
+    const val WORLD_SWEDISH_TAGLINE = "Läsning & berättelser"
+    const val WORLD_MATH_TITLE = "Sifferdalen"
+    const val WORLD_MATH_TAGLINE = "Tal, klockan & mattegåtor"
+    const val WORLD_ENGLISH_TITLE = "Glosornas Hamn"
+    const val WORLD_ENGLISH_TAGLINE = "Engelska ord & fraser"
+    const val WORLD_SELECTOR_HEADER_PREFIX = "VÄRLD"
+
     // Reading Activity
     const val READING_MODE_SELECT_TITLE = "Hur vill du läsa?"
     const val READING_MODE_AI_LABEL = "AI-Läsassistent (1–3 stjärnor)"
     const val READING_MODE_MANUAL_LABEL = "Läsa själv (1 stjärna)"
     const val READING_MODE_LOCKED_BADGE = "Läsläge"
-    const val READING_TIMED_CHALLENGE_TOGGLE = "Tidsutmaning"
     const val READING_SIMULATE_VOICE_BTN = "Läs nästa ord"
     const val READING_SIMULATE_FULL_SENTENCE_BTN = "Läs hela meningen"
     const val READING_MANUAL_DONE_BTN = "Klar med läsningen"
@@ -60,7 +68,14 @@ object LixoStrings {
     const val READING_HELP_SYLLABLES = "Stavelser"
     const val READING_HELP_EXPLANATION = "Förklaring"
     const val READING_HELP_SKIP_NO_PENALTY = "Gå vidare"
-    const val READING_TAP_WORD_HINT = "Tryck på valfritt ord för uttal och stavelser"
+    const val READING_TAP_WORD_HINT = "Gula ord kan behöva övas – tryck på ett ord för hjälp"
+    const val READING_READ_YELLOW_WORDS = "Läs de gula orden för att bli klar"
+    const val READING_PRACTICE_WORDS_TITLE = "Ord att öva"
+    const val READING_TIME_ROW_PREFIX = "Din tid:"
+    const val READING_TIME_ROW_BEST_PREFIX = "Bästa:"
+    const val READING_TIMED_CHALLENGE_COMPLETED = "Tidsutmaning klarad!"
+    const val READING_TIME_RECORD_AT_MAX_STARS_NOTE =
+        "Snabbare tid sparas som personbästa, men ger inga fler stjärnor på en bana med 3 stjärnor."
 
     // Math & English Activity
     const val MATH_SUBMIT_BTN = "Kontrollera"
