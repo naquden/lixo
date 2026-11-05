@@ -22,11 +22,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import se.lixo.app.domain.model.AvatarAppearance
@@ -176,6 +178,63 @@ fun Avatar3DViewport(
     }
 }
 
+private fun darken(color: Color, f: Float): Color = color.copy(
+    red = (color.red * f).coerceIn(0f, 1f),
+    green = (color.green * f).coerceIn(0f, 1f),
+    blue = (color.blue * f).coerceIn(0f, 1f)
+)
+
+private fun lighten(color: Color, f: Float): Color = color.copy(
+    red = (color.red + (1f - color.red) * f).coerceIn(0f, 1f),
+    green = (color.green + (1f - color.green) * f).coerceIn(0f, 1f),
+    blue = (color.blue + (1f - color.blue) * f).coerceIn(0f, 1f)
+)
+
+/**
+ * Draws a pseudo-3D Roblox-style block: a darker side face (direction depends on turntable
+ * yaw parallax), a front face with a subtle vertical shading gradient, and a lighter top-edge
+ * highlight strip.
+ */
+private fun DrawScope.drawBlock(
+    color: Color,
+    topLeft: Offset,
+    blockSize: Size,
+    corner: Float,
+    yawParallax: Float,
+    scale: Float
+) {
+    val sideWidth = abs(yawParallax).coerceAtLeast(3f * scale)
+    val sideColor = darken(color, 0.7f)
+    if (yawParallax >= 0f) {
+        drawRoundRect(
+            color = sideColor,
+            topLeft = Offset(topLeft.x + blockSize.width, topLeft.y),
+            size = Size(sideWidth, blockSize.height),
+            cornerRadius = CornerRadius(corner, corner)
+        )
+    } else {
+        drawRoundRect(
+            color = sideColor,
+            topLeft = Offset(topLeft.x - sideWidth, topLeft.y),
+            size = Size(sideWidth, blockSize.height),
+            cornerRadius = CornerRadius(corner, corner)
+        )
+    }
+    drawRoundRect(
+        brush = Brush.verticalGradient(listOf(color, darken(color, 0.9f))),
+        topLeft = topLeft,
+        size = blockSize,
+        cornerRadius = CornerRadius(corner, corner)
+    )
+    val highlightHeight = (4f * scale).coerceAtMost(blockSize.height * 0.3f)
+    drawRoundRect(
+        color = lighten(color, 0.3f),
+        topLeft = topLeft,
+        size = Size(blockSize.width, highlightHeight),
+        cornerRadius = CornerRadius(corner, corner)
+    )
+}
+
 private fun DrawScope.drawLowPolyAvatarScene(
     appearance: AvatarAppearance,
     equippedItems: Map<EquipmentSlot, WardrobeItem>,
@@ -187,11 +246,23 @@ private fun DrawScope.drawLowPolyAvatarScene(
     val cy = size.height * 0.56f
     val scale = (minOf(size.width, size.height) / 340f).coerceAtLeast(0.45f)
     val yawParallax = sin(yawAngleDeg * (PI / 180.0)).toFloat() * 14f * scale
+    val blockCorner = 3f * scale
 
-    // 1. Pedestal shadow & 3D stage ring
+    // Roblox-style block proportions (1 unit ~= 40px*scale wide), anchored by leg/foot stance.
+    val legsBottom = cy + 96f * scale
+    val legsTop = legsBottom - 80f * scale
+    val torsoBottom = legsTop
+    val torsoTop = torsoBottom - 80f * scale
+    val torsoLeft = cx - 40f * scale
+    val torsoRight = cx + 40f * scale
+    val headBottom = torsoTop - 1.5f * scale
+    val headTop = headBottom - 52f * scale
+    val headLeft = cx - 28f * scale + yawParallax * 0.35f
+
+    // 1. Pedestal shadow & 3D stage ring (anchored under the feet)
     drawOval(
         color = Color(0x33000000),
-        topLeft = Offset(cx - 88f * scale, cy + 96f * scale),
+        topLeft = Offset(cx - 88f * scale, legsBottom + 2f * scale),
         size = Size(176f * scale, 36f * scale)
     )
     drawOval(
@@ -202,7 +273,7 @@ private fun DrawScope.drawLowPolyAvatarScene(
                 listOf(Color(0xFF4A90E2), Color(0xFF357ABD))
             }
         ),
-        topLeft = Offset(cx - 82f * scale, cy + 92f * scale),
+        topLeft = Offset(cx - 82f * scale, legsBottom - 2f * scale),
         size = Size(164f * scale, 28f * scale),
         style = Stroke(width = 4f * scale)
     )
@@ -221,225 +292,324 @@ private fun DrawScope.drawLowPolyAvatarScene(
         }
     }
 
-    val bodyColor = Color(appearance.primaryTintHex)
-    val bodyShadeColor = bodyColor.copy(
-        red = (bodyColor.red * 0.82f).coerceIn(0f, 1f),
-        green = (bodyColor.green * 0.82f).coerceIn(0f, 1f),
-        blue = (bodyColor.blue * 0.82f).coerceIn(0f, 1f)
-    )
+    val skinColor = Color(appearance.primaryTintHex)
+    val darkerSkin = darken(skinColor, 0.78f)
+    val shirtColor = equippedItems[EquipmentSlot.ARMOR_SHIRT]?.let { Color(it.primaryColorHex) }
+        ?: Color(0xFF4A90E2)
+    val pantsColor = equippedItems[EquipmentSlot.PANTS]?.let { Color(it.primaryColorHex) }
+        ?: Color(0xFF34495E)
+    val shoesColor = equippedItems[EquipmentSlot.SHOES]?.let { Color(it.primaryColorHex) }
+        ?: Color(0xFF2C3E50)
+    val handColor = equippedItems[EquipmentSlot.ARMS_GLOVES]?.let { Color(it.primaryColorHex) }
+        ?: skinColor
 
-    // 3. Slot: SHOULDERS_BACK (Cape / Wings behind character)
+    // 3. Slot: SHOULDERS_BACK (Cape behind the character)
     equippedItems[EquipmentSlot.SHOULDERS_BACK]?.let { cape ->
         val capeColor = Color(cape.primaryColorHex)
+        val capeInner = darken(capeColor, 0.75f)
+        val capeTopHalfWidth = 40f * scale + 10f * scale
+        val capeBottomHalfWidth = 40f * scale + 30f * scale
+        val capeTopY = torsoTop + 2f * scale
+        val capeBottomY = legsTop + 30f * scale
         val capePath = Path().apply {
-            moveTo(cx - 42f * scale, cy - 35f * scale)
-            lineTo(cx + 42f * scale, cy - 35f * scale)
-            lineTo(cx + 62f * scale - yawParallax * 0.5f, cy + 72f * scale)
-            lineTo(cx - 62f * scale - yawParallax * 0.5f, cy + 72f * scale)
+            moveTo(cx - capeTopHalfWidth, capeTopY)
+            lineTo(cx + capeTopHalfWidth, capeTopY)
+            lineTo(cx + capeBottomHalfWidth - yawParallax * 0.5f, capeBottomY)
+            lineTo(cx - capeBottomHalfWidth - yawParallax * 0.5f, capeBottomY)
             close()
         }
         drawPath(capePath, color = capeColor)
+        val capeInnerPath = Path().apply {
+            moveTo(cx - capeTopHalfWidth * 0.5f, capeTopY)
+            lineTo(cx + capeTopHalfWidth * 0.5f, capeTopY)
+            lineTo(cx + capeBottomHalfWidth * 0.5f - yawParallax * 0.5f, capeBottomY)
+            lineTo(cx - capeBottomHalfWidth * 0.5f - yawParallax * 0.5f, capeBottomY)
+            close()
+        }
+        drawPath(capeInnerPath, color = capeInner)
     }
 
-    // 4. Slot: TAIL (Wagging rigid-body bone)
+    // 4. Slot: TAIL (Wagging rigid-body bone, drawn behind legs/torso from lower back)
     val showTail = !appearance.avatarType.isHumanoid || equippedItems.containsKey(EquipmentSlot.TAIL)
     if (showTail) {
-        val tailColor = equippedItems[EquipmentSlot.TAIL]?.let { Color(it.primaryColorHex) } ?: bodyShadeColor
+        val tailColor = equippedItems[EquipmentSlot.TAIL]?.let { Color(it.primaryColorHex) } ?: darkerSkin
         withTransform({
-            rotate(degrees = pose.tailWagAngleDeg, pivot = Offset(cx + 32f * scale, cy + 40f * scale))
+            rotate(degrees = pose.tailWagAngleDeg, pivot = Offset(torsoRight - 4f * scale, torsoBottom - 10f * scale))
         }) {
             drawRoundRect(
                 color = tailColor,
-                topLeft = Offset(cx + 28f * scale, cy + 26f * scale),
-                size = Size(54f * scale, 16f * scale),
-                cornerRadius = CornerRadius(10f * scale, 10f * scale)
+                topLeft = Offset(torsoRight - 6f * scale, torsoBottom - 14f * scale),
+                size = Size(50f * scale, 15f * scale),
+                cornerRadius = CornerRadius(7f * scale, 7f * scale)
             )
         }
     }
 
-    // 5. Slot: PANTS & Legs
-    val pantsColor = equippedItems[EquipmentSlot.PANTS]?.let { Color(it.primaryColorHex) } ?: Color(0xFF34495E)
-    drawRoundRect(
-        color = pantsColor,
-        topLeft = Offset(cx - 34f * scale, cy + 36f * scale),
-        size = Size(28f * scale, 48f * scale),
-        cornerRadius = CornerRadius(8f * scale, 8f * scale)
+    // 5. Slot: PANTS/SHOES & Legs (flush against each other and the torso)
+    val legWidth = 40f * scale
+    val legHeight = 80f * scale
+    val shoeHeight = 18f * scale
+    val shoeOutset = 3f * scale
+    val leftLegTopLeft = Offset(cx - legWidth, legsTop)
+    val rightLegTopLeft = Offset(cx, legsTop)
+    drawBlock(pantsColor, leftLegTopLeft, Size(legWidth, legHeight - shoeHeight), blockCorner, yawParallax, scale)
+    drawBlock(pantsColor, rightLegTopLeft, Size(legWidth, legHeight - shoeHeight), blockCorner, yawParallax, scale)
+    drawBlock(
+        shoesColor,
+        Offset(leftLegTopLeft.x - shoeOutset, legsBottom - shoeHeight),
+        Size(legWidth + shoeOutset * 2f, shoeHeight),
+        blockCorner,
+        yawParallax,
+        scale
     )
-    drawRoundRect(
-        color = pantsColor,
-        topLeft = Offset(cx + 6f * scale, cy + 36f * scale),
-        size = Size(28f * scale, 48f * scale),
-        cornerRadius = CornerRadius(8f * scale, 8f * scale)
+    drawBlock(
+        shoesColor,
+        Offset(rightLegTopLeft.x - shoeOutset, legsBottom - shoeHeight),
+        Size(legWidth + shoeOutset * 2f, shoeHeight),
+        blockCorner,
+        yawParallax,
+        scale
+    )
+    // Seam between the legs
+    drawLine(
+        color = darken(pantsColor, 0.6f),
+        start = Offset(cx, legsTop + 2f * scale),
+        end = Offset(cx, legsBottom - shoeHeight - 2f * scale),
+        strokeWidth = 1.5f * scale
     )
 
-    // 6. Slot: SHOES
-    val shoesColor = equippedItems[EquipmentSlot.SHOES]?.let { Color(it.primaryColorHex) } ?: Color(0xFF2C3E50)
-    drawRoundRect(
-        color = shoesColor,
-        topLeft = Offset(cx - 38f * scale, cy + 78f * scale),
-        size = Size(34f * scale, 20f * scale),
-        cornerRadius = CornerRadius(8f * scale, 8f * scale)
-    )
-    drawRoundRect(
-        color = shoesColor,
-        topLeft = Offset(cx + 4f * scale, cy + 78f * scale),
-        size = Size(34f * scale, 20f * scale),
-        cornerRadius = CornerRadius(8f * scale, 8f * scale)
-    )
-
-    // 7. Torso & Slot: ARMOR_SHIRT (with breathing scale)
-    val torsoColor = equippedItems[EquipmentSlot.ARMOR_SHIRT]?.let { Color(it.primaryColorHex) } ?: bodyColor
+    // 6. Torso & Slot: ARMOR_SHIRT (with breathing scale, pivot at torso bottom)
+    val torsoWidth = 80f * scale
+    val torsoHeight = 80f * scale
     withTransform({
-        scale(scaleX = 1.0f, scaleY = pose.torsoBreathScaleY, pivot = Offset(cx, cy + 10f * scale))
+        scale(scaleX = 1.0f, scaleY = pose.torsoBreathScaleY, pivot = Offset(cx, torsoBottom))
     }) {
-        drawRoundRect(
-            brush = Brush.verticalGradient(
-                listOf(torsoColor, torsoColor.copy(alpha = 0.88f))
-            ),
-            topLeft = Offset(cx - 42f * scale, cy - 36f * scale),
-            size = Size(84f * scale, 78f * scale),
-            cornerRadius = CornerRadius(18f * scale, 18f * scale)
+        drawBlock(
+            shirtColor,
+            Offset(torsoLeft, torsoTop),
+            Size(torsoWidth, torsoHeight),
+            blockCorner,
+            yawParallax,
+            scale
+        )
+        // Belt-ish seam near the torso bottom
+        drawLine(
+            color = darken(shirtColor, 0.6f),
+            start = Offset(torsoLeft + 4f * scale, torsoBottom - 6f * scale),
+            end = Offset(torsoRight - 4f * scale, torsoBottom - 6f * scale),
+            strokeWidth = 2f * scale
         )
     }
 
-    // 8. Left & Right Arms + Slot: ARMS_GLOVES + Slots: HAND_LEFT & HAND_RIGHT
-    val armColor = equippedItems[EquipmentSlot.ARMS_GLOVES]?.let { Color(it.primaryColorHex) } ?: bodyShadeColor
+    // 7. Left & Right Arms + Slot: ARMS_GLOVES + Slots: HAND_LEFT & HAND_RIGHT
+    val armWidth = 38f * scale
+    val armHeight = 80f * scale
+    val sleeveHeight = armHeight * 0.6f
+    val handHeight = armHeight - sleeveHeight
 
-    // Left Arm (viewer's left)
+    // Left Arm (viewer's left) - holds HAND_RIGHT equipment (character's main hand)
+    val leftArmLeft = torsoLeft - armWidth
     withTransform({
-        rotate(degrees = pose.leftArmAngleDeg, pivot = Offset(cx - 46f * scale, cy - 28f * scale))
+        rotate(degrees = pose.leftArmAngleDeg, pivot = Offset(leftArmLeft + armWidth / 2f, torsoTop))
     }) {
-        drawRoundRect(
-            color = armColor,
-            topLeft = Offset(cx - 66f * scale, cy - 28f * scale),
-            size = Size(22f * scale, 58f * scale),
-            cornerRadius = CornerRadius(10f * scale, 10f * scale)
+        drawBlock(
+            shirtColor,
+            Offset(leftArmLeft, torsoTop),
+            Size(armWidth, sleeveHeight),
+            blockCorner,
+            yawParallax,
+            scale
         )
-        // Slot: HAND_RIGHT (Sword / Wand held in character's main hand on viewer's left)
+        drawBlock(
+            handColor,
+            Offset(leftArmLeft, torsoTop + sleeveHeight),
+            Size(armWidth, handHeight),
+            blockCorner,
+            yawParallax,
+            scale
+        )
+        // Slot: HAND_RIGHT (Sword / Wand gripped in the character's main hand)
         equippedItems[EquipmentSlot.HAND_RIGHT]?.let { weapon ->
             val weaponColor = Color(weapon.primaryColorHex)
+            val handCenterX = leftArmLeft + armWidth / 2f
+            val gripY = torsoTop + sleeveHeight + handHeight * 0.5f
             drawRoundRect(
-                color = weaponColor,
-                topLeft = Offset(cx - 76f * scale, cy - 72f * scale),
-                size = Size(14f * scale, 76f * scale),
-                cornerRadius = CornerRadius(6f * scale, 6f * scale)
+                color = Color(0xFF2C3E50),
+                topLeft = Offset(handCenterX - 3f * scale, gripY - 10f * scale),
+                size = Size(6f * scale, 20f * scale),
+                cornerRadius = CornerRadius(2f * scale, 2f * scale)
             )
-            // Guard
             drawRoundRect(
                 color = Color(0xFFF1C40F),
-                topLeft = Offset(cx - 86f * scale, cy - 12f * scale),
-                size = Size(34f * scale, 10f * scale),
-                cornerRadius = CornerRadius(4f * scale, 4f * scale)
+                topLeft = Offset(handCenterX - 14f * scale, gripY - 14f * scale),
+                size = Size(28f * scale, 7f * scale),
+                cornerRadius = CornerRadius(3f * scale, 3f * scale)
+            )
+            drawRoundRect(
+                brush = Brush.horizontalGradient(listOf(lighten(weaponColor, 0.3f), weaponColor)),
+                topLeft = Offset(handCenterX - 5f * scale, gripY - 84f * scale),
+                size = Size(10f * scale, 70f * scale),
+                cornerRadius = CornerRadius(3f * scale, 3f * scale)
             )
         }
     }
 
-    // Right Arm (viewer's right)
+    // Right Arm (viewer's right) - holds HAND_LEFT equipment
+    val rightArmLeft = torsoRight
     withTransform({
-        rotate(degrees = pose.rightArmAngleDeg, pivot = Offset(cx + 46f * scale, cy - 28f * scale))
+        rotate(degrees = pose.rightArmAngleDeg, pivot = Offset(rightArmLeft + armWidth / 2f, torsoTop))
     }) {
-        drawRoundRect(
-            color = armColor,
-            topLeft = Offset(cx + 44f * scale, cy - 28f * scale),
-            size = Size(22f * scale, 58f * scale),
-            cornerRadius = CornerRadius(10f * scale, 10f * scale)
+        drawBlock(
+            shirtColor,
+            Offset(rightArmLeft, torsoTop),
+            Size(armWidth, sleeveHeight),
+            blockCorner,
+            yawParallax,
+            scale
         )
-        // Slot: HAND_LEFT (Shield / Lantern)
+        drawBlock(
+            handColor,
+            Offset(rightArmLeft, torsoTop + sleeveHeight),
+            Size(armWidth, handHeight),
+            blockCorner,
+            yawParallax,
+            scale
+        )
+        // Slot: HAND_LEFT (Shield)
         equippedItems[EquipmentSlot.HAND_LEFT]?.let { shield ->
             val shieldColor = Color(shield.primaryColorHex)
+            val shieldTopLeft = Offset(rightArmLeft - 2f * scale, torsoTop + sleeveHeight - 2f * scale)
+            val shieldSize = Size(40f * scale, 48f * scale)
             drawRoundRect(
                 color = shieldColor,
-                topLeft = Offset(cx + 42f * scale, cy - 12f * scale),
-                size = Size(44f * scale, 52f * scale),
-                cornerRadius = CornerRadius(14f * scale, 14f * scale)
+                topLeft = shieldTopLeft,
+                size = shieldSize,
+                cornerRadius = CornerRadius(6f * scale, 6f * scale)
             )
             drawRoundRect(
                 color = Color(0xFFF39C12),
-                topLeft = Offset(cx + 42f * scale, cy - 12f * scale),
-                size = Size(44f * scale, 52f * scale),
-                cornerRadius = CornerRadius(14f * scale, 14f * scale),
-                style = Stroke(width = 3.5f * scale)
+                topLeft = shieldTopLeft,
+                size = shieldSize,
+                cornerRadius = CornerRadius(6f * scale, 6f * scale),
+                style = Stroke(width = 3f * scale)
+            )
+            drawCircle(
+                color = Color(0xFFF39C12),
+                radius = 5f * scale,
+                center = Offset(shieldTopLeft.x + shieldSize.width / 2f, shieldTopLeft.y + shieldSize.height / 2f)
             )
         }
     }
 
-    // 9. Head (with rigid-body vertical bob & Roblox/Lost Castle blocky low-poly charm)
-    val headCenterY = cy - 78f * scale + pose.headBobOffsetY * scale
-    val headLeft = cx - 48f * scale + yawParallax * 0.35f
+    // 8. Head (with rigid-body vertical bob & Roblox blocky charm, narrower than the torso)
+    val headBobOffset = pose.headBobOffsetY * scale * 0.5f
+    val headWidth = 56f * scale
+    val headHeight = 52f * scale
+    val animatedHeadTop = headTop + headBobOffset
+    val animatedHeadBottom = headBottom + headBobOffset
 
-    // Cat / Dog ears if animal avatar
+    // Cat / Dog ears if animal avatar (attached to head top, follow the head bob)
     if (appearance.avatarType == AvatarType.CAT) {
         val leftEar = Path().apply {
-            moveTo(headLeft + 8f * scale, headCenterY - 36f * scale)
-            lineTo(headLeft + 22f * scale, headCenterY - 68f * scale)
-            lineTo(headLeft + 38f * scale, headCenterY - 36f * scale)
+            moveTo(headLeft + 2f * scale, animatedHeadTop + 10f * scale)
+            lineTo(headLeft + 12f * scale, animatedHeadTop - 16f * scale)
+            lineTo(headLeft + 22f * scale, animatedHeadTop + 10f * scale)
             close()
         }
         val rightEar = Path().apply {
-            moveTo(headLeft + 58f * scale, headCenterY - 36f * scale)
-            lineTo(headLeft + 74f * scale, headCenterY - 68f * scale)
-            lineTo(headLeft + 88f * scale, headCenterY - 36f * scale)
+            moveTo(headLeft + headWidth - 22f * scale, animatedHeadTop + 10f * scale)
+            lineTo(headLeft + headWidth - 12f * scale, animatedHeadTop - 16f * scale)
+            lineTo(headLeft + headWidth - 2f * scale, animatedHeadTop + 10f * scale)
             close()
         }
-        drawPath(leftEar, color = bodyShadeColor)
-        drawPath(rightEar, color = bodyShadeColor)
+        drawPath(leftEar, color = darkerSkin)
+        drawPath(rightEar, color = darkerSkin)
     } else if (appearance.avatarType == AvatarType.DOG) {
         drawRoundRect(
-            color = bodyShadeColor,
-            topLeft = Offset(headLeft - 10f * scale, headCenterY - 28f * scale),
-            size = Size(18f * scale, 42f * scale),
-            cornerRadius = CornerRadius(8f * scale, 8f * scale)
+            color = darkerSkin,
+            topLeft = Offset(headLeft - 4f * scale, animatedHeadTop + 8f * scale),
+            size = Size(10f * scale, 28f * scale),
+            cornerRadius = CornerRadius(4f * scale, 4f * scale)
         )
         drawRoundRect(
-            color = bodyShadeColor,
-            topLeft = Offset(headLeft + 88f * scale, headCenterY - 28f * scale),
-            size = Size(18f * scale, 42f * scale),
-            cornerRadius = CornerRadius(8f * scale, 8f * scale)
+            color = darkerSkin,
+            topLeft = Offset(headLeft + headWidth - 6f * scale, animatedHeadTop + 8f * scale),
+            size = Size(10f * scale, 28f * scale),
+            cornerRadius = CornerRadius(4f * scale, 4f * scale)
         )
     }
 
-    // Main low-poly head cube
-    drawRoundRect(
-        color = bodyColor,
-        topLeft = Offset(headLeft, headCenterY - 42f * scale),
-        size = Size(96f * scale, 80f * scale),
-        cornerRadius = CornerRadius(22f * scale, 22f * scale)
+    // Main Roblox-style head block
+    drawBlock(
+        skinColor,
+        Offset(headLeft, animatedHeadTop),
+        Size(headWidth, headHeight),
+        12f * scale,
+        yawParallax,
+        scale
     )
 
-    // Expressive eyes & friendly smile
-    val eyeY = headCenterY - 6f * scale
-    val eyeRadius = if (appearance.eyeExpressionIndex % 2 == 0) 7.5f * scale else 9.0f * scale
-    drawCircle(Color(0xFF1E272E), radius = eyeRadius, center = Offset(headLeft + 30f * scale, eyeY))
-    drawCircle(Color(0xFF1E272E), radius = eyeRadius, center = Offset(headLeft + 66f * scale, eyeY))
-    // Eye sparkle
-    drawCircle(Color.White, radius = 2.8f * scale, center = Offset(headLeft + 28f * scale, eyeY - 2.5f * scale))
-    drawCircle(Color.White, radius = 2.8f * scale, center = Offset(headLeft + 64f * scale, eyeY - 2.5f * scale))
-
-    // Smile
-    drawRoundRect(
+    // Expressive eyes & friendly smile (shifted for turntable parallax)
+    val faceShiftX = yawParallax * 0.35f
+    val eyeW = if (appearance.eyeExpressionIndex % 2 == 1) 8f * scale else 6f * scale
+    val eyeH = if (appearance.eyeExpressionIndex % 2 == 1) 12f * scale else 9f * scale
+    val eyeY = animatedHeadTop + headHeight * 0.4f
+    val leftEyeCenter = Offset(cx - 14f * scale + faceShiftX, eyeY)
+    val rightEyeCenter = Offset(cx + 14f * scale + faceShiftX, eyeY)
+    drawOval(
         color = Color(0xFF1E272E),
-        topLeft = Offset(headLeft + 38f * scale, headCenterY + 12f * scale),
-        size = Size(20f * scale, 7f * scale),
-        cornerRadius = CornerRadius(4f * scale, 4f * scale)
+        topLeft = Offset(leftEyeCenter.x - eyeW / 2f, leftEyeCenter.y - eyeH / 2f),
+        size = Size(eyeW, eyeH)
+    )
+    drawOval(
+        color = Color(0xFF1E272E),
+        topLeft = Offset(rightEyeCenter.x - eyeW / 2f, rightEyeCenter.y - eyeH / 2f),
+        size = Size(eyeW, eyeH)
+    )
+    drawCircle(Color.White, radius = 1.6f * scale, center = leftEyeCenter - Offset(0.8f * scale, eyeH * 0.22f))
+    drawCircle(Color.White, radius = 1.6f * scale, center = rightEyeCenter - Offset(0.8f * scale, eyeH * 0.22f))
+
+    // Smile as a stroked arc
+    val smileWide = appearance.smileExpressionIndex % 2 != 0
+    val smileSize = Size(26f * scale, 18f * scale)
+    val smileTopLeft = Offset(cx - smileSize.width / 2f + faceShiftX, animatedHeadTop + headHeight * 0.58f)
+    val smileSweep = if (smileWide) 160f else 120f
+    val smileStart = (180f - smileSweep) / 2f
+    drawArc(
+        color = Color(0xFF1E272E),
+        startAngle = smileStart,
+        sweepAngle = smileSweep,
+        useCenter = false,
+        topLeft = smileTopLeft,
+        size = smileSize,
+        style = Stroke(width = 3f * scale, cap = StrokeCap.Round)
     )
 
-    // 10. Slot: HAT (Anchored to socket_hat on top of the head)
+    // 9. Slot: HAT (Anchored to the head top, follows the head bob)
     equippedItems[EquipmentSlot.HAT]?.let { hat ->
         val hatColor = Color(hat.primaryColorHex)
-        // Hat brim
-        drawRoundRect(
-            color = hatColor,
-            topLeft = Offset(headLeft - 10f * scale, headCenterY - 52f * scale),
-            size = Size(116f * scale, 16f * scale),
-            cornerRadius = CornerRadius(8f * scale, 8f * scale)
-        )
-        // Hat crown
-        val crownPath = Path().apply {
-            moveTo(headLeft + 12f * scale, headCenterY - 50f * scale)
-            lineTo(headLeft + 48f * scale, headCenterY - 96f * scale)
-            lineTo(headLeft + 84f * scale, headCenterY - 50f * scale)
+        val brimWidth = headWidth + 20f * scale
+        val brimHeight = 12f * scale
+        val brimTopLeft = Offset(headLeft - 10f * scale, animatedHeadTop - 10f * scale)
+        drawBlock(hatColor, brimTopLeft, Size(brimWidth, brimHeight), blockCorner, yawParallax, scale)
+        // Hat crown (wizard-hat style sharp triangle with a darker 3D side face)
+        val crownBaseY = brimTopLeft.y
+        val crownTip = Offset(cx + yawParallax * 0.2f, crownBaseY - 46f * scale)
+        val crownLeft = Offset(headLeft + 8f * scale, crownBaseY)
+        val crownRight = Offset(headLeft + headWidth - 8f * scale, crownBaseY)
+        val crownSidePath = Path().apply {
+            moveTo(crownTip.x, crownTip.y)
+            lineTo(cx, crownBaseY)
+            lineTo((if (yawParallax >= 0f) crownRight else crownLeft).x, crownBaseY)
             close()
         }
-        drawPath(crownPath, color = hatColor)
+        val crownFrontPath = Path().apply {
+            moveTo(crownTip.x, crownTip.y)
+            lineTo(crownLeft.x, crownLeft.y)
+            lineTo(crownRight.x, crownRight.y)
+            close()
+        }
+        drawPath(crownFrontPath, color = hatColor)
+        drawPath(crownSidePath, color = darken(hatColor, 0.7f))
     }
 }
