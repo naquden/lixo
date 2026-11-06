@@ -10,6 +10,7 @@ import kotlinx.datetime.toLocalDateTime
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.remote.SyncMergeEngine
+import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.model.Achievement
 import se.lixo.app.domain.model.AvatarAppearance
 import se.lixo.app.domain.model.AvatarType
@@ -25,7 +26,6 @@ import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathErrorLog
-import se.lixo.app.domain.model.MathProblem
 import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.StruggledWordLog
@@ -143,8 +143,8 @@ class LixoRepository(
             Course("course_sv_2", "Svenska Sagor: Kristallbergen", Subject.SWEDISH, minGrade = 2, version = 1, updatedAt = seedTimestamp),
             Course("course_sv_3", "Svenska Sagor: Stjärnborgens Krönikor", Subject.SWEDISH, minGrade = 3, version = 1, updatedAt = seedTimestamp),
             Course("course_math_1", "Matteäventyret: Plus, Minus & Tiokompisar", Subject.MATH, minGrade = 1, version = 1, updatedAt = seedTimestamp),
-            Course("course_math_2", "Klocktornet & Guldbörsen: Tid och Pengar", Subject.MATH, minGrade = 1, version = 1, updatedAt = seedTimestamp),
-            Course("course_math_3", "Sifferdalens Gånger, Delat & Kluringar", Subject.MATH, minGrade = 2, version = 1, updatedAt = seedTimestamp),
+            Course("course_math_2", "Klocktornet & Guldbörsen: Tiotal, Tid och Pengar", Subject.MATH, minGrade = 1, version = 1, updatedAt = seedTimestamp),
+            Course("course_math_3", "Sifferdalens Kluringar: Hundratal, Gåtor & Klockmästaren", Subject.MATH, minGrade = 2, version = 1, updatedAt = seedTimestamp),
             Course("course_en_1", "Engelska Glosresan", Subject.ENGLISH, minGrade = 2, version = 1, updatedAt = seedTimestamp)
         )
 
@@ -152,7 +152,7 @@ class LixoRepository(
         val generatedItems = buildSeedWardrobeCatalog()
         _wardrobeCatalog.value = generatedItems
 
-        // Seed 100 Campaign Levels + Tasks
+        // Seed 160 Campaign Levels (40 Swedish, 100 Math, 20 English) + Tasks
         val (generatedLevels, generatedTasks) = buildSeedCampaignLevelsAndTasks(generatedItems)
         _levels.value = generatedLevels
         _tasksById.value = generatedTasks
@@ -517,16 +517,23 @@ class LixoRepository(
         if (coursesToSync.isNotEmpty()) {
             val mergedCoursesById = _courses.value.associateBy { it.id }.toMutableMap()
             val mergedLevelsById = _levels.value.associateBy { it.id }.toMutableMap()
+            val syncedLevelIds = mutableSetOf<String>()
 
             for (course in coursesToSync) {
                 mergedCoursesById[course.id] = course
                 val remoteLevels = cloudGateway.fetchLevelsForCourse(course.id)
                 for (lvl in remoteLevels) {
                     mergedLevelsById[lvl.id] = lvl
+                    syncedLevelIds.add(lvl.id)
                 }
             }
 
+            // FirebaseSyncService.fetchTasksForCourse ignores its courseId argument and always
+            // returns the full task set, so fetch it exactly once (instead of once per course)
+            // and keep only the tasks belonging to the levels we're actually syncing.
             val remoteTasks = cloudGateway.fetchTasksForCourse(coursesToSync.first().id)
+                .filter { it.levelId in syncedLevelIds }
+
             if (remoteTasks.isNotEmpty()) {
                 _tasksById.update { current ->
                     val next = current.toMutableMap()
@@ -677,19 +684,19 @@ class LixoRepository(
             return items
         }
 
+        /**
+         * Builds the 160 campaign levels + tasks. Swedish (40) and English (20) are interleaved
+         * across orders 1..100 (order%5==0 -> English, else even -> math slot, else Swedish);
+         * the 100 math levels are built separately from [MathCurriculum] and sit at the even,
+         * non-multiple-of-10 orders within 1..100 (n1..n40) plus orders 101..160 (n41..n100).
+         */
         fun buildSeedCampaignLevelsAndTasks(
             wardrobeItems: List<WardrobeItem>
         ): Pair<List<CampaignLevel>, Map<String, HomeworkTask>> {
             val levels = mutableListOf<CampaignLevel>()
             val tasks = mutableMapOf<String, HomeworkTask>()
 
-            val biomes = listOf(
-                "Viskande Skogen",
-                "Sifferdalen",
-                "Glosornas Hamn",
-                "Kristallbergen",
-                "Stjärnborgen"
-            )
+            val biomes = MathCurriculum.BIOMES
 
             // Ordered by difficulty: 40 unique stories, one per Swedish level (no repeats).
             // 1-14 = course_sv_1 (grade 1), 15-27 = course_sv_2 (grade 2), 28-40 = course_sv_3 (grade 3).
@@ -736,27 +743,27 @@ class LixoRepository(
                 "Stjärnborgens Stora Bibliotek" to "Äntligen öppnades de tunga ekportarna till Stjärnborgens innersta sal. Lixo klev försiktigt in och tappade nästan andan. Hyllorna sträckte sig ända upp mot det välvda taket, och där väntade tusentals berättelser och kloka gåtor. Alla vänner från resan stod redan där: ugglan, Bo, prinsessan Mira, riddaren Ruben, häxan Hilda och till och med det trötta trollet. Brevduvan kom flygande med andra halvan av Lixos brev, bagaren bjöd på kanelbullar, och trollkarlens gryta sjöng falskt men glatt. Tillsammans firade de att Lixo hade läst sig hela vägen genom sagoriket."
             )
 
+            // Swedish (40 levels) and English (20 levels) occupy orders 1..100, interleaved with
+            // math slots: order%5==0 -> ENGLISH, else even -> MATH (handled separately below),
+            // else SWEDISH. Math itself is independent of this loop; see MathCurriculum for its
+            // own orders (2,4,6,...,98 for n1..n40, and 101..160 for n41..n100).
             var swedishIdx = 0
             for (order in 1..100) {
-                val biome = biomes[(order - 1) / 20]
-                val difficulty = (((order - 1) / 17) + 1).coerceIn(1, 6)
                 val subject = when {
                     order % 5 == 0 -> Subject.ENGLISH
-                    order % 2 == 0 -> Subject.MATH
+                    order % 2 == 0 -> continue
                     else -> Subject.SWEDISH
                 }
+                val biome = biomes[(order - 1) / 20]
+                val difficulty = (((order - 1) / 17) + 1).coerceIn(1, 6)
+
                 val courseId = when (subject) {
                     Subject.SWEDISH -> when {
                         order <= 33 -> "course_sv_1"
                         order <= 67 -> "course_sv_2"
                         else -> "course_sv_3"
                     }
-                    Subject.MATH -> when {
-                        order <= 34 -> "course_math_1"
-                        order <= 68 -> "course_math_2"
-                        else -> "course_math_3"
-                    }
-                    Subject.ENGLISH -> "course_en_1"
+                    else -> "course_en_1"
                 }
                 val levelId = "level_$order"
                 val taskId = "task_$order"
@@ -769,15 +776,7 @@ class LixoRepository(
 
                 val titleSv = when (subject) {
                     Subject.SWEDISH -> "Bana $order: ${currentStory?.first ?: "Sagan i $biome"}"
-                    Subject.MATH -> {
-                        val mathTheme = when {
-                            order <= 34 -> "Tiokompisar & Tallinjen"
-                            order <= 68 -> "Klockan & Guldkronor"
-                            else -> "Gånger, Delat & Gåtor"
-                        }
-                        "Bana $order: $mathTheme ($biome)"
-                    }
-                    Subject.ENGLISH -> "Bana $order: Glosäventyr i $biome"
+                    else -> "Bana $order: Glosäventyr i $biome"
                 }
 
                 levels.add(
@@ -806,17 +805,7 @@ class LixoRepository(
                             rewardItemId = rewardItem?.id
                         )
                     }
-                    Subject.MATH -> {
-                        HomeworkTask(
-                            id = taskId,
-                            levelId = levelId,
-                            type = TaskType.MATH,
-                            subject = Subject.MATH,
-                            mathProblems = buildMathProblemsForLevel(order, difficulty),
-                            rewardItemId = rewardItem?.id
-                        )
-                    }
-                    Subject.ENGLISH -> {
+                    else -> {
                         HomeworkTask(
                             id = taskId,
                             levelId = levelId,
@@ -852,111 +841,40 @@ class LixoRepository(
                 }
                 tasks[taskId] = task
             }
-            return levels to tasks
-        }
 
-        private fun buildMathProblemsForLevel(order: Int, difficulty: Int): List<MathProblem> {
-            val a = 3 + ((order * 3) % (6 + difficulty * 3))
-            val b = 4 + ((order * 5) % (5 + difficulty * 2))
-            val subTop = 12 + ((order * 4) % (8 + difficulty * 4))
-            val subTake = 4 + (order % minOf(9, subTop - 2))
-            val subAns = subTop - subTake
+            for (n in 1..MathCurriculum.MATH_LEVEL_COUNT) {
+                val spec = MathCurriculum.mathLevelSpec(n)
+                val order = spec.order
+                val levelId = "level_$order"
+                val taskId = "task_$order"
+                val rewardItem = wardrobeItems.getOrNull(order % wardrobeItems.size)
 
-            val tenPairs = listOf(8 to 5, 7 to 6, 9 to 4, 8 to 7, 6 to 8, 9 to 6, 7 to 5, 8 to 9)
-            val (tcA, tcB) = tenPairs[(order / 2) % tenPairs.size]
-            val tcNeed = 10 - tcA
-            val tcRest = tcB - tcNeed
-            val tcAns = tcA + tcB
-
-            val mulA = 2 + (order % (2 + difficulty))
-            val mulB = 3 + ((order / 2) % (3 + difficulty))
-            val mulAns = mulA * mulB
-
-            val divGroups = 2 + (order % 4)
-            val divEach = 3 + ((order / 3) % (3 + difficulty))
-            val divTotal = divGroups * divEach
-
-            val wpTotal = 14 + (order % 11)
-            val wpGive = 5 + (order % 5)
-            val wpLeft = wpTotal - wpGive
-
-            return listOf(
-                MathProblem(
-                    id = "mp_${order}_addition",
-                    type = MathProblemType.ADDITION,
-                    promptSv = "Vad blir $a + $b?",
-                    correctAnswer = "${a + b}",
-                    choices = listOf("${a + b - 1}", "${a + b}", "${a + b + 1}", "${a + b + 2}"),
-                    hintStep1Sv = "Börja på $a och räkna $b steg framåt på tallinjen.",
-                    hintStep2Sv = "Lägg ihop tiotal och ental lugnt: $a + $b = ${a + b}."
-                ),
-                MathProblem(
-                    id = "mp_${order}_subtraction",
-                    type = MathProblemType.SUBTRACTION,
-                    promptSv = "Vad blir $subTop - $subTake?",
-                    correctAnswer = "$subAns",
-                    choices = listOf("${subAns - 1}", "$subAns", "${subAns + 1}", "${subAns + 2}"),
-                    hintStep1Sv = "Starta på $subTop och backa $subTake steg bakåt.",
-                    hintStep2Sv = "$subTop minus $subTake blir $subAns!"
-                ),
-                MathProblem(
-                    id = "mp_${order}_ten_crossing",
-                    type = MathProblemType.TEN_CROSSING,
-                    promptSv = "Tiotalsövergång: Vad blir $tcA + $tcB?",
-                    correctAnswer = "$tcAns",
-                    choices = listOf("${tcAns - 1}", "$tcAns", "${tcAns + 1}", "${tcAns + 2}"),
-                    hintStep1Sv = "$tcA behöver $tcNeed till för att bli ett helt tiotal (10).",
-                    hintStep2Sv = "Dela upp $tcB i $tcNeed + $tcRest: $tcA + $tcNeed = 10, och 10 + $tcRest = $tcAns!"
-                ),
-                MathProblem(
-                    id = "mp_${order}_clock",
-                    type = MathProblemType.CLOCK,
-                    promptSv = "Timvisaren pekar mellan 3 och 4, och minutvisaren pekar rakt ner på 6. Vad är klockan?",
-                    correctAnswer = "03:30",
-                    choices = listOf("03:00", "03:15", "03:30", "06:15"),
-                    hintStep1Sv = "När långa minutvisaren pekar rakt ner på 6 betyder det halv timme (30 minuter).",
-                    hintStep2Sv = "Halv fyra skrivs digitalt som 03:30.",
-                    visualClockHour = 3,
-                    visualClockMinute = 30
-                ),
-                MathProblem(
-                    id = "mp_${order}_money",
-                    type = MathProblemType.MONEY,
-                    promptSv = "Du har en 20-krona, en 10-krona och en 5-krona. Hur många kronor har du tillsammans?",
-                    correctAnswer = "35",
-                    choices = listOf("25", "30", "35", "40"),
-                    hintStep1Sv = "Lägg ihop sedeln och det största myntet först: 20 kr + 10 kr = 30 kr.",
-                    hintStep2Sv = "Lägg sedan till 5-kronan: 30 kr + 5 kr = 35 kr!",
-                    visualMoneyBreakdownKr = listOf(20, 10, 5)
-                ),
-                MathProblem(
-                    id = "mp_${order}_multiplication",
-                    type = MathProblemType.MULTIPLICATION,
-                    promptSv = "Vad blir $mulA × $mulB?",
-                    correctAnswer = "$mulAns",
-                    choices = listOf("${maxOf(1, mulAns - mulA)}", "$mulAns", "${mulAns + 2}", "${mulAns + mulB}"),
-                    hintStep1Sv = "Tänk $mulA grupper med $mulB stjärnor i varje grupp.",
-                    hintStep2Sv = "Om du lägger ihop $mulB totalt $mulA gånger får du $mulAns!"
-                ),
-                MathProblem(
-                    id = "mp_${order}_division",
-                    type = MathProblemType.DIVISION,
-                    promptSv = "$divTotal guldstjärnor delas lika mellan $divGroups vänner. Hur många får var och en?",
-                    correctAnswer = "$divEach",
-                    choices = listOf("${maxOf(1, divEach - 1)}", "$divEach", "${divEach + 1}", "${divEach + 2}"),
-                    hintStep1Sv = "Fördela de $divTotal stjärnorna i $divGroups lika stora högar.",
-                    hintStep2Sv = "Eftersom $divGroups × $divEach = $divTotal får varje vän $divEach stjärnor."
-                ),
-                MathProblem(
-                    id = "mp_${order}_word_problem",
-                    type = MathProblemType.WORD_PROBLEM,
-                    promptSv = "Katten Lixo har plockat $wpTotal blåbär i skogen och bjuder ugglan på $wpGive stycken. Hur många blåbär har Lixo kvar?",
-                    correctAnswer = "$wpLeft",
-                    choices = listOf("${wpLeft - 1}", "$wpLeft", "${wpLeft + 1}", "${wpLeft + 2}"),
-                    hintStep1Sv = "Vi räknar subtraktion: $wpTotal minus $wpGive.",
-                    hintStep2Sv = "$wpTotal - $wpGive = $wpLeft blåbär kvar!"
+                levels.add(
+                    CampaignLevel(
+                        id = levelId,
+                        courseId = spec.courseId,
+                        order = order,
+                        title = spec.title,
+                        biomeNameSv = spec.biome,
+                        subject = Subject.MATH,
+                        difficulty = spec.difficulty,
+                        timeRequirementSeconds = spec.timeRequirementSeconds,
+                        referenceWpm = spec.referenceWpm,
+                        taskId = taskId
+                    )
                 )
-            )
+
+                tasks[taskId] = HomeworkTask(
+                    id = taskId,
+                    levelId = levelId,
+                    type = TaskType.MATH,
+                    subject = Subject.MATH,
+                    mathProblems = MathCurriculum.buildMathProblems(n, order),
+                    rewardItemId = rewardItem?.id
+                )
+            }
+
+            return levels.sortedBy { it.order } to tasks
         }
 
         fun buildSeedDictionary(): Map<String, DictionaryEntry> {

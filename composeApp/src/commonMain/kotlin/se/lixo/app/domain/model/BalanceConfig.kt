@@ -75,6 +75,18 @@ object BalanceConfig {
     const val STREAK_REQUIRED_MATH_TASKS_PER_DAY = 1
     const val WEEKLY_STREAK_DAYS_FOR_SET_REWARD = 7
 
+    // --- Campaign size ---
+    /**
+     * Total number of ordered campaign slots (project.md §2 "Linjär kampanj"). Math is
+     * independent from Swedish/English: Swedish (40 levels) and English (20 levels) occupy
+     * orders 1..100 (order%5==0 -> English, else even -> math slot, else Swedish), while the
+     * 100 math levels live at the even, non-multiple-of-10 orders within 1..100 (n1..n40) and at
+     * orders 101..160 (n41..n100) (see [se.lixo.app.domain.content.MathCurriculum]). Unlocking is
+     * per subject, using the previous level of the same subject, so the order gap between n40
+     * (order 98) and n41 (order 101) doesn't block math progression.
+     */
+    const val CAMPAIGN_MAX_ORDER = 160
+
     // --- Privacy & Crashlytics Consent (§6) ---
     /**
      * Show Crashlytics opt-in consent dialog on the 3rd app launch so first test sessions

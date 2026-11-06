@@ -195,13 +195,18 @@ data class Course(
 
 /**
  * Firestore / local Campaign Level (`levels/{levelId}`).
- * Linear campaign of 100 levels (project.md §2 "Linjär kampanj").
+ * Campaign of 160 levels, orders 1..160 (project.md §2 "Linjär kampanj"). Math is independent
+ * from Swedish/English: Swedish (40 levels) and English (20 levels) are interleaved across
+ * orders 1..100, while the 100 math levels sit at the even, non-multiple-of-10 orders within
+ * 1..100 (n1..n40) plus orders 101..160 (n41..n100). See
+ * [se.lixo.app.domain.content.MathCurriculum]. Unlocking is per subject (previous level of the
+ * same subject), independent of other subjects' positions.
  */
 @Serializable
 data class CampaignLevel(
     val id: String,
     val courseId: String,
-    val order: Int, // 1..100
+    val order: Int, // 1..160
     val title: String,
     val biomeNameSv: String,
     val subject: Subject,

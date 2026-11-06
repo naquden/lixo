@@ -19,6 +19,7 @@ import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
+import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.model.AvatarAppearance
 import se.lixo.app.domain.model.AvatarType
@@ -571,6 +572,337 @@ class LixoEnginesTest {
         referenceWpm = 40,
         taskId = "task_$order"
     )
+
+    @Test
+    fun seededCampaign_has160LevelsAnd100MathLevels() {
+        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(LixoRepository.buildSeedWardrobeCatalog())
+
+        val orders = levels.map { it.order }
+        assertEquals(orders.size, orders.distinct().size, "Level orders must be unique")
+        assertEquals((1..160).toList(), orders.sorted())
+
+        val mathLevels = levels.filter { it.subject == Subject.MATH }
+        val swedishLevels = levels.filter { it.subject == Subject.SWEDISH }
+        val englishLevels = levels.filter { it.subject == Subject.ENGLISH }
+        // Subject assignment is unchanged from before this refactor: order % 5 == 0 -> ENGLISH,
+        // remaining even orders -> MATH (now built separately via MathCurriculum), remaining odd -> SWEDISH.
+        // Across orders 1..100 that is 20 ENGLISH, 40 SWEDISH, 40 MATH (n1..40); n41..100 add 60 more MATH
+        // levels at orders 101..160, for 100 MATH levels total and 160 levels overall.
+        assertEquals(100, mathLevels.size)
+        assertEquals(40, swedishLevels.size)
+        assertEquals(20, englishLevels.size)
+
+        val mathIndices = mathLevels.mapNotNull { MathCurriculum.mathIndexForOrder(it.order) }.sorted()
+        assertEquals((1..100).toList(), mathIndices)
+    }
+
+    @Test
+    fun seededMath_n1IsSixEasyAdditions() {
+        val (levels, tasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(LixoRepository.buildSeedWardrobeCatalog())
+        val level = levels.first { it.order == 2 }
+        val task = tasks.getValue(level.taskId)
+        val problems = task.mathProblems
+
+        assertEquals(6, problems.size)
+        assertTrue(problems.all { it.type == MathProblemType.ADDITION })
+        assertTrue(problems.all { (it.correctAnswer.toIntOrNull() ?: Int.MAX_VALUE) <= 5 })
+        assertEquals(1, level.difficulty)
+        assertEquals(60, level.timeRequirementSeconds)
+        assertEquals("Bana 1: Plus med små tal (Viskande Skogen)", level.title)
+    }
+
+    @Test
+    fun seededMath_stageAndClockRules() {
+        val (levels, tasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(LixoRepository.buildSeedWardrobeCatalog())
+        val mathLevels = levels.filter { it.subject == Subject.MATH }
+
+        val allTypesSeen = mutableSetOf<MathProblemType>()
+        for (level in mathLevels) {
+            val n = MathCurriculum.mathIndexForOrder(level.order) ?: error("No math index for order ${level.order}")
+            val problems = tasks.getValue(level.taskId).mathProblems
+
+            assertTrue(problems.size <= 10, "n=$n has more than 10 questions")
+            if (n <= 5) {
+                assertEquals(6, problems.size, "n=$n must have exactly 6 questions")
+            }
+
+            if (n <= 20) {
+                assertTrue(problems.all { it.type == MathProblemType.ADDITION }, "n=$n must be all ADDITION")
+            }
+            if (n < 28) {
+                assertTrue(problems.none { it.type == MathProblemType.SUBTRACTION }, "SUBTRACTION before n28 at n=$n")
+            }
+            if (n < 31) {
+                assertTrue(problems.none { it.type == MathProblemType.CLOCK }, "CLOCK before n31 at n=$n")
+            }
+            if (n < 80) {
+                problems.filter { it.type == MathProblemType.CLOCK }.forEach {
+                    assertTrue(
+                        it.visualClockMinute == 0 || it.visualClockMinute == 30,
+                        "n=$n clock minute must be 0 or 30, got ${it.visualClockMinute}"
+                    )
+                }
+            }
+            assertTrue(
+                problems.none { it.type == MathProblemType.MULTIPLICATION || it.type == MathProblemType.DIVISION },
+                "No multiplication/division allowed at n=$n"
+            )
+            allTypesSeen.addAll(problems.map { it.type })
+
+            for (p in problems) {
+                assertTrue(p.correctAnswer in p.choices, "n=$n ${p.id}: correctAnswer not in choices")
+                assertEquals(4, p.choices.size, "n=$n ${p.id}: expected 4 choices")
+                assertEquals(4, p.choices.distinct().size, "n=$n ${p.id}: choices must be distinct")
+                if (p.type != MathProblemType.CLOCK) {
+                    p.choices.forEach { choice ->
+                        val value = choice.toIntOrNull()
+                        assertNotNull(value, "n=$n ${p.id}: non-integer choice '$choice'")
+                        assertTrue(value >= 0, "n=$n ${p.id}: negative choice '$choice'")
+                    }
+                }
+            }
+        }
+
+        assertEquals(
+            setOf(
+                MathProblemType.ADDITION,
+                MathProblemType.SUBTRACTION,
+                MathProblemType.TEN_CROSSING,
+                MathProblemType.CLOCK,
+                MathProblemType.MONEY,
+                MathProblemType.WORD_PROBLEM
+            ),
+            allTypesSeen
+        )
+    }
+
+    @Test
+    fun seededMath_correctAnswerPositionVaries() {
+        val (levels, tasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(LixoRepository.buildSeedWardrobeCatalog())
+        val mathLevels = levels.filter { it.subject == Subject.MATH }
+
+        for (level in mathLevels) {
+            val problems = tasks.getValue(level.taskId).mathProblems
+            val positions = problems.map { it.choices.indexOf(it.correctAnswer) }.toSet()
+            assertTrue(positions.size > 1, "Level order ${level.order} never varies correct answer position")
+        }
+    }
+
+    @Test
+    fun progressionEngine_perSubjectUnlock_mathN41RequiresStarOnN40AcrossOrderGap() {
+        val levels = listOf(
+            level(order = 98, subject = Subject.MATH),
+            level(order = 99, subject = Subject.SWEDISH),
+            level(order = 100, subject = Subject.ENGLISH),
+            level(order = 101, subject = Subject.MATH)
+        )
+
+        assertFalse(progressionEngine.isLevelUnlocked(101, emptyMap(), levels))
+
+        val progressWithOnlySwedishAndEnglishStarred = mapOf(
+            levels[1].id to LevelProgress(
+                profileId = "p1",
+                levelId = levels[1].id,
+                levelOrder = 99,
+                starsEarned = 3,
+                completedInAiMode = true,
+                bestTimeSeconds = 20,
+                bestWpm = 40
+            ),
+            levels[2].id to LevelProgress(
+                profileId = "p1",
+                levelId = levels[2].id,
+                levelOrder = 100,
+                starsEarned = 3,
+                completedInAiMode = true,
+                bestTimeSeconds = 20,
+                bestWpm = 40
+            )
+        )
+        assertFalse(
+            progressionEngine.isLevelUnlocked(101, progressWithOnlySwedishAndEnglishStarred, levels),
+            "MATH order 101 must require a star on MATH order 98, not on Swedish/English levels"
+        )
+
+        val progressWithMathStarred = mapOf(
+            levels[0].id to LevelProgress(
+                profileId = "p1",
+                levelId = levels[0].id,
+                levelOrder = 98,
+                starsEarned = 1,
+                completedInAiMode = true,
+                bestTimeSeconds = 20,
+                bestWpm = 40
+            )
+        )
+        assertTrue(
+            progressionEngine.isLevelUnlocked(101, progressWithMathStarred, levels),
+            "MATH order 101 unlocks once MATH order 98 (the previous MATH level, despite the order gap) has a star"
+        )
+
+        // Repeat on the real seeded levels.
+        val (seededLevels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(LixoRepository.buildSeedWardrobeCatalog())
+        val seededProgress = mapOf(
+            "level_98" to LevelProgress(
+                profileId = "p1",
+                levelId = "level_98",
+                levelOrder = 98,
+                starsEarned = 1,
+                completedInAiMode = true,
+                bestTimeSeconds = 20,
+                bestWpm = 40
+            )
+        )
+        assertTrue(progressionEngine.isLevelUnlocked(101, seededProgress, seededLevels))
+        assertEquals(Subject.MATH, seededLevels.first { it.order == 101 }.subject)
+    }
+
+    @Test
+    fun mathCurriculum_parityFixture() {
+        assertEquals(2, MathCurriculum.orderForMathIndex(1))
+        assertEquals(76, MathCurriculum.orderForMathIndex(31))
+        assertEquals(98, MathCurriculum.orderForMathIndex(40))
+        assertEquals(101, MathCurriculum.orderForMathIndex(41))
+        assertEquals(152, MathCurriculum.orderForMathIndex(92))
+        assertEquals(160, MathCurriculum.orderForMathIndex(100))
+
+        assertEquals(40, MathCurriculum.mathIndexForOrder(98))
+        assertEquals(41, MathCurriculum.mathIndexForOrder(101))
+        assertNull(MathCurriculum.mathIndexForOrder(10))
+        assertNull(MathCurriculum.mathIndexForOrder(3))
+
+        val n1Prompts = listOf(
+            "Vad blir 1 + 1?",
+            "Vad blir 1 + 2?",
+            "Vad blir 2 + 1?",
+            "Vad blir 1 + 3?",
+            "Vad blir 3 + 1?",
+            "Vad blir 1 + 4?"
+        )
+        val n1Choices = listOf(
+            listOf("1", "3", "2", "4"),
+            listOf("2", "4", "5", "3"),
+            listOf("3", "2", "4", "5"),
+            listOf("3", "4", "5", "6"),
+            listOf("3", "5", "4", "6"),
+            listOf("4", "6", "7", "5")
+        )
+        val n1Problems = MathCurriculum.buildMathProblems(1, MathCurriculum.orderForMathIndex(1))
+        assertEquals(n1Prompts, n1Problems.map { it.promptSv })
+        assertEquals(n1Choices, n1Problems.map { it.choices })
+
+        val n31Prompts = listOf(
+            "Vad blir 2 - 1?",
+            "Vad blir 3 - 1?",
+            "Timvisaren pekar rakt på 3 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 4 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 5 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 6 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 7 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 8 och minutvisaren pekar rakt upp på 12. Vad är klockan?"
+        )
+        val n31Answers = listOf("1", "2", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00")
+        val n31Problems = MathCurriculum.buildMathProblems(31, MathCurriculum.orderForMathIndex(31))
+        assertEquals(n31Prompts, n31Problems.map { it.promptSv })
+        assertEquals(n31Answers, n31Problems.map { it.correctAnswer })
+
+        val n92Prompts = listOf(
+            "Timvisaren är mellan 7 och 8, och minutvisaren pekar på 4. Vad är klockan?",
+            "Timvisaren är mellan 10 och 11, och minutvisaren pekar på 7. Vad är klockan?",
+            "Timvisaren är mellan 2 och 3, och minutvisaren pekar på 2. Vad är klockan?",
+            "Timvisaren närmar sig 6 och minutvisaren pekar på 9. Vad är klockan?",
+            "Timvisaren är mellan 8 och 9, och minutvisaren pekar på 1. Vad är klockan?",
+            "Timvisaren är mellan 11 och 12, och minutvisaren pekar på 10. Vad är klockan?",
+            "Timvisaren är mellan 3 och 4, och minutvisaren pekar på 5. Vad är klockan?",
+            "Timvisaren är mellan 6 och 7, och minutvisaren pekar på 8. Vad är klockan?",
+            "Timvisaren är strax efter 9 och minutvisaren pekar på 3. Vad är klockan?",
+            "Timvisaren är mellan 12 och 1, och minutvisaren pekar på 11. Vad är klockan?"
+        )
+        val n92Answers = listOf(
+            "07:20", "10:35", "02:10", "05:45", "08:05",
+            "11:50", "03:25", "06:40", "09:15", "12:55"
+        )
+        val n92Problems = MathCurriculum.buildMathProblems(92, MathCurriculum.orderForMathIndex(92))
+        assertEquals(n92Prompts, n92Problems.map { it.promptSv })
+        assertEquals(n92Answers, n92Problems.map { it.correctAnswer })
+    }
+
+    @Test
+    fun mathCurriculum_clockMinuteRanges() {
+        for (n in 1..100) {
+            val problems = MathCurriculum.buildMathProblems(n, MathCurriculum.orderForMathIndex(n))
+            val clockProblems = problems.filter { it.type == MathProblemType.CLOCK }
+            if (n < 31) {
+                assertTrue(clockProblems.isEmpty(), "CLOCK before n31 at n=$n")
+            }
+            if (n < 80) {
+                clockProblems.forEach {
+                    assertTrue(
+                        it.visualClockMinute == 0 || it.visualClockMinute == 30,
+                        "n=$n clock minute must be in {0, 30}, got ${it.visualClockMinute}"
+                    )
+                }
+            } else if (n in 80..91) {
+                clockProblems.forEach {
+                    assertTrue(
+                        it.visualClockMinute in setOf(0, 15, 30, 45),
+                        "n=$n clock minute must be in {0, 15, 30, 45}, got ${it.visualClockMinute}"
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun progressionEngine_recordLevelCompletion_order150AdvancesTo151AndOrder160StaysCapped() {
+        val wardrobe = LixoRepository.buildSeedWardrobeCatalog()
+        val levelAt150 = level(order = 150, subject = Subject.MATH)
+        val levelAt160 = level(order = 160, subject = Subject.MATH)
+        val baseProfile = ChildProfile(
+            id = "p1",
+            displayName = "Test",
+            currentLevelOrder = 150,
+            createdAtEpochMillis = 0L,
+            updatedAtEpochMillis = 0L
+        )
+
+        val outcome150 = progressionEngine.recordLevelCompletion(
+            profile = baseProfile,
+            level = levelAt150,
+            previousProgress = null,
+            earnedStarsThisRun = 2,
+            completedInAiMode = true,
+            elapsedSeconds = 30,
+            achievedWpm = 50,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            allWardrobeItems = wardrobe,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-01-01"),
+            nowEpochMillis = 1000L
+        )
+        assertEquals(151, outcome150.updatedProfile.currentLevelOrder)
+
+        val profileAt160 = baseProfile.copy(currentLevelOrder = 160)
+        val outcome160 = progressionEngine.recordLevelCompletion(
+            profile = profileAt160,
+            level = levelAt160,
+            previousProgress = null,
+            earnedStarsThisRun = 2,
+            completedInAiMode = true,
+            elapsedSeconds = 30,
+            achievedWpm = 50,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            allWardrobeItems = wardrobe,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-01-01"),
+            nowEpochMillis = 1000L
+        )
+        assertEquals(160, outcome160.updatedProfile.currentLevelOrder)
+    }
 
     @Test
     fun syncMergeEngine_combinesInventoryUnionBestStarsAndLastWriteWinsSettings() {

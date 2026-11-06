@@ -34,7 +34,12 @@ data class LevelCompletionOutcome(
  * Progression, Linear Campaign, Calendar-Day Streak, and Non-Lootbox Gift Engine
  * (`project.md` §2 "Progression & Kampanjstruktur", "Presenter / gåvor", "Streak"):
  *
- * - Linear Campaign (1..100): levels must be completed in order.
+ * - Campaign (orders 1..160; 40 Swedish, 100 Math, 20 English). Math is independent from
+ *   Swedish/English: Swedish and English are interleaved across orders 1..100, while math sits
+ *   at the even, non-multiple-of-10 orders within 1..100 (n1..n40) plus orders 101..160
+ *   (n41..n100, see [se.lixo.app.domain.content.MathCurriculum]). Unlocking is per subject world:
+ *   levels must be completed in order within their subject, regardless of their position among
+ *   other subjects.
  * - Anti-Star-Farming: replaying an already 3-starred level awards 0 additional stars;
  *   replaying a 1- or 2-starred level only awards the positive delta (`max(0, newStars - previousBest)`).
  * - Non-Lootbox Gifts: extra repetition awards a gift with an item. If the rolled item is a duplicate,
@@ -203,7 +208,7 @@ class ProgressionAndGiftEngine(
             }
         }
 
-        val nextLevelOrder = max(profile.currentLevelOrder, (level.order + 1).coerceAtMost(100))
+        val nextLevelOrder = max(profile.currentLevelOrder, (level.order + 1).coerceAtMost(BalanceConfig.CAMPAIGN_MAX_ORDER))
         val updatedProfile = profile.copy(
             unlockedAvatars = profile.unlockedAvatars + newlyUnlockedAvatars,
             currentLevelOrder = nextLevelOrder,

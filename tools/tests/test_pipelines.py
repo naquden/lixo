@@ -20,6 +20,18 @@ def load_seed_bundle() -> dict:
     return json.loads(SEED_BUNDLE_PATH.read_text(encoding="utf-8"))
 
 
+def math_levels_by_index(bundle: dict) -> dict:
+    math_levels = sorted(
+        (lvl for lvl in bundle["levels"] if lvl["subject"] == "MATH"), key=lambda lvl: lvl["order"]
+    )
+    return {n: lvl for n, lvl in enumerate(math_levels, start=1)}
+
+
+def math_problems_for_index(bundle: dict, n: int) -> list:
+    tasks_by_id = {t["id"]: t for t in bundle["tasks"]}
+    return tasks_by_id[math_levels_by_index(bundle)[n]["taskId"]]["mathProblems"]
+
+
 class LixoPipelineAndSpecificationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -27,9 +39,9 @@ class LixoPipelineAndSpecificationTests(unittest.TestCase):
 
     def test_seed_bundle_passes_all_mvp_constraints(self) -> None:
         bundle = load_seed_bundle()
-        self.assertEqual(len(bundle["levels"]), 100)
-        self.assertEqual(len(bundle["tasks"]), 100)
-        self.assertEqual([lvl["order"] for lvl in bundle["levels"]], list(range(1, 101)))
+        self.assertEqual(len(bundle["levels"]), 160)
+        self.assertEqual(len(bundle["tasks"]), 160)
+        self.assertEqual(sorted(lvl["order"] for lvl in bundle["levels"]), list(range(1, 161)))
         self.assertGreaterEqual(len(bundle["wardrobeItems"]), 100)
         task_ids = {t["id"] for t in bundle["tasks"]}
         for lvl in bundle["levels"]:
@@ -58,6 +70,95 @@ class LixoPipelineAndSpecificationTests(unittest.TestCase):
         sv1, sv2, sv3 = (avg_words_per_sentence(c) for c in ("course_sv_1", "course_sv_2", "course_sv_3"))
         self.assertLess(sv1, sv2)
         self.assertLess(sv2, sv3)
+
+    def test_math_parity_fixture(self) -> None:
+        bundle = load_seed_bundle()
+        by_index = math_levels_by_index(bundle)
+        self.assertEqual(len(by_index), 100)
+        self.assertEqual(by_index[1]["order"], 2)
+        self.assertEqual(by_index[31]["order"], 76)
+        self.assertEqual(by_index[40]["order"], 98)
+        self.assertEqual(by_index[41]["order"], 101)
+        self.assertEqual(by_index[92]["order"], 152)
+        self.assertEqual(by_index[100]["order"], 160)
+
+        n1_prompts = [
+            "Vad blir 1 + 1?",
+            "Vad blir 1 + 2?",
+            "Vad blir 2 + 1?",
+            "Vad blir 1 + 3?",
+            "Vad blir 3 + 1?",
+            "Vad blir 1 + 4?",
+        ]
+        n1_choices = [
+            ["1", "3", "2", "4"],
+            ["2", "4", "5", "3"],
+            ["3", "2", "4", "5"],
+            ["3", "4", "5", "6"],
+            ["3", "5", "4", "6"],
+            ["4", "6", "7", "5"],
+        ]
+        n1_problems = math_problems_for_index(bundle, 1)
+        self.assertEqual([p["promptSv"] for p in n1_problems], n1_prompts)
+        self.assertEqual([p["choices"] for p in n1_problems], n1_choices)
+
+        n31_prompts = [
+            "Vad blir 2 - 1?",
+            "Vad blir 3 - 1?",
+            "Timvisaren pekar rakt på 3 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 4 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 5 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 6 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 7 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+            "Timvisaren pekar rakt på 8 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
+        ]
+        n31_answers = ["1", "2", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00"]
+        n31_problems = math_problems_for_index(bundle, 31)
+        self.assertEqual([p["promptSv"] for p in n31_problems], n31_prompts)
+        self.assertEqual([p["correctAnswer"] for p in n31_problems], n31_answers)
+
+        n92_prompts = [
+            "Timvisaren är mellan 7 och 8, och minutvisaren pekar på 4. Vad är klockan?",
+            "Timvisaren är mellan 10 och 11, och minutvisaren pekar på 7. Vad är klockan?",
+            "Timvisaren är mellan 2 och 3, och minutvisaren pekar på 2. Vad är klockan?",
+            "Timvisaren närmar sig 6 och minutvisaren pekar på 9. Vad är klockan?",
+            "Timvisaren är mellan 8 och 9, och minutvisaren pekar på 1. Vad är klockan?",
+            "Timvisaren är mellan 11 och 12, och minutvisaren pekar på 10. Vad är klockan?",
+            "Timvisaren är mellan 3 och 4, och minutvisaren pekar på 5. Vad är klockan?",
+            "Timvisaren är mellan 6 och 7, och minutvisaren pekar på 8. Vad är klockan?",
+            "Timvisaren är strax efter 9 och minutvisaren pekar på 3. Vad är klockan?",
+            "Timvisaren är mellan 12 och 1, och minutvisaren pekar på 11. Vad är klockan?",
+        ]
+        n92_answers = [
+            "07:20", "10:35", "02:10", "05:45", "08:05",
+            "11:50", "03:25", "06:40", "09:15", "12:55",
+        ]
+        n92_problems = math_problems_for_index(bundle, 92)
+        self.assertEqual([p["promptSv"] for p in n92_problems], n92_prompts)
+        self.assertEqual([p["correctAnswer"] for p in n92_problems], n92_answers)
+
+    def test_math_constraints(self) -> None:
+        bundle = load_seed_bundle()
+        by_index = math_levels_by_index(bundle)
+        self.assertEqual(len(by_index), 100)
+
+        tasks_by_id = {t["id"]: t for t in bundle["tasks"]}
+        types_seen = set()
+        for n, lvl in by_index.items():
+            mps = tasks_by_id[lvl["taskId"]]["mathProblems"]
+            self.assertLessEqual(len(mps), 10)
+            if n <= 5:
+                self.assertEqual(len(mps), 6)
+            positions = {mp["choices"].index(mp["correctAnswer"]) for mp in mps}
+            self.assertGreater(len(positions), 1, f"n={n} choice position never varies")
+            for mp in mps:
+                types_seen.add(mp["type"].lower())
+                self.assertIn(mp["correctAnswer"], mp["choices"])
+                self.assertEqual(len(set(mp["choices"])), len(mp["choices"]))
+
+        self.assertEqual(types_seen, {
+            "addition", "subtraction", "ten_crossing", "clock", "money", "word_problem",
+        })
 
     def test_3d_sample_glb_binary_inspection(self) -> None:
         glb_path = self.repo_root / "3d_sample.glb"
