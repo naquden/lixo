@@ -39,6 +39,7 @@ import se.lixo.app.domain.model.DictionaryEntry
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
+import se.lixo.app.domain.model.ItemPattern
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathProblem
 import se.lixo.app.domain.model.MathProblemType
@@ -1256,13 +1257,13 @@ class LixoEnginesTest {
                 Result.success(looked)
         }
         val repo = LixoRepository(fakeGateway, lexiconCache = null)
-        val before = repo.friends.value
+        val before = repo.friendsOfActiveProfile()
 
         val result = repo.addFriendByQuery("stjarn_sokare")
         assertTrue(result.isSuccess)
         assertEquals("friend_found_1", result.getOrNull()?.userId)
-        assertEquals("friend_found_1", repo.friends.value.first().userId)
-        assertEquals(before.size + 1, repo.friends.value.size)
+        assertEquals("friend_found_1", repo.friendsOfActiveProfile().first().userId)
+        assertEquals(before.size + 1, repo.friendsOfActiveProfile().size)
     }
 
     @Test
@@ -1272,12 +1273,12 @@ class LixoEnginesTest {
                 Result.success(null)
         }
         val repo = LixoRepository(fakeGateway, lexiconCache = null)
-        val before = repo.friends.value
+        val before = repo.friendsOfActiveProfile()
 
         val result = repo.addFriendByQuery("nobody_here")
         assertTrue(result.isFailure)
         assertEquals(AddFriendError.NOT_FOUND, (result.exceptionOrNull() as? AddFriendException)?.reason)
-        assertEquals(before, repo.friends.value)
+        assertEquals(before, repo.friendsOfActiveProfile())
     }
 
     @Test
@@ -1296,12 +1297,12 @@ class LixoEnginesTest {
 
         val first = repo.addFriendByQuery("dubbel_vän")
         assertTrue(first.isSuccess)
-        val countAfterFirst = repo.friends.value.size
+        val countAfterFirst = repo.friendsOfActiveProfile().size
 
         val second = repo.addFriendByQuery("dubbel_vän")
         assertTrue(second.isFailure)
         assertEquals(AddFriendError.ALREADY_FRIEND, (second.exceptionOrNull() as? AddFriendException)?.reason)
-        assertEquals(countAfterFirst, repo.friends.value.size)
+        assertEquals(countAfterFirst, repo.friendsOfActiveProfile().size)
     }
 
     @Test
@@ -1311,12 +1312,44 @@ class LixoEnginesTest {
                 Result.failure(AddFriendException(AddFriendError.NETWORK))
         }
         val repo = LixoRepository(fakeGateway, lexiconCache = null)
-        val before = repo.friends.value
+        val before = repo.friendsOfActiveProfile()
 
         val result = repo.addFriendByQuery("offline_user")
         assertTrue(result.isFailure)
         assertEquals(AddFriendError.NETWORK, (result.exceptionOrNull() as? AddFriendException)?.reason)
-        assertEquals(before, repo.friends.value)
+        assertEquals(before, repo.friendsOfActiveProfile())
+    }
+
+    @Test
+    fun friends_freshRepoIsEmptyAndFriendsAreScopedPerProfile() = runTest {
+        val looked = FriendProfile(
+            userId = "friend_scoped_1",
+            username = "egen_kompis",
+            appearance = AvatarAppearance(avatarType = AvatarType.CAT),
+            totalStars = 3
+        )
+        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
+            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
+                Result.success(looked)
+        }
+        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        assertTrue(repo.friendsOfActiveProfile().isEmpty())
+
+        val firstProfileId = repo.activeProfileId.value!!
+        assertTrue(repo.addFriendByQuery("egen_kompis").isSuccess)
+        assertEquals(1, repo.friendsOfActiveProfile().size)
+
+        val sibling = repo.createSiblingProfile("Syskon", 7)
+        repo.selectProfile(sibling.id)
+        assertTrue(repo.friendsOfActiveProfile().isEmpty())
+
+        // Same friend may be added independently by the sibling
+        assertTrue(repo.addFriendByQuery("egen_kompis").isSuccess)
+        repo.removeFriend("friend_scoped_1")
+        assertTrue(repo.friendsOfActiveProfile().isEmpty())
+
+        repo.selectProfile(firstProfileId)
+        assertEquals(listOf("friend_scoped_1"), repo.friendsOfActiveProfile().map { it.userId })
     }
 
     @Test
@@ -1510,5 +1543,45 @@ class LixoEnginesTest {
         assertEquals("Ny förklaring.", repo.lookupDictionaryWord("bor").explanationSv)
         assertEquals("En stor plats med många träd.", repo.lookupDictionaryWord("skog.").explanationSv)
         assertTrue(repo.lookupDictionaryWord("okänt_ord").explanationSv.startsWith("Lyssna på ordet"))
+    }
+
+    @Test
+    fun wardrobeCatalog_hasUniqueIdsFullStyleAndRarityCoverageAndNoDuplicateCombos() {
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+
+        val ids = catalog.map { it.id }
+        assertEquals(ids.size, ids.distinct().size, "Wardrobe item ids must be unique")
+
+        val itemsBySlot = catalog.groupBy { it.slot }
+        for (slot in EquipmentSlot.entries) {
+            val itemsInSlot = itemsBySlot[slot].orEmpty()
+            assertTrue(itemsInSlot.isNotEmpty(), "Slot $slot must have at least one item")
+
+            val stylesPresent = itemsInSlot.map { it.styleIndex }.toSet()
+            assertEquals(
+                (0..7).toSet(),
+                stylesPresent,
+                "Slot $slot must use all 8 styleIndex values (0..7), found $stylesPresent"
+            )
+
+            val raritiesPresent = itemsInSlot.map { it.rarity }.toSet()
+            assertEquals(
+                Rarity.entries.toSet(),
+                raritiesPresent,
+                "Slot $slot must have all 5 rarities, found $raritiesPresent"
+            )
+
+            val combos = itemsInSlot.map { Triple(it.styleIndex, it.primaryColorHex, it.pattern) }
+            assertEquals(
+                combos.size,
+                combos.distinct().size,
+                "Slot $slot must not have duplicate (styleIndex, primaryColorHex, pattern) combos"
+            )
+        }
+
+        // Sanity: the generated catalog is dominant in size and ItemPattern/ItemOrnament values are
+        // actually exercised (not just defaults) now that items carry visual variety.
+        assertTrue(catalog.size > 500, "Expected the generated catalog to dominate the item count")
+        assertTrue(catalog.any { it.pattern != ItemPattern.NONE }, "Expected some items to use a non-NONE pattern")
     }
 }

@@ -22,7 +22,7 @@ import androidx.room.RoomDatabaseConstructor
         AppSettingsEntity::class,
         LexiconMetaEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @ConstructedBy(LixoDatabaseConstructor::class)

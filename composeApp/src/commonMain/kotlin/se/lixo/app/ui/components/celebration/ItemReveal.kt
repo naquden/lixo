@@ -30,22 +30,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.WardrobeItem
+import se.lixo.app.ui.components.avatar3d.WardrobeItemPreview
 import se.lixo.app.ui.theme.LixoColors
-import se.lixo.app.ui.theme.LixoIcon
-import se.lixo.app.ui.theme.LixoIcons
 import se.lixo.app.ui.theme.LixoStrings
 
-private fun slotIcon(slot: EquipmentSlot) = when (slot) {
-    EquipmentSlot.HAND_LEFT, EquipmentSlot.HAND_RIGHT -> LixoIcons.Shield
-    EquipmentSlot.TAIL -> LixoIcons.Star
-    EquipmentSlot.HAT -> LixoIcons.Hat
-    else -> LixoIcons.Shirt
-}
-
-/** Rarity-tinted tile with the item's slot icon, used both in the reveal and the unlock dialog. */
+/** Rarity-tinted tile with a live preview of the item's shape, used both in the reveal and the unlock dialog. */
 @Composable
 fun RarityItemTile(
     item: WardrobeItem,
@@ -74,7 +65,7 @@ fun RarityItemTile(
             .border(3.dp, Color.White, RoundedCornerShape(24.dp)),
         contentAlignment = Alignment.Center
     ) {
-        LixoIcon(icon = slotIcon(item.slot), tint = Color.White, size = tileSize * 0.45f)
+        WardrobeItemPreview(item = item, modifier = Modifier.size(tileSize * 0.72f))
     }
 }
 

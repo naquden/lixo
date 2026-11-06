@@ -7,9 +7,10 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +42,7 @@ import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
+import se.lixo.app.ui.components.avatar3d.WardrobeItemPreview
 import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoCircleIconButton
 import se.lixo.app.ui.theme.LixoColors
@@ -57,7 +59,6 @@ import se.lixo.app.ui.theme.TtsIconButton
  * - Equipment slot category pills.
  * - Fortnite rarity-accented item cards with clear equip/unequip states.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WardrobeScreen(
     profile: ChildProfile,
@@ -74,7 +75,13 @@ fun WardrobeScreen(
     val catalogById = remember(allWardrobeItems) { allWardrobeItems.associateBy { it.id } }
 
     val unlockedItemsForSlot = remember(allWardrobeItems, unlockedItemIds, selectedSlot) {
-        allWardrobeItems.filter { it.slot == selectedSlot && unlockedItemIds.contains(it.id) }
+        allWardrobeItems
+            .filter { it.slot == selectedSlot && unlockedItemIds.contains(it.id) }
+            .sortedWith(
+                compareByDescending<WardrobeItem> { it.rarity.ordinal }
+                    .thenBy { it.styleIndex }
+                    .thenBy { it.id }
+            )
     }
 
     val tintChoices = listOf(0xFFF5A623L, 0xFF3498DBL, 0xFF2ECC71L, 0xFF9B59B6L, 0xFFE74C3CL)
@@ -281,110 +288,122 @@ fun WardrobeScreen(
                 }
             }
         } else {
-            FlowRow(
+            // "Ingen" (null) is always the first choice: selecting it empties the slot. Using a
+            // lazy grid (rather than a non-lazy FlowRow/forEach over every unlocked item, which
+            // could be 60+ per slot) keeps card composition/measurement bounded to what's
+            // actually visible, with a stable key per item.id so equip-state recomposition
+            // doesn't rebuild unrelated cards.
+            val displayItems: List<WardrobeItem?> = remember(unlockedItemsForSlot) {
+                listOf(null) + unlockedItemsForSlot
+            }
+            LazyHorizontalGrid(
+                rows = GridCells.Fixed(3),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(420.dp)
             ) {
-                // "Ingen" is always the first choice: selecting it empties the slot.
-                val isSlotEmpty = !profile.appearance.equippedItems.containsKey(selectedSlot)
-                LixoCard(
-                    modifier = Modifier.width(160.dp),
-                    selected = isSlotEmpty,
-                    cornerRadius = 18.dp,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
-                    onClick = { if (!isSlotEmpty) onEquipSlotItem(selectedSlot, null) }
-                ) {
-                    Column {
-                        LixoIcon(icon = LixoIcons.Close, tint = LixoColors.TextMuted, size = 18.dp)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = LixoStrings.WARDROBE_NONE_ITEM,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = LixoColors.TextPrimary
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (isSlotEmpty) {
-                                LixoIcon(icon = LixoIcons.Check, tint = LixoColors.GreenLip, size = 16.dp)
-                                Spacer(Modifier.width(4.dp))
+                items(displayItems, key = { it?.id ?: "__none__" }) { item ->
+                    if (item == null) {
+                        // "Ingen" slot-empty card.
+                        val isSlotEmpty = !profile.appearance.equippedItems.containsKey(selectedSlot)
+                        LixoCard(
+                            modifier = Modifier.width(104.dp),
+                            selected = isSlotEmpty,
+                            cornerRadius = 16.dp,
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp),
+                            onClick = { if (!isSlotEmpty) onEquipSlotItem(selectedSlot, null) }
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier.size(64.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    LixoIcon(icon = LixoIcons.Close, tint = LixoColors.TextMuted, size = 24.dp)
+                                    if (isSlotEmpty) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .size(18.dp)
+                                                .clip(CircleShape)
+                                                .background(LixoColors.GreenLip),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            LixoIcon(icon = LixoIcons.Check, tint = Color.White, size = 12.dp)
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = LixoStrings.WARDROBE_EQUIPPED_LABEL,
+                                    text = LixoStrings.WARDROBE_NONE_ITEM,
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = LixoColors.GreenLip
-                                )
-                            } else {
-                                Text(
-                                    text = LixoStrings.WARDROBE_CHOOSE_LABEL,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = LixoColors.TextMuted
+                                    fontWeight = FontWeight.Bold,
+                                    color = LixoColors.TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
-                    }
-                }
+                    } else {
+                        val isEquipped = profile.appearance.equippedItems[selectedSlot] == item.id
+                        val rarityColor = LixoColors.rarityColor(item.rarity)
 
-                unlockedItemsForSlot.forEach { item ->
-                    val isEquipped = profile.appearance.equippedItems[selectedSlot] == item.id
-                    val rarityColor = LixoColors.rarityColor(item.rarity)
-
-                    LixoCard(
-                        modifier = Modifier.width(160.dp),
-                        selected = isEquipped,
-                        cornerRadius = 18.dp,
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
-                        onClick = {
-                            if (isEquipped) {
-                                onEquipSlotItem(selectedSlot, null)
-                            } else {
-                                onEquipSlotItem(selectedSlot, item.id)
-                            }
-                        }
-                    ) {
-                        Column {
-                            // Rarity badge
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(rarityColor.copy(alpha = 0.15f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = LixoStrings.rarityName(item.rarity).uppercase(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = rarityColor
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = item.nameSv,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = LixoColors.TextPrimary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(Modifier.height(10.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                        LixoCard(
+                            modifier = Modifier.width(104.dp),
+                            selected = isEquipped,
+                            borderColor = if (isEquipped) LixoColors.Blue else rarityColor,
+                            backgroundColor = if (isEquipped) LixoColors.BlueTint else rarityColor.copy(alpha = 0.10f),
+                            cornerRadius = 16.dp,
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp),
+                            onClick = {
                                 if (isEquipped) {
-                                    LixoIcon(icon = LixoIcons.Check, tint = LixoColors.GreenLip, size = 16.dp)
-                                    Spacer(Modifier.width(4.dp))
+                                    onEquipSlotItem(selectedSlot, null)
+                                } else {
+                                    onEquipSlotItem(selectedSlot, item.id)
+                                }
+                            }
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier.size(64.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    WardrobeItemPreview(item = item, modifier = Modifier.size(64.dp))
+                                    if (isEquipped) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .size(18.dp)
+                                                .clip(CircleShape)
+                                                .background(LixoColors.GreenLip),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            LixoIcon(icon = LixoIcons.Check, tint = Color.White, size = 12.dp)
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(rarityColor.copy(alpha = 0.18f))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                ) {
                                     Text(
-                                        text = LixoStrings.WARDROBE_EQUIPPED_LABEL,
+                                        text = LixoStrings.rarityName(item.rarity).uppercase(),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = LixoColors.GreenLip
-                                    )
-                                } else {
-                                    Text(
-                                        text = LixoStrings.WARDROBE_CHOOSE_LABEL,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = LixoColors.TextMuted
+                                        color = rarityColor
                                     )
                                 }
+                                Spacer(Modifier.height(3.dp))
+                                Text(
+                                    text = item.nameSv,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = LixoColors.TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }

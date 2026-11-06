@@ -1,5 +1,6 @@
 package se.lixo.app.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -75,7 +76,11 @@ data class WardrobeItemEntity(
     val unlockStarRequirement: Int,
     val unlockAchievementId: String?,
     val isWeeklyStreakSetPiece: Boolean,
-    val primaryColorHex: Long
+    val primaryColorHex: Long,
+    @ColumnInfo(defaultValue = "0") val styleIndex: Int = 0,
+    @ColumnInfo(defaultValue = "4294967295") val secondaryColorHex: Long = 0xFFFFFFFF,
+    @ColumnInfo(defaultValue = "'NONE'") val pattern: String = "NONE",
+    @ColumnInfo(defaultValue = "'NONE'") val ornament: String = "NONE"
 )
 
 /**

@@ -29,6 +29,8 @@ import se.lixo.app.domain.model.EnglishGlosaItem
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
+import se.lixo.app.domain.model.ItemOrnament
+import se.lixo.app.domain.model.ItemPattern
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathErrorLog
 import se.lixo.app.domain.model.MathProblemType
@@ -106,8 +108,11 @@ class LixoRepository(
     private val _achievements = MutableStateFlow<List<Achievement>>(emptyList())
     val achievements: StateFlow<List<Achievement>> = _achievements.asStateFlow()
 
-    private val _friends = MutableStateFlow<List<FriendProfile>>(emptyList())
-    val friends: StateFlow<List<FriendProfile>> = _friends.asStateFlow()
+    private val _friendsByProfile = MutableStateFlow<Map<String, List<FriendProfile>>>(emptyMap())
+    val friendsByProfile: StateFlow<Map<String, List<FriendProfile>>> = _friendsByProfile.asStateFlow()
+
+    fun friendsOfActiveProfile(): List<FriendProfile> =
+        _activeProfileId.value?.let { _friendsByProfile.value[it] }.orEmpty()
 
     private val _privacySettings = MutableStateFlow(AppPrivacySettings())
     val privacySettings: StateFlow<AppPrivacySettings> = _privacySettings.asStateFlow()
@@ -156,7 +161,7 @@ class LixoRepository(
             Course("course_en_1", "Engelska Glosresan", Subject.ENGLISH, minGrade = 2, version = 1, updatedAt = seedTimestamp)
         )
 
-        // Seed 108 Wardrobe Items across all 9 slots and 5 rarities
+        // Seed 579 Wardrobe Items across all 9 slots and 5 rarities (3 handmade + 576 generated)
         val generatedItems = buildSeedWardrobeCatalog()
         _wardrobeCatalog.value = generatedItems
 
@@ -167,24 +172,6 @@ class LixoRepository(
 
         // Seed Epic & Legendary Achievements
         _achievements.value = buildSeedAchievements()
-
-        // Seed 1 sample friend in gallery
-        _friends.value = listOf(
-            FriendProfile(
-                userId = "friend_demo_1",
-                username = "stjarn_riddare_99",
-                appearance = AvatarAppearance(
-                    avatarType = AvatarType.KNIGHT,
-                    primaryTintHex = 0xFF3498DB,
-                    equippedItems = mapOf(
-                        EquipmentSlot.HAT to "item_hat_starter_explorer",
-                        EquipmentSlot.HAND_RIGHT to "item_hand_right_math_sword_1"
-                    )
-                ),
-                totalStars = 42,
-                addedAtEpochMillis = now
-            )
-        )
     }
 
     fun recordAppLaunch() {
@@ -392,7 +379,9 @@ class LixoRepository(
         val friend = lookupResult.getOrNull()
             ?: return Result.failure(AddFriendException(AddFriendError.NOT_FOUND))
 
-        val alreadyFriend = _friends.value.any {
+        val activeId = _activeProfileId.value
+            ?: return Result.failure(AddFriendException(AddFriendError.NOT_FOUND))
+        val alreadyFriend = _friendsByProfile.value[activeId].orEmpty().any {
             it.userId == friend.userId || it.username.equals(friend.username, ignoreCase = true)
         }
         if (alreadyFriend) {
@@ -404,12 +393,18 @@ class LixoRepository(
         } else {
             friend
         }
-        _friends.update { current -> listOf(toAdd) + current }
+        _friendsByProfile.update { current ->
+            current + (activeId to (listOf(toAdd) + current[activeId].orEmpty()))
+        }
         return Result.success(toAdd)
     }
 
     fun removeFriend(userId: String) {
-        _friends.update { list -> list.filterNot { it.userId == userId } }
+        val activeId = _activeProfileId.value ?: return
+        _friendsByProfile.update { current ->
+            val list = current[activeId] ?: return@update current
+            current + (activeId to list.filterNot { it.userId == userId })
+        }
     }
 
     suspend fun sendEmailSignInLink(email: String): Result<Unit> {
@@ -645,7 +640,11 @@ class LixoRepository(
                     meshAssetPath = "3d_sample.glb",
                     meshNodeName = "socket_hat_explorer",
                     unlockStarRequirement = 0,
-                    primaryColorHex = 0xFF2ECC71
+                    primaryColorHex = 0xFF2ECC71,
+                    styleIndex = 5, // cap
+                    secondaryColorHex = 0xFFFFFFFF,
+                    pattern = ItemPattern.NONE,
+                    ornament = ItemOrnament.NONE
                 )
             )
 
@@ -661,7 +660,11 @@ class LixoRepository(
                     meshAssetPath = "3d_sample.glb",
                     meshNodeName = "socket_hand_right_sword",
                     unlockStarRequirement = 6,
-                    primaryColorHex = 0xFF3498DB
+                    primaryColorHex = 0xFF3498DB,
+                    styleIndex = 0, // sword
+                    secondaryColorHex = 0xFFF1C40F,
+                    pattern = ItemPattern.STRIPES,
+                    ornament = ItemOrnament.TRIM
                 )
             )
             items.add(
@@ -676,57 +679,80 @@ class LixoRepository(
                     meshNodeName = "socket_shoulders_cape",
                     unlockStarRequirement = 15,
                     unlockAchievementId = "ach_speed_reader_5",
-                    primaryColorHex = 0xFF9B59B6
+                    primaryColorHex = 0xFF9B59B6,
+                    styleIndex = 0, // cape
+                    secondaryColorHex = 0xFFF1C40F,
+                    pattern = ItemPattern.STARS,
+                    ornament = ItemOrnament.GEM
                 )
             )
 
-            val slotTemplates = listOf(
-                Triple(EquipmentSlot.HAT, Subject.ENGLISH, listOf("Krona", "Trollhatt", "Riddarhjälm", "Stjärndiadem", " Äventyrshuva", "Drakmask", "Alvluva", " Kungahatt", " Solhatt", "Månkrona", " Runhjälm", " Vintermössa")),
-                Triple(EquipmentSlot.SHOULDERS_BACK, Subject.SWEDISH, listOf("Vintermantel", "Drakvingar", "Riddarcape", "Skogsmantel", "Solmantel", "Molnkappa", "Stjärnslöja", "Äventyrsryggsäck", " Fjädermantel", "Norrskenscape", "Sköldkappa", "Kungamantel")),
-                Triple(EquipmentSlot.ARMS_GLOVES, Subject.MATH, listOf("Järnhandskar", "Magikerhandskar", "Guldarmband", "Skogsvantar", "Kristallvantar", "Riddararmar", "Blixthandskar", "Solarmband", " Stjärnhandskar", "Runvantar", "Klovantar", "Mästarhandskar")),
-                Triple(EquipmentSlot.ARMOR_SHIRT, Subject.SWEDISH, listOf("Riddarrustning", "Trollkarlsrock", "Skogstunika", "Prinsessklänning", "Stjärnharnesk", "Drakpansar", "Äventyrsväst", "Måntunika", "Solrustning", "Kristallpansar", "Sagodräkt", "Legendarisk Rustning")),
-                Triple(EquipmentSlot.PANTS, Subject.SWEDISH, listOf("Äventyrsbyxor", "Riddarbenskenor", "Skogsbyxor", "Stjärnbyxor", "Magikerbyxor", "Drakbenskenor", "Solbyxor", "Månbyxor", " Vinterbyxor", "Kristallbyxor", "Kungabyxor", "Guldbenskenor")),
-                Triple(EquipmentSlot.SHOES, Subject.SWEDISH, listOf("Vindstövlar", "Riddarskor", "Smygartofflor", "Stjärnstövlar", "Fjäderskor", "Drakstövlar", "Solskor", "Månstövlar", "Hoppskor", "Kristallstövlar", "Skogsstövlar", "Guldskor")),
-                Triple(EquipmentSlot.HAND_RIGHT, Subject.MATH, listOf("Mattesvärd", "Trollstav", "Stjärnspira", "Runyxa", "Solstav", "Kristallklinga", "Blixtsvärd", "Månstav", " Kunskapsstav", "Draksvärd", "Sifferspira", "Evighetssvärd")),
-                Triple(EquipmentSlot.HAND_LEFT, Subject.MATH, listOf("Siffersköld", "Stjärnsköld", "Runbok", "Kristallsköld", "Draksköld", "Solsköld", "Månlykta", "Magisk Lykta", "Timglassköld", "Ekbarkssköld", "Äventyrskompass", "Guldsköld")),
-                Triple(EquipmentSlot.TAIL, Subject.SWEDISH, listOf("Fluffig Kattsvans", "Glad Hundsvans", "Draksvans", "Stjärnsvans", "Rävsvans", "Eldsvans", "Regnbågssvans", "Kristallsvans", "Månsvans", "Solsvans", "Komet-svans", "Guldkatt-svans"))
+            // 2b. Achievement reward items (buildSeedAchievements() below points at these by id).
+            // Colors/pattern are picked to avoid colliding with the generated catalog's
+            // (slot, styleIndex, primaryColorHex, pattern) combos for the same styleIndex.
+            items.add(
+                WardrobeItem(
+                    id = "item_hat_weekly_hero",
+                    nameSv = "Veckans Hjältekrona",
+                    descriptionSv = "En gyllene krona som bara de mest trogna veckostreakarna kan bära.",
+                    slot = EquipmentSlot.HAT,
+                    rarity = Rarity.LEGENDARY,
+                    subjectTheme = Subject.ENGLISH,
+                    meshAssetPath = "3d_sample.glb",
+                    meshNodeName = "socket_hat_weekly_hero",
+                    scaleMultiplier = 1.15f,
+                    unlockStarRequirement = 0,
+                    unlockAchievementId = "ach_weekly_streak_7",
+                    isWeeklyStreakSetPiece = true,
+                    primaryColorHex = 0xFFFFD700,
+                    styleIndex = 1, // Krona (crown)
+                    secondaryColorHex = 0xFFFFF8DC,
+                    pattern = ItemPattern.STARS,
+                    ornament = ItemOrnament.SPARKLE
+                )
+            )
+            items.add(
+                WardrobeItem(
+                    id = "item_armor_shirt_crystal_voice",
+                    nameSv = "Kristallklara Rösten",
+                    descriptionSv = "En skimrande kåpa som glödar när uttalet är kristallklart.",
+                    slot = EquipmentSlot.ARMOR_SHIRT,
+                    rarity = Rarity.LEGENDARY,
+                    subjectTheme = Subject.SWEDISH,
+                    meshAssetPath = "3d_sample.glb",
+                    meshNodeName = "socket_armor_shirt_crystal_voice",
+                    scaleMultiplier = 1.15f,
+                    unlockStarRequirement = 0,
+                    unlockAchievementId = "ach_pronunciation_master_10",
+                    primaryColorHex = 0xFF00E0FF,
+                    styleIndex = 2, // Kåpa (cloak)
+                    secondaryColorHex = 0xFFFFFFFF,
+                    pattern = ItemPattern.STARS,
+                    ornament = ItemOrnament.GLOW
+                )
+            )
+            items.add(
+                WardrobeItem(
+                    id = "item_hand_right_clock_money",
+                    nameSv = "Tid- och Pengasfären",
+                    descriptionSv = "En lysande sfär prydd med klocksiffror och blänkande mynt.",
+                    slot = EquipmentSlot.HAND_RIGHT,
+                    rarity = Rarity.EPIC,
+                    subjectTheme = Subject.MATH,
+                    meshAssetPath = "3d_sample.glb",
+                    meshNodeName = "socket_hand_right_clock_money",
+                    unlockStarRequirement = 0,
+                    unlockAchievementId = "ach_math_clock_money",
+                    primaryColorHex = 0xFFFFD700,
+                    styleIndex = 7, // Magisk Sfär (sphere)
+                    secondaryColorHex = 0xFF2C3E50,
+                    pattern = ItemPattern.DOTS,
+                    ornament = ItemOrnament.GEM
+                )
             )
 
-            val rarities = Rarity.entries
-            val palette = listOf(0xFF9E9E9E, 0xFF2ECC71, 0xFF3498DB, 0xFF9B59B6, 0xFFF39C12)
-
-            var globalIdx = 1
-            for ((slot, subject, names) in slotTemplates) {
-                for ((idx, rawName) in names.withIndex()) {
-                    val rarity = when {
-                        idx < 4 -> Rarity.COMMON
-                        idx < 7 -> Rarity.UNCOMMON
-                        idx < 9 -> Rarity.RARE
-                        idx < 11 -> Rarity.EPIC
-                        else -> Rarity.LEGENDARY
-                    }
-                    val rarityIdx = rarities.indexOf(rarity)
-                    val isStreakSet = idx == 11
-                    items.add(
-                        WardrobeItem(
-                            id = "item_${slot.id}_${idx + 1}",
-                            nameSv = rawName.trim(),
-                            descriptionSv = "Upplåsbar ${rawName.trim().lowercase()} för alla avatarer i Lixo.",
-                            slot = slot,
-                            rarity = rarity,
-                            subjectTheme = subject,
-                            meshAssetPath = "3d_sample.glb",
-                            meshNodeName = "${slot.socketName}_${idx + 1}",
-                            scaleMultiplier = if (rarity == Rarity.LEGENDARY) 1.15f else 1.0f,
-                            unlockStarRequirement = (globalIdx * 2).coerceAtMost(250),
-                            unlockAchievementId = if (rarity == Rarity.EPIC || rarity == Rarity.LEGENDARY) "ach_${slot.id}_$idx" else null,
-                            isWeeklyStreakSetPiece = isStreakSet,
-                            primaryColorHex = palette[rarityIdx]
-                        )
-                    )
-                    globalIdx++
-                }
-            }
+            // 3. The bulk of the catalog: generated by tools/item_pipeline/generate_wardrobe_items.py
+            items.addAll(GENERATED_WARDROBE_ITEMS)
             return items
         }
 
@@ -743,6 +769,26 @@ class LixoRepository(
             val tasks = mutableMapOf<String, HomeworkTask>()
 
             val biomes = MathCurriculum.BIOMES
+
+            // Reward pool for each level's `rewardItemId`, round-robin across all 9 equipment
+            // slots. `wardrobeItems.getOrNull(order % wardrobeItems.size)` previously indexed
+            // straight into the catalog, whose first ~160 entries are almost all HAT items (the
+            // handmade items + the first couple of generated slots), so orders 1..160 only ever
+            // rewarded a few slots. Achievement-gated and weekly-streak-set-piece items are
+            // excluded here (they have their own unlock path), and generated items are preferred
+            // (kept in their generator order) over the handful of handmade ones.
+            val levelRewardPool: List<WardrobeItem> = run {
+                val eligible = wardrobeItems.filter { it.unlockAchievementId == null && !it.isWeeklyStreakSetPiece }
+                val bySlot = EquipmentSlot.entries.associateWith { slot -> eligible.filter { it.slot == slot } }
+                val maxPerSlot = bySlot.values.maxOfOrNull { it.size } ?: 0
+                buildList {
+                    for (i in 0 until maxPerSlot) {
+                        for (slot in EquipmentSlot.entries) {
+                            bySlot[slot]?.getOrNull(i)?.let { add(it) }
+                        }
+                    }
+                }
+            }
 
             // Ordered by difficulty: 40 unique stories, one per Swedish level (no repeats).
             // 1-14 = course_sv_1 (grade 1), 15-27 = course_sv_2 (grade 2), 28-40 = course_sv_3 (grade 3).
@@ -813,7 +859,7 @@ class LixoRepository(
                 }
                 val levelId = "level_$order"
                 val taskId = "task_$order"
-                val rewardItem = wardrobeItems.getOrNull(order % wardrobeItems.size)
+                val rewardItem = levelRewardPool.getOrNull(order % levelRewardPool.size)
                 val refWpm = BalanceConfig.referenceWpmForDifficulty(difficulty)
 
                 val currentStory = if (subject == Subject.SWEDISH) {
@@ -893,7 +939,7 @@ class LixoRepository(
                 val order = spec.order
                 val levelId = "level_$order"
                 val taskId = "task_$order"
-                val rewardItem = wardrobeItems.getOrNull(order % wardrobeItems.size)
+                val rewardItem = levelRewardPool.getOrNull(order % levelRewardPool.size)
 
                 levels.add(
                     CampaignLevel(
@@ -944,7 +990,7 @@ class LixoRepository(
                 targetCount = 10,
                 currentCount = 4,
                 isUnlocked = false,
-                rewardItemId = "item_armor_shirt_12"
+                rewardItemId = "item_armor_shirt_crystal_voice"
             ),
             Achievement(
                 id = "ach_math_clock_money",
@@ -955,7 +1001,7 @@ class LixoRepository(
                 targetCount = 15,
                 currentCount = 6,
                 isUnlocked = false,
-                rewardItemId = "item_hand_right_12"
+                rewardItemId = "item_hand_right_clock_money"
             ),
             Achievement(
                 id = "ach_weekly_streak_7",
@@ -966,7 +1012,7 @@ class LixoRepository(
                 targetCount = 7,
                 currentCount = 1,
                 isUnlocked = false,
-                rewardItemId = "item_hat_12"
+                rewardItemId = "item_hat_weekly_hero"
             )
         )
     }

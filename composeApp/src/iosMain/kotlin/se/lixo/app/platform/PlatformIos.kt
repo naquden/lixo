@@ -20,6 +20,7 @@ import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDefaults
 import platform.Foundation.NSUserDomainMask
+import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
 
 /**
@@ -136,7 +137,8 @@ actual fun createPlatformLixoDatabase(): LixoDatabase? {
         Room.databaseBuilder<LixoDatabase>(name = "$dir/lixo.db")
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // Every LixoDatabase version bump needs a Migration in LIXO_MIGRATIONS (no destructive fallback).
+            .addMigrations(*LIXO_MIGRATIONS)
             .build()
     } catch (_: Throwable) {
         null

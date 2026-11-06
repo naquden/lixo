@@ -161,6 +161,19 @@ data class ChildProfile(
 )
 
 /**
+ * Visual decoration pattern drawn on top of an item's base shape, used to telegraph rarity
+ * (project.md §2 "Epic/Legendary via prestationer").
+ */
+@Serializable
+enum class ItemPattern { NONE, STRIPES, DOTS, STARS, ZIGZAG, CHECKER }
+
+/**
+ * Trim/decoration applied to an item, escalating with rarity.
+ */
+@Serializable
+enum class ItemOrnament { NONE, TRIM, GEM, GLOW, SPARKLE }
+
+/**
  * Universal wardrobe item (project.md §2 "Universal Garderob").
  * Usable by any avatar; no avatar-locked items.
  */
@@ -178,7 +191,11 @@ data class WardrobeItem(
     val unlockStarRequirement: Int = 0,
     val unlockAchievementId: String? = null,
     val isWeeklyStreakSetPiece: Boolean = false,
-    val primaryColorHex: Long = 0xFF3498DB
+    val primaryColorHex: Long = 0xFF3498DB,
+    val styleIndex: Int = 0,
+    val secondaryColorHex: Long = 0xFFFFFFFF,
+    val pattern: ItemPattern = ItemPattern.NONE,
+    val ornament: ItemOrnament = ItemOrnament.NONE
 )
 
 /**

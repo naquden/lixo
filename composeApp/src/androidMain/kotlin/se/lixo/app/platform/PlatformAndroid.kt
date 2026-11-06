@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
+import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
 import java.util.Locale
 
@@ -351,7 +352,8 @@ actual fun createPlatformLixoDatabase(): LixoDatabase? {
         )
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // Every LixoDatabase version bump needs a Migration in LIXO_MIGRATIONS (no destructive fallback).
+            .addMigrations(*LIXO_MIGRATIONS)
             .build()
             .also { cachedLixoDatabase = it }
     } catch (_: Throwable) {

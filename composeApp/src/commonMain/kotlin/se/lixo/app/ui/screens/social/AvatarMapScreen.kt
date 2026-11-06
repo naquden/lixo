@@ -48,11 +48,13 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import se.lixo.app.domain.model.AddFriendError
 import se.lixo.app.domain.model.AddFriendException
 import se.lixo.app.domain.model.ChildProfile
+import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
@@ -216,7 +218,7 @@ fun AvatarMapScreen(
                             }
                         }
                         Column(
-                            modifier = Modifier.weight(1f).padding(top = 85.dp),
+                            modifier = Modifier.weight(1f).padding(top = 120.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(20.dp)
                         ) {
@@ -250,9 +252,9 @@ fun AvatarMapScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Box(
                     modifier = Modifier
-                        .size(200.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(LixoColors.Surface),
+                        .fillMaxWidth()
+                        .height(260.dp)
+                        .avatarGround(face = LixoColors.Green, lip = LixoColors.GreenLip),
                     contentAlignment = Alignment.Center
                 ) {
                     Avatar3DViewport(
@@ -278,6 +280,51 @@ fun AvatarMapScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = LixoColors.TextSecondary
                     )
+                }
+                Spacer(Modifier.height(20.dp))
+
+                val equippedGear = remember(friend, catalogById) {
+                    EquipmentSlot.entries
+                        .mapNotNull { slot -> friend.appearance.equippedItems[slot]?.let(catalogById::get) }
+                        .sortedByDescending { it.rarity.ordinal }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = LixoStrings.FRIEND_SHEET_GEAR_TITLE,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = LixoColors.TextPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (showSwedishTtsButtons) {
+                        Spacer(Modifier.width(8.dp))
+                        TtsIconButton(
+                            textToSpeak = "${LixoStrings.FRIEND_SHEET_GEAR_TITLE}. " +
+                                equippedGear.joinToString(". ") { it.nameSv },
+                            ttsEngine = ttsEngine
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                if (equippedGear.isEmpty()) {
+                    Text(
+                        text = LixoStrings.FRIEND_SHEET_NO_GEAR,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LixoColors.TextMuted,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        equippedGear.forEach { item ->
+                            EquippedGearRow(item = item)
+                        }
+                    }
                 }
                 Spacer(Modifier.height(20.dp))
                 LixoButton(
@@ -627,7 +674,7 @@ private fun FriendPlot(
     ) {
         Box(
             modifier = Modifier
-                .size(96.dp)
+                .size(150.dp)
                 .avatarGround(face = LixoColors.Green, lip = LixoColors.GreenLip)
         ) {
             Avatar3DViewport(
@@ -649,11 +696,32 @@ private fun FriendPlot(
                 text = "@${friend.username}",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = LixoColors.TextPrimary
+                color = LixoColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         Spacer(Modifier.height(4.dp))
         StatPill(icon = LixoIcons.Star, value = "${friend.totalStars}", tint = LixoColors.GoldLip)
+
+        val equippedRarities = remember(friend, catalogById) {
+            EquipmentSlot.entries.mapNotNull { slot ->
+                friend.appearance.equippedItems[slot]?.let(catalogById::get)?.rarity
+            }
+        }
+        if (equippedRarities.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                equippedRarities.forEach { rarity ->
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(LixoColors.rarityColor(rarity))
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -680,7 +748,7 @@ private fun AddFriendPlot(onClick: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .size(96.dp)
+                .size(150.dp)
                 .clip(RoundedCornerShape(50))
                 .background(LixoColors.Surface)
                 .drawBehind {
@@ -697,12 +765,12 @@ private fun AddFriendPlot(onClick: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(56.dp)
                     .clip(CircleShape)
                     .background(LixoColors.Border),
                 contentAlignment = Alignment.Center
             ) {
-                LixoIcon(icon = LixoIcons.Plus, tint = LixoColors.TextSecondary, size = 22.dp)
+                LixoIcon(icon = LixoIcons.Plus, tint = LixoColors.TextSecondary, size = 28.dp)
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -712,5 +780,49 @@ private fun AddFriendPlot(onClick: () -> Unit) {
             fontWeight = FontWeight.Bold,
             color = LixoColors.TextSecondary
         )
+    }
+}
+
+/** One row in the friend's gear list: a rarity badge, item name and slot, modeled on the wardrobe item card. */
+@Composable
+private fun EquippedGearRow(item: WardrobeItem) {
+    val rarityColor = LixoColors.rarityColor(item.rarity)
+
+    LixoCard(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 16.dp,
+        contentPadding = PaddingValues(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(rarityColor.copy(alpha = 0.15f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = LixoStrings.rarityName(item.rarity).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = rarityColor
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.nameSv,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = LixoColors.TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = LixoStrings.slotName(item.slot),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = LixoColors.TextSecondary
+                )
+            }
+        }
     }
 }

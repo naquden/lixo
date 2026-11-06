@@ -104,7 +104,7 @@ fun LixoApp(
     val struggledWordsByProfile by repository.struggledWordsByProfile.collectAsState()
     val mathErrorsByProfile by repository.mathErrorsByProfile.collectAsState()
     val achievements by repository.achievements.collectAsState()
-    val friends by repository.friends.collectAsState()
+    val friendsByProfile by repository.friendsByProfile.collectAsState()
     val privacySettings by repository.privacySettings.collectAsState()
     val incomingEmailLink by EmailLinkAuthDispatcher.incomingLink.collectAsState()
 
@@ -343,7 +343,7 @@ fun LixoApp(
                             LixoMainDestination.AVATAR_MAP -> {
                                 AvatarMapScreen(
                                     profile = activeProfile,
-                                    friends = friends,
+                                    friends = friendsByProfile[activeProfile.id].orEmpty(),
                                     catalogById = catalogById,
                                     ttsEngine = ttsEngine,
                                     showSwedishTtsButtons = showSwedishTts,
@@ -379,7 +379,7 @@ fun LixoApp(
                                     dailyActivity = dailyActivityByProfile[activeProfile.id].orEmpty(),
                                     struggledWords = struggledWordsByProfile[activeProfile.id].orEmpty(),
                                     mathErrors = mathErrorsByProfile[activeProfile.id].orEmpty(),
-                                    friends = friends,
+                                    friends = friendsByProfile[activeProfile.id].orEmpty(),
                                     privacySettings = privacySettings,
                                     mathEngine = mathEngine,
                                     onSelectProfile = { repository.selectProfile(it.id) },

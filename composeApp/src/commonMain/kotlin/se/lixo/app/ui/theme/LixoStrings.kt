@@ -120,6 +120,8 @@ object LixoStrings {
     const val AVATAR_MAP_ADD_FRIEND = "Lägg till kompis"
     const val AVATAR_MAP_EMPTY = "Inga kompisar än – lägg till din första!"
     const val FRIEND_SHEET_REMOVE_BTN = "Ta bort kompis"
+    const val FRIEND_SHEET_GEAR_TITLE = "Har på sig"
+    const val FRIEND_SHEET_NO_GEAR = "Har inga föremål på sig än"
     const val SHEET_CLOSE_BTN = "Stäng"
     const val FRIENDS_SUBTITLE = "Lägg till kompisar med kod eller användarnamn. Ingen chatt."
     const val FRIENDS_INPUT_PLACEHOLDER = "Användarnamn eller kod"
