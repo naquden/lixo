@@ -100,4 +100,17 @@ object BalanceConfig {
      * are never interrupted.
      */
     const val CRASHLYTICS_CONSENT_LAUNCH_COUNT = 3
+
+    // --- Effort Chest "Flitkistan" (§2 "Presenter / gåvor") ---
+    /**
+     * Chest progress is stored as integer half-points to avoid float drift. Reaching this
+     * threshold (20 half-points = 10 points) awards a chest and the counter keeps the overflow.
+     */
+    const val CHEST_POINTS_THRESHOLD_HALF = 20
+
+    /** Half-points awarded for a run that earns new stars or clears a new level (1 point). */
+    const val CHEST_POINTS_PROGRESS_RUN_HALF = 2
+
+    /** Half-points awarded for replaying an already-passed level with no new stars (0.5 point). */
+    const val CHEST_POINTS_REPLAY_RUN_HALF = 1
 }

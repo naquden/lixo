@@ -409,10 +409,22 @@ fun MathActivityScreen(
                     statsSuffix = null,
                     showDuplicateGiftNote = completion.newlyUnlockedItems.isEmpty() &&
                         completion.giftOutcome?.isDuplicate == true,
+                    showDuplicateChestNote = completion.chestOutcome?.isDuplicate == true,
                     onContinue = onCloseToMap,
                     continueEnabled = celebrationSequenceFinished,
                     modifier = Modifier.fillMaxWidth()
-                )
+                ) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = if (completion.chestOutcome != null && completion.chestOutcome.newlyUnlockedItem != null) {
+                            LixoStrings.CHEST_OPENED
+                        } else {
+                            LixoStrings.chestProgress(completion.updatedProfile.chestProgressHalfPoints)
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LixoColors.TextSecondary
+                    )
+                }
             }
         }
 

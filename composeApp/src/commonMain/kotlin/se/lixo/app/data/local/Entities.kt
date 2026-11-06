@@ -21,7 +21,8 @@ data class ProfileEntity(
     val dailyReadingGoalMinutes: Int,
     val dailyMathGoalProblems: Int,
     val createdAtEpochMillis: Long,
-    val updatedAtEpochMillis: Long
+    val updatedAtEpochMillis: Long,
+    val chestProgressHalfPoints: Int = 0
 )
 
 @Entity(tableName = "courses")

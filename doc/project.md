@@ -52,6 +52,7 @@ Spelifieringen bygger på ett tydligt orsak-verkan-samband där akademiska prest
 - **Epic/Legendary via prestationer:** Speciella föremål endast via unika prestationer (t.ex. hastighet på X sagor, perfekt uttal på X sagor). Uttalsprestationer kräver AI-läge.
 - **Sällsynthet:** Bakgrundsfärg i 2D enligt **Fortnites färgskala** (grå/grön/blå/lila/guld-orange). Legendary har coolast animationer/effekter i 3D. MVP: ca **100+ items** över slots och sällsyntheter.
 - **Presenter / gåvor (inte lootbox):** Extra repetition ger en present med ett föremål. Dubblett → ingenting händer. Obegränsat antal gåvor per dag. Helt gratis och reklamfritt.
+- **Flitkista:** 1 p per omgång som ger nya stjärnor eller klarar en ny bana, 0,5 p per omspel utan nya stjärnor. Vid 10 p får barnet en kista med ett slumpat föremål (samma dubblett-regel som presenter). Potten exkluderar streak- och prestationsföremål, och poängräknaren delas över alla ämnen.
 - **Belöningskurva:** Snabb start med tidiga upplåsningar, sedan gradvis svårare och mer tidskrävande för sällsynta föremål.
 
 ## **AI-Läsassistent & Realtime Highlighting (Kärn-USP)**

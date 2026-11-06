@@ -1,5 +1,6 @@
 package se.lixo.app
 
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -41,9 +42,11 @@ import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathProblem
 import se.lixo.app.domain.model.MathProblemType
+import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.ReadingMode
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
+import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.EmailLinkAuthDispatcher
 import se.lixo.app.platform.PendingEmailLinkStorage
 import se.lixo.app.platform.RecognizedSpeechToken
@@ -506,6 +509,133 @@ class LixoEnginesTest {
         assertNotNull(run2.giftOutcome)
         assertTrue(run2.giftOutcome.isDuplicate, "Duplicate gift roll does nothing")
         assertNull(run2.giftOutcome.newlyUnlockedItem)
+    }
+
+    private fun chestFixtureItem(
+        id: String,
+        isWeeklyStreakSetPiece: Boolean = false,
+        unlockAchievementId: String? = null,
+        rarity: Rarity = Rarity.COMMON
+    ): WardrobeItem = WardrobeItem(
+        id = id,
+        nameSv = "Item $id",
+        descriptionSv = "Testföremål $id",
+        slot = EquipmentSlot.HAT,
+        rarity = rarity,
+        subjectTheme = Subject.SWEDISH,
+        isWeeklyStreakSetPiece = isWeeklyStreakSetPiece,
+        unlockAchievementId = unlockAchievementId
+    )
+
+    @Test
+    fun chestPoints_progressRunGivesOnePointReplayGivesHalfManualModeZero() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+
+        // A progress run (new level or new stars) always pays 1 point (2 half-points).
+        assertEquals(2, engine.chestPointsForRun(netNewStars = 1, isReplay = false, eligible = true))
+        assertEquals(2, engine.chestPointsForRun(netNewStars = 1, isReplay = true, eligible = true))
+
+        // A replay with no new stars pays 0.5 point (1 half-point).
+        assertEquals(1, engine.chestPointsForRun(netNewStars = 0, isReplay = true, eligible = true))
+
+        // Manual mode / not eligible for gifts pays nothing, regardless of stars.
+        assertEquals(0, engine.chestPointsForRun(netNewStars = 1, isReplay = false, eligible = false))
+        assertEquals(0, engine.chestPointsForRun(netNewStars = 0, isReplay = true, eligible = false))
+    }
+
+    @Test
+    fun chest_awardedAtTenPointsAndCarriesOverflow() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val catalog = listOf(chestFixtureItem("item_x"), chestFixtureItem("item_y"))
+        val profile = ChildProfile(id = "p1", displayName = "Saga", chestProgressHalfPoints = 19)
+        val level1 = level(order = 1, subject = Subject.SWEDISH)
+        val today = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-11-01")
+
+        val run = engine.recordLevelCompletion(
+            profile = profile,
+            level = level1,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 60,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = null,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertNotNull(run.chestOutcome, "19 + 2 half-points crosses the 20 half-point threshold")
+        assertEquals(1, run.updatedProfile.chestProgressHalfPoints, "Overflow of 1 half-point carries over")
+    }
+
+    @Test
+    fun chest_notAwardedBelowThreshold() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val catalog = listOf(chestFixtureItem("item_x"), chestFixtureItem("item_y"))
+        val profile = ChildProfile(id = "p1", displayName = "Saga", chestProgressHalfPoints = 0)
+        val level1 = level(order = 1, subject = Subject.SWEDISH)
+        val today = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-11-01")
+
+        val run = engine.recordLevelCompletion(
+            profile = profile,
+            level = level1,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 60,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = null,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertNull(run.chestOutcome)
+        assertEquals(2, run.updatedProfile.chestProgressHalfPoints)
+    }
+
+    @Test
+    fun chest_poolExcludesStreakAndAchievementItems() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val streakItem = chestFixtureItem("item_streak", isWeeklyStreakSetPiece = true)
+        val achievementItem = chestFixtureItem("item_achievement", unlockAchievementId = "ach_1")
+        val catalog = listOf(
+            chestFixtureItem("item_a"),
+            chestFixtureItem("item_b"),
+            streakItem,
+            achievementItem
+        )
+
+        repeat(200) {
+            val outcome = engine.rollChest(allItems = catalog, unlockedItemIds = emptySet())
+            assertNotNull(outcome)
+            assertTrue(
+                outcome.rolledItem.id != streakItem.id && outcome.rolledItem.id != achievementItem.id,
+                "Chest pool must exclude weekly-streak set pieces and achievement-linked items"
+            )
+        }
+    }
+
+    @Test
+    fun chest_duplicateUnlocksNothing() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val catalog = listOf(chestFixtureItem("item_a"), chestFixtureItem("item_b"))
+
+        val outcome = engine.rollChest(
+            allItems = catalog,
+            unlockedItemIds = catalog.map { it.id }.toSet()
+        )
+
+        assertNotNull(outcome)
+        assertTrue(outcome.isDuplicate)
+        assertNull(outcome.newlyUnlockedItem)
     }
 
     @Test

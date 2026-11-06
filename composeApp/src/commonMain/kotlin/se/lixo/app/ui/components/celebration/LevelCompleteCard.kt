@@ -31,6 +31,7 @@ fun LevelCompleteCard(
     netNewStars: Int,
     statsSuffix: String?,
     showDuplicateGiftNote: Boolean,
+    showDuplicateChestNote: Boolean = false,
     onContinue: () -> Unit,
     modifier: Modifier = Modifier,
     continueEnabled: Boolean = true,
@@ -72,6 +73,14 @@ fun LevelCompleteCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = LixoStrings.GIFT_DUPLICATE_NOTE,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LixoColors.TextSecondary
+                )
+            }
+            if (showDuplicateChestNote) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = LixoStrings.CHEST_DUPLICATE_NOTE,
                     style = MaterialTheme.typography.bodyMedium,
                     color = LixoColors.TextSecondary
                 )

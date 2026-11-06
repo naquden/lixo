@@ -1,6 +1,7 @@
 package se.lixo.app.ui.theme
 
 import se.lixo.app.domain.model.AvatarType
+import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.Rarity
@@ -90,6 +91,8 @@ object LixoStrings {
     const val GIFT_UNLOCKED_TITLE = "Ny present!"
     const val GIFT_DUPLICATE_NOTE = "Presenten innehöll en dubblett"
     const val CHEST_TAP_TO_OPEN = "Tryck för att öppna!"
+    const val CHEST_OPENED = "Flitkista öppnad!"
+    const val CHEST_DUPLICATE_NOTE = "Flitkistan innehöll en dubblett"
     const val ITEM_UNLOCKED_TITLE = "Nytt föremål!"
     const val EQUIP_NOW_BTN = "Ta på nu"
     const val EQUIPPED_CONFIRM = "Påtagen!"
@@ -195,6 +198,16 @@ object LixoStrings {
         Subject.SWEDISH -> "Svenska"
         Subject.MATH -> "Matematik"
         Subject.ENGLISH -> "Engelska"
+    }
+
+    /**
+     * Renders chest progress half-points as a Swedish-decimal-comma label, e.g. "7,5 / 10 p".
+     */
+    fun chestProgress(halfPoints: Int): String {
+        val whole = halfPoints / 2
+        val fraction = if (halfPoints % 2 == 1) ",5" else ""
+        val threshold = BalanceConfig.CHEST_POINTS_THRESHOLD_HALF / 2
+        return "Flitkista: $whole$fraction / $threshold p"
     }
 
     fun mathTypeName(type: MathProblemType): String = when (type) {

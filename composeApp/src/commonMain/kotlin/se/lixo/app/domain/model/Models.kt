@@ -156,7 +156,8 @@ data class ChildProfile(
     val dailyReadingGoalMinutes: Int = 15,
     val dailyMathGoalProblems: Int = 10,
     val createdAtEpochMillis: Long = 0L,
-    val updatedAtEpochMillis: Long = 0L
+    val updatedAtEpochMillis: Long = 0L,
+    val chestProgressHalfPoints: Int = 0
 )
 
 /**

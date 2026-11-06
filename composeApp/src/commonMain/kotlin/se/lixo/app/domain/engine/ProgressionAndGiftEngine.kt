@@ -27,7 +27,9 @@ data class LevelCompletionOutcome(
     val newlyUnlockedAvatars: Set<AvatarType>,
     val newlyUnlockedItems: List<WardrobeItem>,
     val giftOutcome: GiftRollOutcome?,
-    val streakIncrementedToday: Boolean
+    val streakIncrementedToday: Boolean,
+    val chestOutcome: GiftRollOutcome? = null,
+    val chestPointsAwardedHalf: Int = 0
 )
 
 /**
@@ -44,6 +46,12 @@ data class LevelCompletionOutcome(
  *   replaying a 1- or 2-starred level only awards the positive delta (`max(0, newStars - previousBest)`).
  * - Non-Lootbox Gifts: extra repetition awards a gift with an item. If the rolled item is a duplicate,
  *   nothing happens (`isDuplicate = true`, `newlyUnlockedItem = null`). Unlimited gifts per day.
+ * - Effort Chest "Flitkistan" (`project.md` §2 "Presenter / gåvor"): every run that earns new stars or
+ *   clears a new level pays 1 point; a replay with no new stars pays 0.5 point (0 in manual mode / when
+ *   not eligible for gifts). Points are stored as integer half-points. At 10 points (20 half-points) a
+ *   chest is awarded with a random item from the catalog, excluding weekly-streak set pieces and
+ *   achievement-linked items, and the counter keeps the overflow. Duplicates follow the same rule as
+ *   gifts: nothing unlocks. The pool has no subject bias.
  * - Calendar-Day Streak (00:00–24:00 local time): a streak day is earned when at least 1 reading task
  *   AND 1 math task are completed on that calendar date.
  */
@@ -177,6 +185,25 @@ class ProgressionAndGiftEngine(
             null
         }
 
+        // 4b. Effort chest "Flitkistan" points (`project.md` §2 "Presenter / gåvor"): 1 point for a
+        // run that earns new stars or clears a new level, 0.5 point for a replay with no new stars,
+        // 0 in manual / non-gift-eligible mode. At 10 points (20 half-points) a chest is rolled and
+        // the counter keeps the overflow.
+        val chestPointsAwardedHalf = chestPointsForRun(
+            netNewStars = netNewStars,
+            isReplay = isReplay,
+            eligible = eligibleForRepetitionGift
+        )
+        var chestProgress = profile.chestProgressHalfPoints + chestPointsAwardedHalf
+        val chestOutcome = if (chestProgress >= BalanceConfig.CHEST_POINTS_THRESHOLD_HALF) {
+            chestProgress -= BalanceConfig.CHEST_POINTS_THRESHOLD_HALF
+            rollChest(allWardrobeItems, workingUnlockedIds)?.also { o ->
+                o.newlyUnlockedItem?.let { newlyUnlockedItems.add(it); workingUnlockedIds.add(it.id) }
+            }
+        } else {
+            null
+        }
+
         // 5. Update Daily Activity & Calendar-Day Streak (00:00 - 24:00 local time)
         val updatedDaily = when (level.subject) {
             Subject.SWEDISH -> todayActivityBeforeRun.copy(
@@ -216,7 +243,8 @@ class ProgressionAndGiftEngine(
             currentStreakDays = nextStreakDays,
             bestStreakDays = nextBestStreak,
             lastStreakDateIso = nextLastStreakDate,
-            updatedAtEpochMillis = nowEpochMillis
+            updatedAtEpochMillis = nowEpochMillis,
+            chestProgressHalfPoints = chestProgress
         )
 
         return LevelCompletionOutcome(
@@ -226,7 +254,9 @@ class ProgressionAndGiftEngine(
             newlyUnlockedAvatars = newlyUnlockedAvatars,
             newlyUnlockedItems = newlyUnlockedItems,
             giftOutcome = giftOutcome,
-            streakIncrementedToday = didIncrementStreak
+            streakIncrementedToday = didIncrementStreak,
+            chestOutcome = chestOutcome,
+            chestPointsAwardedHalf = chestPointsAwardedHalf
         )
     }
 
@@ -240,11 +270,33 @@ class ProgressionAndGiftEngine(
         unlockedItemIds: Set<String>
     ): GiftRollOutcome {
         val candidatePool = allItems.filter { it.subjectTheme == subject }.ifEmpty { allItems }
-        val totalWeight = candidatePool.sumOf { it.rarity.giftDropWeight }.coerceAtLeast(1)
-        var pick = random.nextInt(totalWeight)
-        var chosen = candidatePool.first()
+        return rollWeighted(candidatePool, unlockedItemIds)
+    }
 
-        for (item in candidatePool) {
+    /**
+     * Rolls a chest item for the effort chest "Flitkistan" (`project.md` §2 "Presenter / gåvor"):
+     * the pool is every catalog item except weekly-streak set pieces and achievement-linked items,
+     * with no subject bias. Returns null if the pool is empty.
+     */
+    fun rollChest(
+        allItems: List<WardrobeItem>,
+        unlockedItemIds: Set<String>
+    ): GiftRollOutcome? {
+        val candidatePool = allItems.filter { !it.isWeeklyStreakSetPiece && it.unlockAchievementId == null }
+        if (candidatePool.isEmpty()) return null
+        return rollWeighted(candidatePool, unlockedItemIds)
+    }
+
+    /**
+     * Weighted-by-[se.lixo.app.domain.model.Rarity.giftDropWeight] roll over [pool], with the same
+     * duplicate rule shared by present gifts and chests: a duplicate roll unlocks nothing.
+     */
+    private fun rollWeighted(pool: List<WardrobeItem>, unlockedItemIds: Set<String>): GiftRollOutcome {
+        val totalWeight = pool.sumOf { it.rarity.giftDropWeight }.coerceAtLeast(1)
+        var pick = random.nextInt(totalWeight)
+        var chosen = pool.first()
+
+        for (item in pool) {
             pick -= item.rarity.giftDropWeight
             if (pick < 0) {
                 chosen = item
@@ -258,6 +310,21 @@ class ProgressionAndGiftEngine(
             isDuplicate = isDuplicate,
             newlyUnlockedItem = if (isDuplicate) null else chosen
         )
+    }
+
+    /**
+     * Chest points awarded for a single run (`project.md` §2 "Presenter / gåvor"), stored as
+     * integer half-points: 0 when not eligible for gifts (e.g. manual reading mode's anti-cheat
+     * "no gifts" rule), 1 point (2 half-points) for a run earning new stars or clearing a new
+     * level, 0.5 point (1 half-point) for a replay with no new stars.
+     */
+    fun chestPointsForRun(netNewStars: Int, isReplay: Boolean, eligible: Boolean): Int {
+        if (!eligible) return 0
+        return if (netNewStars > 0 || !isReplay) {
+            BalanceConfig.CHEST_POINTS_PROGRESS_RUN_HALF
+        } else {
+            BalanceConfig.CHEST_POINTS_REPLAY_RUN_HALF
+        }
     }
 
     /**
