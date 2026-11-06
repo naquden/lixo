@@ -5,6 +5,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,6 +45,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
@@ -52,11 +56,17 @@ import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
 import se.lixo.app.domain.engine.MathSessionScoreResult
+import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.TaskType
+import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
+import se.lixo.app.ui.components.celebration.CelebrationSequenceHost
+import se.lixo.app.ui.components.celebration.LevelCompleteCard
+import se.lixo.app.ui.feedback.SfxCue
+import se.lixo.app.ui.feedback.rememberLixoHaptics
 import se.lixo.app.ui.theme.ChoiceCard
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
@@ -85,6 +95,8 @@ fun MathActivityScreen(
     showSwedishTtsButtons: Boolean,
     onLogMathError: (MathProblemType, String, Int, Int) -> Unit,
     onFinishMathSession: (MathSessionScoreResult, Int) -> LevelCompletionOutcome,
+    onEquipItem: (WardrobeItem) -> Unit,
+    onSelectAvatar: (AvatarType) -> Unit,
     onCloseToMap: () -> Unit
 ) {
     val isEnglishTask = task.type == TaskType.ENGLISH_VOCAB
@@ -114,6 +126,16 @@ fun MathActivityScreen(
     var wrongChoices by remember { mutableStateOf<Set<String>>(emptySet()) }
     var lastCheckResult by remember { mutableStateOf<Boolean?>(null) }
     var completedResult by remember { mutableStateOf<Pair<MathSessionScoreResult, LevelCompletionOutcome>?>(null) }
+    var celebrationSequenceFinished by remember { mutableStateOf(false) }
+
+    val haptics = rememberLixoHaptics()
+    val sheetBounce = remember { Animatable(1f) }
+    LaunchedEffect(lastCheckResult) {
+        if (lastCheckResult == true) {
+            sheetBounce.snapTo(0.6f)
+            sheetBounce.animateTo(1f, spring(dampingRatio = 0.35f, stiffness = Spring.StiffnessMedium))
+        }
+    }
 
     val allSolved = attemptStates.all { it.isSolved }
 
@@ -333,6 +355,7 @@ fun MathActivityScreen(
                                     lastCheckResult = isCorrect
 
                                     if (isCorrect) {
+                                        haptics.success(SfxCue.ANSWER_CORRECT)
                                         if (updatedState.wrongAttempts > 0 || updatedState.hintsRevealed > 0) {
                                             onLogMathError(
                                                 currentAttempt.problem.type,
@@ -342,6 +365,7 @@ fun MathActivityScreen(
                                             )
                                         }
                                     } else {
+                                        haptics.reject(SfxCue.ANSWER_WRONG)
                                         wrongChoices = wrongChoices + choice
                                     }
                                 }
@@ -379,72 +403,16 @@ fun MathActivityScreen(
             // End of Session Celebration
             completedResult?.let { (score, completion) ->
                 Spacer(Modifier.height(24.dp))
-                LixoCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColor = LixoColors.Green,
-                    backgroundColor = LixoColors.GreenTint,
-                    cornerRadius = 24.dp,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp)
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = LixoStrings.ACTIVITY_FINISH_CELEBRATION_TITLE,
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = LixoColors.GreenLip
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.Center) {
-                            for (i in 1..3) {
-                                LixoIcon(
-                                    icon = LixoIcons.Star,
-                                    tint = if (i <= score.starsEarned) LixoColors.Gold else LixoColors.BorderDarker,
-                                    size = 36.dp,
-                                    modifier = Modifier.padding(horizontal = 4.dp)
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "+${completion.netNewStarsAwarded} ${LixoStrings.MAP_STARS_LABEL}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = LixoColors.TextPrimary
-                        )
-
-                        if (completion.newlyUnlockedItems.isNotEmpty()) {
-                            Spacer(Modifier.height(14.dp))
-                            completion.newlyUnlockedItems.forEach { item ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    LixoIcon(icon = LixoIcons.Gift, tint = LixoColors.GreenLip, size = 20.dp)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = "${item.nameSv} (${LixoStrings.rarityName(item.rarity)})",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = LixoColors.GreenLip
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(20.dp))
-                        LixoButton(
-                            onClick = onCloseToMap,
-                            variant = LixoButtonVariant.PRIMARY,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = LixoStrings.ACTIVITY_BACK_TO_MAP_BTN,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = Color.White
-                            )
-                        }
-                    }
-                }
+                LevelCompleteCard(
+                    starsEarned = score.starsEarned,
+                    netNewStars = completion.netNewStarsAwarded,
+                    statsSuffix = null,
+                    showDuplicateGiftNote = completion.newlyUnlockedItems.isEmpty() &&
+                        completion.giftOutcome?.isDuplicate == true,
+                    onContinue = onCloseToMap,
+                    continueEnabled = celebrationSequenceFinished,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 
@@ -471,7 +439,13 @@ fun MathActivityScreen(
             ) {
                 Column {
                     if (lastCheckResult == true) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.graphicsLayer {
+                                scaleX = sheetBounce.value
+                                scaleY = sheetBounce.value
+                            }
+                        ) {
                             LixoIcon(icon = LixoIcons.Check, tint = LixoColors.GreenLip, size = 24.dp)
                             Spacer(Modifier.width(8.dp))
                             Text(
@@ -513,6 +487,17 @@ fun MathActivityScreen(
                     }
                 }
             }
+        }
+
+        completedResult?.let { (score, completion) ->
+            CelebrationSequenceHost(
+                outcome = completion,
+                starsEarned = score.starsEarned,
+                onEquipItem = onEquipItem,
+                onSelectAvatar = onSelectAvatar,
+                onFinished = { celebrationSequenceFinished = true },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

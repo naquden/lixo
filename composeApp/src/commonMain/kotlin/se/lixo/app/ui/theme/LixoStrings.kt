@@ -89,13 +89,21 @@ object LixoStrings {
     const val ACTIVITY_BACK_TO_MAP_BTN = "Fortsätt"
     const val GIFT_UNLOCKED_TITLE = "Ny present!"
     const val GIFT_DUPLICATE_NOTE = "Presenten innehöll en dubblett"
+    const val CHEST_TAP_TO_OPEN = "Tryck för att öppna!"
+    const val ITEM_UNLOCKED_TITLE = "Nytt föremål!"
+    const val EQUIP_NOW_BTN = "Ta på nu"
+    const val EQUIPPED_CONFIRM = "Påtagen!"
+    const val AVATAR_UNLOCKED_TITLE = "Ny avatar!"
+    const val SWITCH_AVATAR_NOW_BTN = "Byt nu"
 
     // Wardrobe
     const val WARDROBE_TITLE = "Garderob"
     const val WARDROBE_SUBTITLE = "Klä din avatar med föremål du låst upp"
     const val WARDROBE_MYSTERY_FOOTER = "Fler föremål låses upp när du spelar äventyret"
-    const val WARDROBE_UNEQUIP_BTN = "Ta av vald plats"
+    const val WARDROBE_NONE_ITEM = "Ingen"
     const val WARDROBE_TRAITS_COLOR_LABEL = "Färg & stil"
+    const val WARDROBE_EQUIPPED_LABEL = "Utrustad"
+    const val WARDROBE_CHOOSE_LABEL = "Välj"
 
     // Trophies
     const val TROPHIES_TITLE = "Troféer"

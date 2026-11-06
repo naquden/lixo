@@ -41,8 +41,6 @@ import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
-import se.lixo.app.ui.theme.LixoButton
-import se.lixo.app.ui.theme.LixoButtonVariant
 import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoCircleIconButton
 import se.lixo.app.ui.theme.LixoColors
@@ -261,23 +259,6 @@ fun WardrobeScreen(
 
         Spacer(Modifier.height(14.dp))
 
-        // Unequip current slot item button (if equipped)
-        if (profile.appearance.equippedItems.containsKey(selectedSlot)) {
-            LixoButton(
-                onClick = { onEquipSlotItem(selectedSlot, null) },
-                variant = LixoButtonVariant.OUTLINE,
-                height = 42.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = LixoStrings.WARDROBE_UNEQUIP_BTN,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = LixoColors.Red
-                )
-            }
-            Spacer(Modifier.height(14.dp))
-        }
-
         // Unlocked Item Cards
         if (unlockedItemsForSlot.isEmpty()) {
             LixoCard(
@@ -305,6 +286,46 @@ fun WardrobeScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                // "Ingen" is always the first choice: selecting it empties the slot.
+                val isSlotEmpty = !profile.appearance.equippedItems.containsKey(selectedSlot)
+                LixoCard(
+                    modifier = Modifier.width(160.dp),
+                    selected = isSlotEmpty,
+                    cornerRadius = 18.dp,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp),
+                    onClick = { if (!isSlotEmpty) onEquipSlotItem(selectedSlot, null) }
+                ) {
+                    Column {
+                        LixoIcon(icon = LixoIcons.Close, tint = LixoColors.TextMuted, size = 18.dp)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = LixoStrings.WARDROBE_NONE_ITEM,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = LixoColors.TextPrimary
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isSlotEmpty) {
+                                LixoIcon(icon = LixoIcons.Check, tint = LixoColors.GreenLip, size = 16.dp)
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = LixoStrings.WARDROBE_EQUIPPED_LABEL,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = LixoColors.GreenLip
+                                )
+                            } else {
+                                Text(
+                                    text = LixoStrings.WARDROBE_CHOOSE_LABEL,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = LixoColors.TextMuted
+                                )
+                            }
+                        }
+                    }
+                }
+
                 unlockedItemsForSlot.forEach { item ->
                     val isEquipped = profile.appearance.equippedItems[selectedSlot] == item.id
                     val rarityColor = LixoColors.rarityColor(item.rarity)
@@ -352,14 +373,14 @@ fun WardrobeScreen(
                                     LixoIcon(icon = LixoIcons.Check, tint = LixoColors.GreenLip, size = 16.dp)
                                     Spacer(Modifier.width(4.dp))
                                     Text(
-                                        text = "Utrustad",
+                                        text = LixoStrings.WARDROBE_EQUIPPED_LABEL,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = LixoColors.GreenLip
                                     )
                                 } else {
                                     Text(
-                                        text = "Välj",
+                                        text = LixoStrings.WARDROBE_CHOOSE_LABEL,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = LixoColors.TextMuted
                                     )

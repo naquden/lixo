@@ -150,9 +150,23 @@ Reserv när AI-lyssning inte räcker (nekad mikrofon, bakgrundsljud, flaky STT, 
 - **Pipeline:** Prompt/koncept via Claude Opus; 3D-generering lokalt (RTX 4090 / open source-modeller / Blender). AI skapar ett **Python-verktyg** för att generera modeller, applicera skelett, rigga och städa.
 - **Rendering:** **SceneView** (etablerat, KMP-stöd) med iOS-stöd via samma stack. WebView + model-viewer som eventuell fallback.
 - **Modulärt system:** Separata .glb-meshar på skelett-ankarpunkter.
-- **Animationer (MVP):** En **idle-animation** via procedurell rigid-body-animation per kroppsdel. Fler animationer (jubel, hopp, presentöppning) kan tillkomma senare.
+- **Animationer (MVP):** En **idle-animation** via procedurell rigid-body-animation per kroppsdel. Fler animationer (jubel, hopp) kan tillkomma senare. **Presentöppning (skakande kista) ingår i MVP** — se Känsla & feedback.
 - **Feedback:** Stjärnregn, partiklar, mikroanimationer på knappar och framstegsmätare.
 - **Dummy-grafik** under utveckling; byts ut utan att ändra kodstruktur.
+
+## **Känsla & feedback (kärnprincip)**
+
+Barnet ska *känna* att det lyckas – varje vinst är högljudd, visuell, fysisk och omedelbar.
+
+- Varje tryck ger feedback inom 100 ms (tryckanimation + haptiskt tick).
+- Inga tysta upplåsningar – varje belöning får ett eget iscensatt ögonblick.
+- Bana klar: stjärnorna poppar in en i taget (fjädring + haptik per stjärna), '+N stjärnor' räknas upp, konfetti exploderar.
+- Nytt föremål: en **skakande kista** väntar på tryck; vid öppning flyger locket av, föremålet skjuts ut med ljusstrålar i raritetsfärg + konfetti + kraftig haptik, därefter dialogen **'Ta på nu' / 'Stäng'**.
+- Ny avatar: dialog **'Byt nu' / 'Stäng'**.
+- Raritet skalar firandet: Legendarisk ger mer konfetti, längre strålar och gyllene glöd.
+- Rätt svar: bekräftande haptik + liten studs; fel svar: mjuk avvisande haptik, aldrig straffande.
+- Ljud: krokar (`CelebrationSfx`) anropas på samma ställen som haptiken; ljudfiler läggs till senare.
+- Implementation: `ui/components/celebration/`, ritat i Compose/Canvas utan extra bibliotek eller bildfiler.
 
 ## **Skärmar, flöden & design**
 

@@ -42,18 +42,23 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.ReadingScoreResult
+import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.DictionaryEntry
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.ReadingMode
+import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.RecognizedSpeechToken
 import se.lixo.app.platform.SpeechRecognitionEngine
 import se.lixo.app.platform.TextToSpeechEngine
+import se.lixo.app.ui.components.celebration.CelebrationSequenceHost
+import se.lixo.app.ui.components.celebration.LevelCompleteCard
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
 import se.lixo.app.ui.theme.LixoCard
@@ -100,6 +105,8 @@ fun ReadingActivityScreen(
     showDebugSimulationControls: Boolean,
     lookupDictionary: (String) -> DictionaryEntry,
     onFinishReadingSession: (ReadingScoreResult, Int) -> LevelCompletionOutcome,
+    onEquipItem: (WardrobeItem) -> Unit,
+    onSelectAvatar: (AvatarType) -> Unit,
     onCloseToMap: () -> Unit
 ) {
     val storyText = task.textContent ?: ""
@@ -119,11 +126,20 @@ fun ReadingActivityScreen(
     var millisSinceLastWordAdvance by remember { mutableLongStateOf(0L) }
     var helpPopupWordIndex by remember { mutableStateOf<Int?>(null) }
     var finalOutcome by remember { mutableStateOf<Pair<ReadingScoreResult, LevelCompletionOutcome>?>(null) }
+    var celebrationSequenceFinished by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     DisposableEffect(Unit) {
         onDispose { sttEngine.cancelListening() }
+    }
+
+    LaunchedEffect(finalOutcome != null) {
+        if (finalOutcome != null) {
+            withFrameNanos { }
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
     }
 
     LaunchedEffect(modeLocked, chosenMode) {
@@ -177,7 +193,7 @@ fun ReadingActivityScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             // Top Bar: Close (X) + Progress Bar + Elapsed Seconds
@@ -586,139 +602,76 @@ fun ReadingActivityScreen(
                 // Completion Celebration
                 finalOutcome?.let { (scoreResult, completion) ->
                     Spacer(Modifier.height(20.dp))
-                    LixoCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        borderColor = LixoColors.Green,
-                        backgroundColor = LixoColors.GreenTint,
-                        cornerRadius = 24.dp,
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp)
+                    LevelCompleteCard(
+                        starsEarned = scoreResult.starsEarned,
+                        netNewStars = completion.netNewStarsAwarded,
+                        statsSuffix = "${scoreResult.achievedWpm} WPM",
+                        showDuplicateGiftNote = completion.newlyUnlockedItems.isEmpty() &&
+                            completion.giftOutcome?.isDuplicate == true,
+                        onContinue = onCloseToMap,
+                        continueEnabled = celebrationSequenceFinished,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        if (sessionState.mode == ReadingMode.AI_LISTENING) {
+                            Spacer(Modifier.height(10.dp))
                             Text(
-                                text = LixoStrings.ACTIVITY_FINISH_CELEBRATION_TITLE,
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = LixoColors.GreenLip
+                                text = "${LixoStrings.READING_TIME_ROW_PREFIX} ${(sessionState.elapsedMillis / 1000L)}s · " +
+                                    "${LixoStrings.READING_TIME_ROW_BEST_PREFIX} ${completion.updatedLevelProgress.bestTimeSeconds}s",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = LixoColors.TextSecondary
                             )
-                            Spacer(Modifier.height(12.dp))
-                            Row(horizontalArrangement = Arrangement.Center) {
-                                for (i in 1..3) {
-                                    LixoIcon(
-                                        icon = LixoIcons.Star,
-                                        tint = if (i <= scoreResult.starsEarned) LixoColors.Gold else LixoColors.BorderDarker,
-                                        size = 36.dp,
-                                        modifier = Modifier.padding(horizontal = 4.dp)
-                                    )
-                                }
+                            if (scoreResult.eligibleForTimedChallengeReward) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = LixoStrings.READING_TIMED_CHALLENGE_COMPLETED,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LixoColors.OrangeLip
+                                )
                             }
-                            Spacer(Modifier.height(8.dp))
+                            if (completion.netNewStarsAwarded == 0 && completion.updatedLevelProgress.starsEarned == 3) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = LixoStrings.READING_TIME_RECORD_AT_MAX_STARS_NOTE,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = LixoColors.TextMuted
+                                )
+                            }
+                        }
+
+                        val practiceWords = sessionState.words
+                            .filter { it.needsPractice }
+                            .distinctBy { it.normalizedText }
+                        if (practiceWords.isNotEmpty()) {
+                            Spacer(Modifier.height(16.dp))
                             Text(
-                                text = "+${completion.netNewStarsAwarded} ${LixoStrings.MAP_STARS_LABEL} · ${scoreResult.achievedWpm} WPM",
-                                style = MaterialTheme.typography.titleMedium,
+                                text = LixoStrings.READING_PRACTICE_WORDS_TITLE,
+                                style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = LixoColors.TextPrimary
                             )
-
-                            if (sessionState.mode == ReadingMode.AI_LISTENING) {
-                                Spacer(Modifier.height(10.dp))
-                                Text(
-                                    text = "${LixoStrings.READING_TIME_ROW_PREFIX} ${(sessionState.elapsedMillis / 1000L)}s · " +
-                                        "${LixoStrings.READING_TIME_ROW_BEST_PREFIX} ${completion.updatedLevelProgress.bestTimeSeconds}s",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = LixoColors.TextSecondary
-                                )
-                                if (scoreResult.eligibleForTimedChallengeReward) {
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = LixoStrings.READING_TIMED_CHALLENGE_COMPLETED,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = LixoColors.OrangeLip
-                                    )
-                                }
-                                if (completion.netNewStarsAwarded == 0 && completion.updatedLevelProgress.starsEarned == 3) {
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = LixoStrings.READING_TIME_RECORD_AT_MAX_STARS_NOTE,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = LixoColors.TextMuted
-                                    )
-                                }
-                            }
-
-                            val practiceWords = sessionState.words
-                                .filter { it.needsPractice }
-                                .distinctBy { it.normalizedText }
-                            if (practiceWords.isNotEmpty()) {
-                                Spacer(Modifier.height(16.dp))
-                                Text(
-                                    text = LixoStrings.READING_PRACTICE_WORDS_TITLE,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = LixoColors.TextPrimary
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    practiceWords.forEach { word ->
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(LixoColors.GoldTint)
-                                                .border(1.5.dp, LixoColors.Gold, RoundedCornerShape(8.dp))
-                                                .clickable { helpPopupWordIndex = word.index }
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = word.displayText,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = LixoColors.GoldLip
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (completion.newlyUnlockedItems.isNotEmpty()) {
-                                Spacer(Modifier.height(14.dp))
-                                completion.newlyUnlockedItems.forEach { item ->
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        LixoIcon(icon = LixoIcons.Gift, tint = LixoColors.GreenLip, size = 20.dp)
-                                        Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.height(8.dp))
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                practiceWords.forEach { word ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(LixoColors.GoldTint)
+                                            .border(1.5.dp, LixoColors.Gold, RoundedCornerShape(8.dp))
+                                            .clickable { helpPopupWordIndex = word.index }
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
                                         Text(
-                                            text = "${item.nameSv} (${LixoStrings.rarityName(item.rarity)})",
-                                            style = MaterialTheme.typography.titleMedium,
+                                            text = word.displayText,
+                                            style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Bold,
-                                            color = LixoColors.GreenLip
+                                            color = LixoColors.GoldLip
                                         )
                                     }
                                 }
-                            } else if (completion.giftOutcome?.isDuplicate == true) {
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    text = LixoStrings.GIFT_DUPLICATE_NOTE,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = LixoColors.TextSecondary
-                                )
-                            }
-
-                            Spacer(Modifier.height(20.dp))
-                            LixoButton(
-                                onClick = onCloseToMap,
-                                variant = LixoButtonVariant.PRIMARY,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = LixoStrings.ACTIVITY_BACK_TO_MAP_BTN,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = Color.White
-                                )
                             }
                         }
                     }
@@ -794,6 +747,17 @@ fun ReadingActivityScreen(
                     }
                 }
             }
+        }
+
+        finalOutcome?.let { (s, c) ->
+            CelebrationSequenceHost(
+                outcome = c,
+                starsEarned = s.starsEarned,
+                onEquipItem = onEquipItem,
+                onSelectAvatar = onSelectAvatar,
+                onFinished = { celebrationSequenceFinished = true },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

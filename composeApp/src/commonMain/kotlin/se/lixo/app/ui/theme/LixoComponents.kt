@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,8 +36,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.TextToSpeechEngine
+import se.lixo.app.ui.feedback.SfxCue
+import se.lixo.app.ui.feedback.rememberLixoHaptics
 
 enum class LixoButtonVariant {
     PRIMARY,
@@ -75,6 +80,16 @@ fun LixoButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val haptics = rememberLixoHaptics()
+    val currentEnabled by rememberUpdatedState(enabled)
+
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect {
+            if (it is PressInteraction.Press && currentEnabled) {
+                haptics.tick(SfxCue.BUTTON_TAP)
+            }
+        }
+    }
 
     val (faceColor, lipColor, textColor) = when {
         !enabled -> Triple(LixoColors.LockedFace, LixoColors.LockedLip, LixoColors.TextDisabled)

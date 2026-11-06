@@ -209,6 +209,8 @@ fun LixoApp(
                             )
                             outcome
                         },
+                        onEquipItem = { item -> repository.equipItemOnActiveProfile(item.slot, item.id) },
+                        onSelectAvatar = { repository.selectAvatarTypeOnActiveProfile(it) },
                         onCloseToMap = { activeGameplayLevel = null }
                     )
                 } else {
@@ -254,6 +256,8 @@ fun LixoApp(
                             )
                             outcome
                         },
+                        onEquipItem = { item -> repository.equipItemOnActiveProfile(item.slot, item.id) },
+                        onSelectAvatar = { repository.selectAvatarTypeOnActiveProfile(it) },
                         onCloseToMap = { activeGameplayLevel = null }
                     )
                 }
