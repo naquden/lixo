@@ -73,10 +73,6 @@ object BalanceConfig {
      */
     const val STUCK_WORD_PROMPT_DELAY_MS = 4_500L
 
-    // --- Math Star Thresholds (§8) ---
-    const val MATH_THREE_STAR_MAX_HINTS = 1
-    const val MATH_TWO_STAR_TIME_MULTIPLIER = 1.5f
-
     // --- Streak Rules (§2 "Streak") ---
     /**
      * A calendar day (00:00–24:00 local time) counts as a streak day when the child

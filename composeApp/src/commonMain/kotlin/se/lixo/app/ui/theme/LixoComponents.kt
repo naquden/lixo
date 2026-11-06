@@ -326,7 +326,7 @@ fun ChoiceCard(
 ) {
     val (faceColor, borderColor, lipColor, textColor) = when (isCorrect) {
         true -> Quad(LixoColors.GreenTint, LixoColors.Green, LixoColors.GreenLip, LixoColors.GreenLip)
-        false -> Quad(LixoColors.RedTint, LixoColors.Red, LixoColors.RedLip, LixoColors.RedLip)
+        false -> Quad(LixoColors.GoldTint, LixoColors.Gold, LixoColors.GoldLip, LixoColors.GoldLip)
         null -> if (selected) {
             Quad(LixoColors.BlueTint, LixoColors.Blue, LixoColors.BlueLip, LixoColors.Blue)
         } else {

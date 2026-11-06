@@ -111,7 +111,7 @@ fun MathActivityScreen(
         mutableStateOf(problems.map { MathProblemAttemptState(it) })
     }
     var elapsedSeconds by remember { mutableIntStateOf(0) }
-    var selectedChoice by remember { mutableStateOf<String?>(null) }
+    var wrongChoices by remember { mutableStateOf<Set<String>>(emptySet()) }
     var lastCheckResult by remember { mutableStateOf<Boolean?>(null) }
     var completedResult by remember { mutableStateOf<Pair<MathSessionScoreResult, LevelCompletionOutcome>?>(null) }
 
@@ -144,10 +144,11 @@ fun MathActivityScreen(
             .fillMaxSize()
             .background(LixoColors.Background)
     ) {
+        val isSheetVisible = currentAttempt != null && !allSolved && completedResult == null && lastCheckResult != null
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = if (completedResult != null) 0.dp else 100.dp)
+                .padding(bottom = if (isSheetVisible) 100.dp else 0.dp)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
@@ -314,14 +315,35 @@ fun MathActivityScreen(
                 // Multiple Choice Answers
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     problem.choices.forEachIndexed { index, choice ->
-                        val isSelected = selectedChoice == choice
+                        val isCorrectChoice = when {
+                            currentAttempt.isSolved && choice == problem.correctAnswer -> true
+                            choice in wrongChoices -> false
+                            else -> null
+                        }
                         ChoiceCard(
                             text = choice,
-                            selected = isSelected,
+                            isCorrect = isCorrectChoice,
                             badgeNumber = "${index + 1}",
                             onClick = {
-                                if (lastCheckResult == null) {
-                                    selectedChoice = choice
+                                if (!currentAttempt.isSolved && choice !in wrongChoices) {
+                                    val (updatedState, isCorrect) = mathEngine.checkAnswer(currentAttempt, choice)
+                                    val copyList = attemptStates.toMutableList()
+                                    copyList[currentIndex] = updatedState
+                                    attemptStates = copyList
+                                    lastCheckResult = isCorrect
+
+                                    if (isCorrect) {
+                                        if (updatedState.wrongAttempts > 0 || updatedState.hintsRevealed > 0) {
+                                            onLogMathError(
+                                                currentAttempt.problem.type,
+                                                currentAttempt.problem.promptSv,
+                                                updatedState.wrongAttempts,
+                                                updatedState.hintsRevealed
+                                            )
+                                        }
+                                    } else {
+                                        wrongChoices = wrongChoices + choice
+                                    }
                                 }
                             }
                         )
@@ -426,8 +448,8 @@ fun MathActivityScreen(
             }
         }
 
-        // Duolingo-style Bottom Action / Feedback Sheet
-        if (currentAttempt != null && !allSolved && completedResult == null) {
+        // Duolingo-style Bottom Feedback Sheet (hidden until a choice has been checked)
+        if (isSheetVisible) {
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -435,16 +457,14 @@ fun MathActivityScreen(
                     .background(
                         when (lastCheckResult) {
                             true -> LixoColors.GreenTint
-                            false -> LixoColors.RedTint
-                            null -> LixoColors.Background
+                            else -> LixoColors.GoldTint
                         }
                     )
                     .border(
                         1.dp,
                         when (lastCheckResult) {
                             true -> LixoColors.GreenLip
-                            false -> LixoColors.RedLip
-                            null -> LixoColors.Border
+                            else -> LixoColors.GoldLip
                         }
                     )
                     .padding(16.dp)
@@ -465,7 +485,7 @@ fun MathActivityScreen(
                         LixoButton(
                             onClick = {
                                 lastCheckResult = null
-                                selectedChoice = null
+                                wrongChoices = emptySet()
                                 if (currentIndex < attemptStates.size - 1) {
                                     currentIndex++
                                 }
@@ -474,67 +494,20 @@ fun MathActivityScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "FORTSÄTT",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = Color.White
-                            )
-                        }
-                    } else if (lastCheckResult == false) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            LixoIcon(icon = LixoIcons.Close, tint = LixoColors.RedLip, size = 24.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "Inte riktigt — prova igen!",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = LixoColors.RedLip
-                            )
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        LixoButton(
-                            onClick = {
-                                lastCheckResult = null
-                                selectedChoice = null
-                            },
-                            variant = LixoButtonVariant.DANGER,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "FÖRSÖK IGEN",
+                                text = LixoStrings.MATH_NEXT_PROBLEM_BTN.uppercase(),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = Color.White
                             )
                         }
                     } else {
-                        // "KONTROLLERA" (Check) button
-                        LixoButton(
-                            onClick = {
-                                val choice = selectedChoice ?: return@LixoButton
-                                val (updatedState, isCorrect) = mathEngine.checkAnswer(currentAttempt, choice)
-                                val copyList = attemptStates.toMutableList()
-                                copyList[currentIndex] = updatedState
-                                attemptStates = copyList
-                                lastCheckResult = isCorrect
-
-                                if (isCorrect) {
-                                    if (updatedState.wrongAttempts > 0 || updatedState.hintsRevealed > 0) {
-                                        onLogMathError(
-                                            currentAttempt.problem.type,
-                                            currentAttempt.problem.promptSv,
-                                            updatedState.wrongAttempts,
-                                            updatedState.hintsRevealed
-                                        )
-                                    }
-                                }
-                            },
-                            enabled = selectedChoice != null,
-                            variant = LixoButtonVariant.PRIMARY,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LixoIcon(icon = LixoIcons.Bulb, tint = LixoColors.GoldLip, size = 24.dp)
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                text = LixoStrings.MATH_SUBMIT_BTN.uppercase(),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = Color.White
+                                text = "Inte riktigt — prova igen!",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = LixoColors.GoldLip
                             )
                         }
                     }

@@ -69,14 +69,9 @@ class MathEngine {
         val totalHints = states.sumOf { it.hintsRevealed }
         val totalWrong = states.sumOf { it.wrongAttempts }
 
-        val stars = when {
-            elapsedSeconds <= timeRequirementSeconds &&
-                totalHints <= BalanceConfig.MATH_THREE_STAR_MAX_HINTS &&
-                totalWrong <= 1 -> 3
-
-            elapsedSeconds <= (timeRequirementSeconds * BalanceConfig.MATH_TWO_STAR_TIME_MULTIPLIER).toInt() -> 2
-            else -> 1
-        }
+        val stars = 1 +
+            (if (elapsedSeconds <= timeRequirementSeconds) 1 else 0) +
+            (if (totalWrong == 0) 1 else 0)
 
         return MathSessionScoreResult(
             starsEarned = stars,

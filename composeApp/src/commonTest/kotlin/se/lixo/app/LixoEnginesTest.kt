@@ -392,6 +392,57 @@ class LixoEnginesTest {
     }
 
     @Test
+    fun mathSession_starsAreCompletionPlusSpeedPlusNoErrors() {
+        val problem = MathProblem(
+            id = "mp_clock_1",
+            type = MathProblemType.CLOCK,
+            promptSv = "Vad är klockan?",
+            correctAnswer = "03:30",
+            choices = listOf("03:00", "03:30"),
+            hintStep1Sv = "Minutvisaren pekar på 6.",
+            hintStep2Sv = "Det betyder 30 minuter över 3 (03:30)."
+        )
+        val timeRequirementSeconds = 60
+        val fastElapsedSeconds = 30
+        val slowElapsedSeconds = 90
+
+        val cleanState = MathProblemAttemptState(problem)
+        val (wrongState, _) = mathEngine.checkAnswer(MathProblemAttemptState(problem), "03:00")
+
+        val fastNoErrors = mathEngine.evaluateMathSession(
+            states = listOf(cleanState),
+            elapsedSeconds = fastElapsedSeconds,
+            timeRequirementSeconds = timeRequirementSeconds,
+            isTimedChallenge = false
+        )
+        assertEquals(3, fastNoErrors.starsEarned)
+
+        val fastWithErrors = mathEngine.evaluateMathSession(
+            states = listOf(wrongState),
+            elapsedSeconds = fastElapsedSeconds,
+            timeRequirementSeconds = timeRequirementSeconds,
+            isTimedChallenge = false
+        )
+        assertEquals(2, fastWithErrors.starsEarned)
+
+        val slowNoErrors = mathEngine.evaluateMathSession(
+            states = listOf(cleanState),
+            elapsedSeconds = slowElapsedSeconds,
+            timeRequirementSeconds = timeRequirementSeconds,
+            isTimedChallenge = false
+        )
+        assertEquals(2, slowNoErrors.starsEarned)
+
+        val slowWithErrors = mathEngine.evaluateMathSession(
+            states = listOf(wrongState),
+            elapsedSeconds = slowElapsedSeconds,
+            timeRequirementSeconds = timeRequirementSeconds,
+            isTimedChallenge = false
+        )
+        assertEquals(1, slowWithErrors.starsEarned)
+    }
+
+    @Test
     fun progressionEngine_preventsStarFarmingOnMaxedLevelsAndHandlesDuplicateGifts() {
         val catalog = LixoRepository.buildSeedWardrobeCatalog()
         val profile = ChildProfile(id = "p1", displayName = "Saga", totalStars = 0)
@@ -609,7 +660,7 @@ class LixoEnginesTest {
 
         assertEquals(6, problems.size)
         assertTrue(problems.all { it.type == MathProblemType.ADDITION })
-        assertTrue(problems.all { (it.correctAnswer.toIntOrNull() ?: Int.MAX_VALUE) <= 5 })
+        assertTrue(problems.all { (it.correctAnswer.toIntOrNull() ?: Int.MAX_VALUE) <= 6 })
         assertEquals(1, level.difficulty)
         assertEquals(60, level.timeRequirementSeconds)
         assertEquals("Bana 1: Plus med små tal (Viskande Skogen)", level.title)
@@ -796,8 +847,8 @@ class LixoEnginesTest {
         assertEquals(n1Choices, n1Problems.map { it.choices })
 
         val n31Prompts = listOf(
-            "Vad blir 2 - 1?",
-            "Vad blir 3 - 1?",
+            "Vad blir 4 - 2?",
+            "Vad blir 5 - 2?",
             "Timvisaren pekar rakt på 3 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
             "Timvisaren pekar rakt på 4 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
             "Timvisaren pekar rakt på 5 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
@@ -805,7 +856,7 @@ class LixoEnginesTest {
             "Timvisaren pekar rakt på 7 och minutvisaren pekar rakt upp på 12. Vad är klockan?",
             "Timvisaren pekar rakt på 8 och minutvisaren pekar rakt upp på 12. Vad är klockan?"
         )
-        val n31Answers = listOf("1", "2", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00")
+        val n31Answers = listOf("2", "3", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00")
         val n31Problems = MathCurriculum.buildMathProblems(31, MathCurriculum.orderForMathIndex(31))
         assertEquals(n31Prompts, n31Problems.map { it.promptSv })
         assertEquals(n31Answers, n31Problems.map { it.correctAnswer })
@@ -853,6 +904,21 @@ class LixoEnginesTest {
                         "n=$n clock minute must be in {0, 15, 30, 45}, got ${it.visualClockMinute}"
                     )
                 }
+            }
+        }
+    }
+
+    @Test
+    fun mathCurriculum_noOperandIsOneFromN2Onward() {
+        val promptPattern = Regex("""Vad blir (\d+) ([+-]) (\d+)\?""")
+        for (n in 2..100) {
+            val problems = MathCurriculum.buildMathProblems(n, MathCurriculum.orderForMathIndex(n))
+            for (p in problems) {
+                if (p.type != MathProblemType.ADDITION && p.type != MathProblemType.SUBTRACTION) continue
+                val match = promptPattern.matchEntire(p.promptSv) ?: continue
+                val a = match.groupValues[1].toInt()
+                val b = match.groupValues[3].toInt()
+                assertTrue(a != 1 && b != 1, "n=$n ${p.id}: operand of 1 found in '${p.promptSv}'")
             }
         }
     }

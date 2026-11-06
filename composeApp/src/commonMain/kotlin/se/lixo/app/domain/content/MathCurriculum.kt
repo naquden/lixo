@@ -14,8 +14,10 @@ import se.lixo.app.domain.model.MathProblemType
  * orders in 1..100) for n1..n40, and at orders 101..160 (order = n+60) for n41..n100. See
  * [orderForMathIndex] / [mathIndexForOrder] for the mapping between `n` and `order`.
  *
- * Every math level draws its questions from a small, hand-curated, fully deterministic pool so
- * Kotlin (shipped) and Python (content pipeline / tests) produce byte-identical output.
+ * Every math level draws its questions from a small, hand-curated, fully deterministic pool.
+ * This Kotlin implementation is the runtime source of truth for math content; the math portion
+ * of `seed_campaign_content.json` (and the Python content pipeline that once generated it) is
+ * stale and unused — math problems are always built here at runtime, not read from the seed JSON.
  */
 object MathCurriculum {
     const val MATH_LEVEL_COUNT = 100
@@ -62,12 +64,12 @@ object MathCurriculum {
 
     // --- Pool builders -----------------------------------------------------
 
-    private fun pairsSum(minSum: Int, maxSum: Int): List<List<Int>> {
+    private fun pairsSum(minSum: Int, maxSum: Int, minOperand: Int = 1): List<List<Int>> {
         val out = mutableListOf<List<Int>>()
-        for (a in 1..maxSum) {
+        for (a in minOperand..maxSum) {
             for (b in a..maxSum) {
                 val s = a + b
-                if (s in minSum..maxSum) {
+                if (s in minSum..maxSum && b >= minOperand) {
                     out.add(listOf(a, b))
                     if (a != b) out.add(listOf(b, a))
                 }
@@ -85,7 +87,7 @@ object MathCurriculum {
         return out
     }
 
-    private fun poolS6(): List<List<Int>> = (2..5).map { listOf(it, it) }
+    private fun poolS6(): List<List<Int>> = (3..9).map { listOf(it, it) }
 
     private fun poolS8(): List<List<Int>> {
         val out = mutableListOf<List<Int>>()
@@ -107,8 +109,8 @@ object MathCurriculum {
 
     private fun poolS10(): List<List<Int>> {
         val out = mutableListOf<List<Int>>()
-        for (a in 2..10) {
-            for (b in 1 until a) out.add(listOf(a, b))
+        for (a in 4..10) {
+            for (b in 2..(a - 2)) out.add(listOf(a, b))
         }
         return out
     }
@@ -149,7 +151,7 @@ object MathCurriculum {
     private fun poolS17a(): List<List<Int>> {
         val out = mutableListOf<List<Int>>()
         for (a in 13..19) {
-            for (b in 1..(a - 10)) out.add(listOf(a, b))
+            for (b in 2..(a - 10)) out.add(listOf(a, b))
         }
         return out
     }
@@ -268,10 +270,11 @@ object MathCurriculum {
     // --- Stage table ---------------------------------------------------
 
     private val stages: List<Stage> = listOf(
-        Stage("S1", 1, 3, "Plus med små tal", Kind.ADD_SMALL, pairsSum(2, 5), countFn = { 6 }, difficultyFn = { 1 }),
-        Stage("S2", 4, 6, "Plus upp till 6", Kind.ADD_SMALL, pairsSum(4, 6), countFn = { n -> if (n == 6) 8 else 6 }, difficultyFn = { 1 }),
-        Stage("S3", 7, 9, "Plus upp till 8", Kind.ADD_SMALL, pairsSum(6, 8), repStageId = "S2", countFn = { 8 }, difficultyFn = { 1 }),
-        Stage("S4", 10, 12, "Plus upp till 10", Kind.ADD_SMALL, pairsSum(8, 10), repStageId = "S3", countFn = { 8 }, difficultyFn = { 1 }),
+        Stage("S1", 1, 1, "Plus med små tal", Kind.ADD_SMALL, pairsSum(2, 6), countFn = { 6 }, difficultyFn = { 1 }),
+        Stage("S1b", 2, 3, "Plus upp till 7", Kind.ADD_SMALL, pairsSum(5, 7, 2), countFn = { 6 }, difficultyFn = { 1 }),
+        Stage("S2", 4, 6, "Plus upp till 10", Kind.ADD_SMALL, pairsSum(6, 10, 2), countFn = { n -> if (n == 6) 8 else 6 }, difficultyFn = { 1 }),
+        Stage("S3", 7, 9, "Plus upp till 10", Kind.ADD_SMALL, pairsSum(8, 10, 3), repStageId = "S2", countFn = { 8 }, difficultyFn = { 1 }),
+        Stage("S4", 10, 12, "Plus upp till 12", Kind.ADD_SMALL, pairsSum(10, 12, 3), repStageId = "S3", countFn = { 8 }, difficultyFn = { 1 }),
         Stage("S5", 13, 15, "Tiokompisar", Kind.TEN_FRIEND, poolS5(), repStageId = "S4", countFn = { 8 }, difficultyFn = { 1 }),
         Stage("S6", 16, 17, "Dubbelt", Kind.DOUBLES, poolS6(), repStageId = "S5", countFn = { 8 }, difficultyFn = { 1 }),
         Stage("S7", 18, 20, "Plus-repetition", Kind.MIX, mixSourceIds = listOf("S2", "S3", "S4", "S5", "S6"), countFn = { 10 }, difficultyFn = { 1 }),

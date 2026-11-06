@@ -81,7 +81,6 @@ object LixoStrings {
         "Snabbare tid sparas som personbästa, men ger inga fler stjärnor på en bana med 3 stjärnor."
 
     // Math & English Activity
-    const val MATH_SUBMIT_BTN = "Kontrollera"
     const val MATH_HINT_BTN = "Visa ledtråd"
     const val MATH_GROWTH_MINDSET_BANNER = "Bra försök! Här är en ledtråd som hjälper dig."
     const val MATH_NEXT_PROBLEM_BTN = "Nästa uppgift"
