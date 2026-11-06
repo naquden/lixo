@@ -15,6 +15,8 @@ import se.lixo.app.data.remote.SyncMergeEngine
 import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.model.Achievement
+import se.lixo.app.domain.model.AddFriendError
+import se.lixo.app.domain.model.AddFriendException
 import se.lixo.app.domain.model.AvatarAppearance
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.BalanceConfig
@@ -382,24 +384,28 @@ class LixoRepository(
 
     suspend fun addFriendByQuery(query: String): Result<FriendProfile> {
         val lookupResult = cloudGateway.lookupFriendByUsernameOrQr(query)
-        val friend = lookupResult.getOrNull()
-            ?: FriendProfile(
-                userId = "friend_${query.lowercase().hashCode().toUInt()}",
-                username = query.trim().lowercase().replace(" ", "_"),
-                appearance = AvatarAppearance(
-                    avatarType = AvatarType.entries[
-                        (query.hashCode().toUInt().toInt() % AvatarType.entries.size)
-                    ],
-                    primaryTintHex = 0xFF2ECC71
-                ),
-                totalStars = 24,
-                addedAtEpochMillis = Clock.System.now().toEpochMilliseconds()
-            )
-        _friends.update { current ->
-            if (current.any { it.username.equals(friend.username, ignoreCase = true) }) current
-            else listOf(friend) + current
+        if (lookupResult.isFailure) {
+            val cause = lookupResult.exceptionOrNull()
+            val reason = (cause as? AddFriendException)?.reason ?: AddFriendError.NETWORK
+            return Result.failure(AddFriendException(reason))
         }
-        return Result.success(friend)
+        val friend = lookupResult.getOrNull()
+            ?: return Result.failure(AddFriendException(AddFriendError.NOT_FOUND))
+
+        val alreadyFriend = _friends.value.any {
+            it.userId == friend.userId || it.username.equals(friend.username, ignoreCase = true)
+        }
+        if (alreadyFriend) {
+            return Result.failure(AddFriendException(AddFriendError.ALREADY_FRIEND))
+        }
+
+        val toAdd = if (friend.addedAtEpochMillis == 0L) {
+            friend.copy(addedAtEpochMillis = Clock.System.now().toEpochMilliseconds())
+        } else {
+            friend
+        }
+        _friends.update { current -> listOf(toAdd) + current }
+        return Result.success(toAdd)
     }
 
     fun removeFriend(userId: String) {

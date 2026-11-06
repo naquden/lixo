@@ -15,8 +15,8 @@ object LixoStrings {
 
     // Bottom Navigation
     const val NAV_MAP = "Karta"
-    const val NAV_WARDROBE = "Garderob"
-    const val NAV_TROPHIES_FRIENDS = "Troféer"
+    const val NAV_FRIENDS = "Kompisar"
+    const val NAV_TROPHIES = "Troféer"
     const val NAV_PARENT_SETTINGS = "Förälder"
 
     // Onboarding & Profile Selection
@@ -97,15 +97,27 @@ object LixoStrings {
     const val WARDROBE_UNEQUIP_BTN = "Ta av vald plats"
     const val WARDROBE_TRAITS_COLOR_LABEL = "Färg & stil"
 
-    // Trophies & Friends
-    const val TAB_TROPHIES = "Troféer"
-    const val TAB_FRIENDS = "Kompisar"
+    // Trophies
+    const val TROPHIES_TITLE = "Troféer"
     const val TROPHIES_SUBTITLE = "Klara utmaningar för att låsa upp sällsynta föremål."
+
+    // Kompisbyn (avatar map) & friends
+    const val AVATAR_MAP_TITLE = "Kompisbyn"
+    const val AVATAR_MAP_SUBTITLE = "Du och dina kompisar"
+    const val AVATAR_MAP_ME_PREFIX = "Du"
+    const val AVATAR_MAP_DRESS_UP_BTN = "Klä om"
+    const val AVATAR_MAP_ADD_FRIEND = "Lägg till kompis"
+    const val AVATAR_MAP_EMPTY = "Inga kompisar än – lägg till din första!"
+    const val FRIEND_SHEET_REMOVE_BTN = "Ta bort kompis"
+    const val SHEET_CLOSE_BTN = "Stäng"
     const val FRIENDS_SUBTITLE = "Lägg till kompisar med kod eller användarnamn. Ingen chatt."
     const val FRIENDS_INPUT_PLACEHOLDER = "Användarnamn eller kod"
     const val FRIENDS_ADD_BTN = "Lägg till"
     const val FRIENDS_REMOVE_BTN = "Ta bort"
     const val FRIENDS_MY_CODE_PREFIX = "Min kod:"
+    const val FRIENDS_ERROR_NOT_FOUND = "Hittade ingen kompis med det namnet."
+    const val FRIENDS_ERROR_ALREADY = "Ni är redan kompisar!"
+    const val FRIENDS_ERROR_NETWORK = "Kunde inte nå internet. Försök igen."
 
     // Parent View & GDPR
     const val PARENT_GATE_TITLE = "Föräldraläge"

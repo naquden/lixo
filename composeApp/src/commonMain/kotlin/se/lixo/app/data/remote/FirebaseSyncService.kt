@@ -8,6 +8,8 @@ import dev.gitlive.firebase.crashlytics.crashlytics
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
+import se.lixo.app.domain.model.AddFriendError
+import se.lixo.app.domain.model.AddFriendException
 import se.lixo.app.domain.model.AvatarAppearance
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.CampaignLevel
@@ -381,6 +383,7 @@ class FirebaseSyncService(
         }
 
         // Try live Firestore `public_avatars` query first, then fallback to local directory cache
+        var queryThrew = false
         try {
             val snap = Firebase.firestore
                 .collection("public_avatars")
@@ -400,9 +403,14 @@ class FirebaseSyncService(
             }
         } catch (_: Throwable) {
             // Fall through to local cache
+            queryThrew = true
         }
 
-        return Result.success(directoryCache[cleaned])
+        val cached = directoryCache[cleaned]
+        if (cached == null && queryThrew) {
+            return Result.failure(AddFriendException(AddFriendError.NETWORK))
+        }
+        return Result.success(cached)
     }
 
     override suspend fun deleteAccountAndAllCloudData(userId: String): Result<Unit> {

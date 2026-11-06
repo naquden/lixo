@@ -25,6 +25,8 @@ import se.lixo.app.domain.engine.ReadingAlignmentSessionState
 import se.lixo.app.domain.engine.StoryWordToken
 import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
+import se.lixo.app.domain.model.AddFriendError
+import se.lixo.app.domain.model.AddFriendException
 import se.lixo.app.domain.model.AvatarAppearance
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.BalanceConfig
@@ -34,6 +36,7 @@ import se.lixo.app.domain.model.Course
 import se.lixo.app.domain.model.DailyActivityRecord
 import se.lixo.app.domain.model.DictionaryEntry
 import se.lixo.app.domain.model.EquipmentSlot
+import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathProblem
@@ -1108,6 +1111,82 @@ class LixoEnginesTest {
             repo.courses.value.first { it.id == "course_sv_1" }.title
         )
         assertEquals("mån-fy-ren", repo.lookupDictionaryWord("månfyren").syllables)
+    }
+
+    @Test
+    fun addFriendByQuery_lookupFindsProfile_addsFriendFirstInList() = runTest {
+        val looked = FriendProfile(
+            userId = "friend_found_1",
+            username = "stjarn_sokare",
+            appearance = AvatarAppearance(avatarType = AvatarType.CAT),
+            totalStars = 10
+        )
+        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
+            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
+                Result.success(looked)
+        }
+        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        val before = repo.friends.value
+
+        val result = repo.addFriendByQuery("stjarn_sokare")
+        assertTrue(result.isSuccess)
+        assertEquals("friend_found_1", result.getOrNull()?.userId)
+        assertEquals("friend_found_1", repo.friends.value.first().userId)
+        assertEquals(before.size + 1, repo.friends.value.size)
+    }
+
+    @Test
+    fun addFriendByQuery_lookupReturnsNull_failsWithNotFoundAndLeavesListUnchanged() = runTest {
+        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
+            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
+                Result.success(null)
+        }
+        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        val before = repo.friends.value
+
+        val result = repo.addFriendByQuery("nobody_here")
+        assertTrue(result.isFailure)
+        assertEquals(AddFriendError.NOT_FOUND, (result.exceptionOrNull() as? AddFriendException)?.reason)
+        assertEquals(before, repo.friends.value)
+    }
+
+    @Test
+    fun addFriendByQuery_sameFriendTwice_secondCallFailsWithAlreadyFriend() = runTest {
+        val looked = FriendProfile(
+            userId = "friend_found_2",
+            username = "dubbel_vän",
+            appearance = AvatarAppearance(avatarType = AvatarType.CAT),
+            totalStars = 5
+        )
+        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
+            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
+                Result.success(looked)
+        }
+        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+
+        val first = repo.addFriendByQuery("dubbel_vän")
+        assertTrue(first.isSuccess)
+        val countAfterFirst = repo.friends.value.size
+
+        val second = repo.addFriendByQuery("dubbel_vän")
+        assertTrue(second.isFailure)
+        assertEquals(AddFriendError.ALREADY_FRIEND, (second.exceptionOrNull() as? AddFriendException)?.reason)
+        assertEquals(countAfterFirst, repo.friends.value.size)
+    }
+
+    @Test
+    fun addFriendByQuery_lookupFails_failsWithNetwork() = runTest {
+        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
+            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
+                Result.failure(AddFriendException(AddFriendError.NETWORK))
+        }
+        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        val before = repo.friends.value
+
+        val result = repo.addFriendByQuery("offline_user")
+        assertTrue(result.isFailure)
+        assertEquals(AddFriendError.NETWORK, (result.exceptionOrNull() as? AddFriendException)?.reason)
+        assertEquals(before, repo.friends.value)
     }
 
     @Test

@@ -373,6 +373,13 @@ data class FriendProfile(
 )
 
 /**
+ * Reasons [LixoRepository.addFriendByQuery] can fail (project.md §2 "Kompisgalleri").
+ */
+enum class AddFriendError { NOT_FOUND, ALREADY_FRIEND, NETWORK }
+
+class AddFriendException(val reason: AddFriendError) : Exception(reason.name)
+
+/**
  * Complete bundled seed structure for `seed_campaign_content.json`.
  */
 @Serializable

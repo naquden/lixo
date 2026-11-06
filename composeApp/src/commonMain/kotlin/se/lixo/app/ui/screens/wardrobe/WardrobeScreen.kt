@@ -44,6 +44,7 @@ import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
 import se.lixo.app.ui.theme.LixoCard
+import se.lixo.app.ui.theme.LixoCircleIconButton
 import se.lixo.app.ui.theme.LixoColors
 import se.lixo.app.ui.theme.LixoIcon
 import se.lixo.app.ui.theme.LixoIcons
@@ -68,7 +69,8 @@ fun WardrobeScreen(
     showSwedishTtsButtons: Boolean,
     onSelectAvatarType: (AvatarType) -> Unit,
     onEquipSlotItem: (EquipmentSlot, String?) -> Unit,
-    onCustomizeBaseTraits: (Long, Int, Int) -> Unit
+    onCustomizeBaseTraits: (Long, Int, Int) -> Unit,
+    onBack: () -> Unit
 ) {
     var selectedSlot by remember { mutableStateOf(EquipmentSlot.HAT) }
     val catalogById = remember(allWardrobeItems) { allWardrobeItems.associateBy { it.id } }
@@ -93,6 +95,11 @@ fun WardrobeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
+            LixoCircleIconButton(
+                icon = LixoIcons.ArrowBack,
+                onClick = onBack
+            )
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = LixoStrings.WARDROBE_TITLE,

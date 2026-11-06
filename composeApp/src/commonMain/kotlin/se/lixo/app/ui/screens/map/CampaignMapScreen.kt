@@ -1,7 +1,6 @@
 package se.lixo.app.ui.screens.map
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -15,9 +14,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -74,6 +71,7 @@ import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
+import se.lixo.app.ui.theme.LixoBottomSheet
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
 import se.lixo.app.ui.theme.LixoCard
@@ -287,158 +285,138 @@ fun CampaignMapScreen(
         }
 
         // Duolingo-style Level Details Bottom Sheet
-        AnimatedVisibility(
+        LixoBottomSheet(
             visible = selectedLevelForSheet != null,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+            onDismiss = { selectedLevelForSheet = null },
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             selectedLevelForSheet?.let { level ->
                 val progress = progressByLevelId[level.id]
                 val stars = progress?.starsEarned ?: 0
 
-                // Scrim backdrop
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(LixoColors.Scrim)
-                        .clickable { selectedLevelForSheet = null },
-                    contentAlignment = Alignment.BottomCenter
+                // Header row with title + close button
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Modal Card
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                            .background(LixoColors.Background)
-                            .clickable(enabled = false) {}
-                            .padding(24.dp)
-                    ) {
-                        // Header row with title + close button
-                        Row(
-                            verticalAlignment = Alignment.Top,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = level.title,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = LixoColors.TextPrimary
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = "${LixoStrings.subjectName(level.subject)} · ${level.timeRequirementSeconds}s",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = LixoColors.TextSecondary
-                                )
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (showSwedishTtsButtons) {
-                                    TtsIconButton(
-                                        textToSpeak = level.title,
-                                        ttsEngine = ttsEngine
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(LixoColors.Surface)
-                                        .clickable { selectedLevelForSheet = null },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    LixoIcon(
-                                        icon = LixoIcons.Close,
-                                        tint = LixoColors.TextSecondary,
-                                        size = 18.dp
-                                    )
-                                }
-                            }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = level.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = LixoColors.TextPrimary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "${LixoStrings.subjectName(level.subject)} · ${level.timeRequirementSeconds}s",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextSecondary
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (showSwedishTtsButtons) {
+                            TtsIconButton(
+                                textToSpeak = level.title,
+                                ttsEngine = ttsEngine
+                            )
+                            Spacer(Modifier.width(8.dp))
                         }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        // Star rating & badges row
-                        Row(
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
+                                .size(36.dp)
+                                .clip(CircleShape)
                                 .background(LixoColors.Surface)
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .clickable { selectedLevelForSheet = null },
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                for (i in 1..3) {
-                                    LixoIcon(
-                                        icon = LixoIcons.Star,
-                                        tint = if (i <= stars) LixoColors.Gold else LixoColors.BorderDarker,
-                                        size = 22.dp,
-                                        modifier = Modifier.padding(end = 4.dp)
-                                    )
-                                }
-                            }
-
-                            if (progress?.completedTimedChallenge == true) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    LixoIcon(icon = LixoIcons.Bolt, tint = LixoColors.Orange, size = 18.dp)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        text = LixoStrings.MAP_TIMED_BADGE,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = LixoColors.Orange
-                                    )
-                                }
-                            }
-                        }
-
-                        // Replay reward hint
-                        if (stars == 3) {
-                            Spacer(Modifier.height(12.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                LixoIcon(icon = LixoIcons.Gift, tint = LixoColors.GoldLip, size = 18.dp)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = LixoStrings.MAP_MAXED_STARS_HINT,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = LixoColors.TextSecondary
-                                )
-                            }
-                        } else if (stars in 1..2) {
-                            Spacer(Modifier.height(12.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                LixoIcon(icon = LixoIcons.Gift, tint = LixoColors.Green, size = 18.dp)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = LixoStrings.MAP_REPLAY_GIFT_HINT,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = LixoColors.GreenLip
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(20.dp))
-
-                        // Big Tactile Start Button
-                        LixoButton(
-                            onClick = {
-                                selectedLevelForSheet = null
-                                onSelectLevel(level)
-                            },
-                            variant = if (stars > 0) LixoButtonVariant.SECONDARY else LixoButtonVariant.PRIMARY,
-                            height = 54.dp,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = if (stars > 0) "SPELA IGEN" else "STARTA BANA",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = Color.White
+                            LixoIcon(
+                                icon = LixoIcons.Close,
+                                tint = LixoColors.TextSecondary,
+                                size = 18.dp
                             )
                         }
                     }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Star rating & badges row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(LixoColors.Surface)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        for (i in 1..3) {
+                            LixoIcon(
+                                icon = LixoIcons.Star,
+                                tint = if (i <= stars) LixoColors.Gold else LixoColors.BorderDarker,
+                                size = 22.dp,
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
+                    }
+
+                    if (progress?.completedTimedChallenge == true) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LixoIcon(icon = LixoIcons.Bolt, tint = LixoColors.Orange, size = 18.dp)
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = LixoStrings.MAP_TIMED_BADGE,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LixoColors.Orange
+                            )
+                        }
+                    }
+                }
+
+                // Replay reward hint
+                if (stars == 3) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        LixoIcon(icon = LixoIcons.Gift, tint = LixoColors.GoldLip, size = 18.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = LixoStrings.MAP_MAXED_STARS_HINT,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextSecondary
+                        )
+                    }
+                } else if (stars in 1..2) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        LixoIcon(icon = LixoIcons.Gift, tint = LixoColors.Green, size = 18.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = LixoStrings.MAP_REPLAY_GIFT_HINT,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.GreenLip
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Big Tactile Start Button
+                LixoButton(
+                    onClick = {
+                        selectedLevelForSheet = null
+                        onSelectLevel(level)
+                    },
+                    variant = if (stars > 0) LixoButtonVariant.SECONDARY else LixoButtonVariant.PRIMARY,
+                    height = 54.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (stars > 0) "SPELA IGEN" else "STARTA BANA",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White
+                    )
                 }
             }
         }

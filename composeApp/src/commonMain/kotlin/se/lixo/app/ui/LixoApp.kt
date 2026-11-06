@@ -55,7 +55,8 @@ import se.lixo.app.ui.screens.math.MathActivityScreen
 import se.lixo.app.ui.screens.onboarding.ProfileSelectAndTutorialScreen
 import se.lixo.app.ui.screens.parent.ParentGateAndDashboardScreen
 import se.lixo.app.ui.screens.reading.ReadingActivityScreen
-import se.lixo.app.ui.screens.social.TrophiesAndFriendsScreen
+import se.lixo.app.ui.screens.social.AvatarMapScreen
+import se.lixo.app.ui.screens.social.TrophiesScreen
 import se.lixo.app.ui.screens.wardrobe.WardrobeScreen
 import se.lixo.app.ui.theme.BouncyButton
 import se.lixo.app.ui.theme.LixoBottomNavBar
@@ -71,8 +72,9 @@ import se.lixo.app.ui.theme.LixoTheme
 enum class LixoMainDestination {
     PROFILE_SELECT_AND_TUTORIAL,
     MAP_HOME,
+    AVATAR_MAP,
     WARDROBE,
-    TROPHIES_AND_FRIENDS,
+    TROPHIES,
     PARENT_SETTINGS
 }
 
@@ -143,6 +145,8 @@ fun LixoApp(
             activeGameplayLevel != null -> activeGameplayLevel = null
             currentDestination == LixoMainDestination.MAP_HOME ->
                 currentDestination = LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL
+            currentDestination == LixoMainDestination.WARDROBE ->
+                currentDestination = LixoMainDestination.AVATAR_MAP
             else -> currentDestination = LixoMainDestination.MAP_HOME
         }
     }
@@ -291,16 +295,17 @@ fun LixoApp(
                                     onClick = { currentDestination = LixoMainDestination.MAP_HOME }
                                 ),
                                 LixoNavItem(
-                                    icon = LixoIcons.Shirt,
-                                    label = LixoStrings.NAV_WARDROBE,
-                                    selected = currentDestination == LixoMainDestination.WARDROBE,
-                                    onClick = { currentDestination = LixoMainDestination.WARDROBE }
+                                    icon = LixoIcons.Friends,
+                                    label = LixoStrings.NAV_FRIENDS,
+                                    selected = currentDestination == LixoMainDestination.AVATAR_MAP ||
+                                        currentDestination == LixoMainDestination.WARDROBE,
+                                    onClick = { currentDestination = LixoMainDestination.AVATAR_MAP }
                                 ),
                                 LixoNavItem(
                                     icon = LixoIcons.Trophy,
-                                    label = LixoStrings.NAV_TROPHIES_FRIENDS,
-                                    selected = currentDestination == LixoMainDestination.TROPHIES_AND_FRIENDS,
-                                    onClick = { currentDestination = LixoMainDestination.TROPHIES_AND_FRIENDS }
+                                    label = LixoStrings.NAV_TROPHIES,
+                                    selected = currentDestination == LixoMainDestination.TROPHIES,
+                                    onClick = { currentDestination = LixoMainDestination.TROPHIES }
                                 ),
                                 LixoNavItem(
                                     icon = LixoIcons.Shield,
@@ -331,6 +336,18 @@ fun LixoApp(
                                     }
                                 )
                             }
+                            LixoMainDestination.AVATAR_MAP -> {
+                                AvatarMapScreen(
+                                    profile = activeProfile,
+                                    friends = friends,
+                                    catalogById = catalogById,
+                                    ttsEngine = ttsEngine,
+                                    showSwedishTtsButtons = showSwedishTts,
+                                    onOpenWardrobe = { currentDestination = LixoMainDestination.WARDROBE },
+                                    onAddFriendByQuery = { repository.addFriendByQuery(it) },
+                                    onRemoveFriend = { repository.removeFriend(it) }
+                                )
+                            }
                             LixoMainDestination.WARDROBE -> {
                                 WardrobeScreen(
                                     profile = activeProfile,
@@ -344,18 +361,12 @@ fun LixoApp(
                                     },
                                     onCustomizeBaseTraits = { hex, eye, smile ->
                                         repository.customizeBaseAppearanceOnActiveProfile(hex, eye, smile)
-                                    }
+                                    },
+                                    onBack = { currentDestination = LixoMainDestination.AVATAR_MAP }
                                 )
                             }
-                            LixoMainDestination.TROPHIES_AND_FRIENDS -> {
-                                TrophiesAndFriendsScreen(
-                                    activeProfile = activeProfile,
-                                    achievements = achievements,
-                                    friends = friends,
-                                    catalogById = catalogById,
-                                    onAddFriendByQuery = { repository.addFriendByQuery(it) },
-                                    onRemoveFriend = { repository.removeFriend(it) }
-                                )
+                            LixoMainDestination.TROPHIES -> {
+                                TrophiesScreen(achievements = achievements)
                             }
                             LixoMainDestination.PARENT_SETTINGS -> {
                                 ParentGateAndDashboardScreen(

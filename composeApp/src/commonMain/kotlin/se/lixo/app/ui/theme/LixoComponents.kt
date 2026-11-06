@@ -1,8 +1,13 @@
 package se.lixo.app.ui.theme
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,11 +17,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -41,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.TextToSpeechEngine
 
 enum class LixoButtonVariant {
@@ -493,5 +501,80 @@ fun LixoBottomNavBar(
                 )
             }
         }
+    }
+}
+
+/**
+ * Reusable Duolingo-style bottom sheet: fullscreen scrim + rounded modal card that slides up
+ * from the bottom. Tapping the scrim or any caller-provided close action dismisses it.
+ */
+@Composable
+fun LixoBottomSheet(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    PlatformBackHandler(enabled = visible, onBack = onDismiss)
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+        exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(LixoColors.Scrim)
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .background(LixoColors.Background)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                    .padding(24.dp),
+                content = content
+            )
+        }
+    }
+}
+
+/**
+ * Small round tactile icon button with the same 3D "lip" look as [LixoButton]: a white face,
+ * a darker bottom lip that doubles as the press-shadow, and a neutral border.
+ */
+@Composable
+fun LixoCircleIconButton(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
+    tint: Color = LixoColors.TextSecondary
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressOffset = if (isPressed) 2.dp else 0.dp
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(LixoColors.BorderDarker)
+            .padding(bottom = 3.dp)
+            .offset(y = pressOffset)
+            .clip(CircleShape)
+            .background(Color.White)
+            .border(1.5.dp, LixoColors.Border, CircleShape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        LixoIcon(icon = icon, tint = tint, size = size * 0.5f)
     }
 }
