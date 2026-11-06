@@ -14,6 +14,8 @@ import android.speech.tts.UtteranceProgressListener
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
+import se.lixo.app.data.local.LixoDatabase
 import java.util.Locale
 
 object AndroidPlatformContext {
@@ -335,6 +338,26 @@ actual fun createPlatformSpeechRecognitionEngine(): SpeechRecognitionEngine =
 
 actual fun createPlatformTextToSpeechEngine(): TextToSpeechEngine =
     AndroidTextToSpeechEngine(AndroidPlatformContext.applicationContext)
+
+private var cachedLixoDatabase: LixoDatabase? = null
+
+actual fun createPlatformLixoDatabase(): LixoDatabase? {
+    cachedLixoDatabase?.let { return it }
+    val ctx = AndroidPlatformContext.applicationContext ?: return null
+    return try {
+        Room.databaseBuilder<LixoDatabase>(
+            context = ctx,
+            name = ctx.getDatabasePath("lixo.db").absolutePath
+        )
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
+            .also { cachedLixoDatabase = it }
+    } catch (_: Throwable) {
+        null
+    }
+}
 
 actual object PendingEmailLinkStorage {
     private const val PREFS_NAME = "lixo_email_link_auth_prefs"

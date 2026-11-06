@@ -1,5 +1,10 @@
 package se.lixo.app.platform
 
+import androidx.room.Room
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -11,7 +16,11 @@ import platform.AVFAudio.AVSpeechBoundary
 import platform.AVFAudio.AVSpeechSynthesizer
 import platform.AVFAudio.AVSpeechSynthesisVoice
 import platform.AVFAudio.AVSpeechUtterance
+import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDefaults
+import platform.Foundation.NSUserDomainMask
+import se.lixo.app.data.local.LixoDatabase
 
 /**
  * iOS implementation of PlatformFeatureFlags with graceful degradation support
@@ -113,6 +122,26 @@ actual fun createPlatformSpeechRecognitionEngine(): SpeechRecognitionEngine =
 
 actual fun createPlatformTextToSpeechEngine(): TextToSpeechEngine =
     IosTextToSpeechEngine()
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun createPlatformLixoDatabase(): LixoDatabase? {
+    val dir = NSFileManager.defaultManager.URLForDirectory(
+        directory = NSDocumentDirectory,
+        inDomain = NSUserDomainMask,
+        appropriateForURL = null,
+        create = true,
+        error = null
+    )?.path ?: return null
+    return try {
+        Room.databaseBuilder<LixoDatabase>(name = "$dir/lixo.db")
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
+    } catch (_: Throwable) {
+        null
+    }
+}
 
 /**
  * iOS implementation of [PendingEmailLinkStorage] backed by `NSUserDefaults.standardUserDefaults`

@@ -447,6 +447,22 @@ fun ReadingActivityScreen(
                             )
                         }
                     }
+
+                    Spacer(Modifier.height(12.dp))
+                    LixoButton(
+                        onClick = {
+                            sessionState = alignmentEngine.finishWithUnreadWords(sessionState)
+                        },
+                        variant = LixoButtonVariant.PRIMARY,
+                        height = 52.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = LixoStrings.READING_CONTINUE_WITH_YELLOW_BTN.uppercase(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(18.dp))
@@ -481,6 +497,36 @@ fun ReadingActivityScreen(
                                     text = LixoStrings.READING_SIMULATE_VOICE_BTN.uppercase(),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = Color.White
+                                )
+                            }
+
+                            Spacer(Modifier.height(10.dp))
+
+                            LixoButton(
+                                onClick = {
+                                    val next = sessionState.words.getOrNull(sessionState.currentWordIndex + 1)
+                                        ?: return@LixoButton
+                                    sessionState = alignmentEngine.processRecognizedTokens(
+                                        sessionState,
+                                        listOf(
+                                            RecognizedSpeechToken(
+                                                rawWord = next.displayText,
+                                                normalizedWord = next.normalizedText,
+                                                confidence = 0.96f,
+                                                timestampMillis = sessionState.elapsedMillis
+                                            )
+                                        )
+                                    )
+                                    millisSinceLastWordAdvance = 0L
+                                },
+                                variant = LixoButtonVariant.OUTLINE,
+                                height = 46.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = LixoStrings.READING_SIMULATE_SKIP_WORD_BTN,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = LixoColors.Blue
                                 )
                             }
 

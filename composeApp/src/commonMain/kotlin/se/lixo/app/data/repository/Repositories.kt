@@ -7,10 +7,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import se.lixo.app.data.local.LexiconCache
+import se.lixo.app.data.local.createPlatformLexiconCache
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.remote.SyncMergeEngine
 import se.lixo.app.domain.content.MathCurriculum
+import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.model.Achievement
 import se.lixo.app.domain.model.AvatarAppearance
 import se.lixo.app.domain.model.AvatarType
@@ -52,8 +55,11 @@ data class AppPrivacySettings(
  * and optional cloud sync via [CloudSyncGateway].
  */
 class LixoRepository(
-    private val cloudGateway: CloudSyncGateway = FirebaseSyncService()
+    private val cloudGateway: CloudSyncGateway = FirebaseSyncService(),
+    private val lexiconCache: LexiconCache? = createPlatformLexiconCache()
 ) {
+    private var lexiconVersion: Int? = null
+
     private val _profiles = MutableStateFlow<List<ChildProfile>>(emptyList())
     val profiles: StateFlow<List<ChildProfile>> = _profiles.asStateFlow()
 
@@ -156,9 +162,6 @@ class LixoRepository(
         val (generatedLevels, generatedTasks) = buildSeedCampaignLevelsAndTasks(generatedItems)
         _levels.value = generatedLevels
         _tasksById.value = generatedTasks
-
-        // Seed Offline Swedish Dictionary with syllable splits ("rid-dar-vagn")
-        _dictionary.value = buildSeedDictionary()
 
         // Seed Epic & Legendary Achievements
         _achievements.value = buildSeedAchievements()
@@ -312,7 +315,7 @@ class LixoRepository(
 
     fun logStruggledWord(profileId: String, wordNormalized: String, levelId: String) {
         val now = Clock.System.now().toEpochMilliseconds()
-        val dictEntry = _dictionary.value[wordNormalized.lowercase()]
+        val dictEntry = _dictionary.value[ForcedAlignmentEngine.normalizeForAlignment(wordNormalized)]
         val syllables = dictEntry?.syllables ?: splitSwedishSyllablesHeuristic(wordNormalized)
 
         _struggledWordsByProfile.update { map ->
@@ -365,13 +368,15 @@ class LixoRepository(
     }
 
     fun lookupDictionaryWord(rawWord: String): DictionaryEntry {
-        val cleaned = rawWord.lowercase().trim { !it.isLetterOrDigit() }
-        return _dictionary.value[cleaned] ?: DictionaryEntry(
+        val cleaned = ForcedAlignmentEngine.normalizeForAlignment(rawWord)
+        _dictionary.value[cleaned]?.let { return it }
+        val syllables = splitSwedishSyllablesHeuristic(cleaned)
+        return DictionaryEntry(
             wordNormalized = cleaned,
             displayWord = rawWord.trim { !it.isLetterOrDigit() },
-            syllables = splitSwedishSyllablesHeuristic(cleaned),
-            explanationSv = "Ett spännande ord i sagan som du kan lyssna på eller läsa i stavelser!",
-            exampleSentenceSv = "Vi läser ordet \"$cleaned\" tillsammans i lugn takt."
+            syllables = syllables,
+            explanationSv = "Lyssna på ordet och läs det i stavelser: $syllables",
+            exampleSentenceSv = ""
         )
     }
 
@@ -502,13 +507,56 @@ class LixoRepository(
     }
 
     /**
-     * Downloads public curriculum content (`courses`, `levels`, `tasks`, `dictionary`) from Firestore
+     * Loads the previously cached lexicon (dictionary) from the Room-backed [lexiconCache], if any,
+     * into memory. Must run before [syncCurriculumFromCloud] so the remote version check has a
+     * real local version to compare against instead of `null`.
+     */
+    suspend fun loadCachedLexicon() {
+        val cache = lexiconCache ?: return
+        val version: Int?
+        val entries: List<DictionaryEntry>
+        try {
+            version = cache.loadVersion()
+            entries = cache.loadEntries()
+        } catch (_: Throwable) {
+            return
+        }
+        if (version == null || entries.isEmpty()) return
+        _dictionary.value = entries.associateBy { ForcedAlignmentEngine.normalizeForAlignment(it.wordNormalized) }
+        lexiconVersion = version
+    }
+
+    /**
+     * Downloads the lexicon from Firestore (`lexicon/meta` + `lexicon/chunk_N`) when the remote
+     * version differs from the locally known one, caches it to Room, and updates in-memory state.
+     * Returns true only when a newer lexicon was actually downloaded and applied.
+     */
+    private suspend fun syncLexiconFromCloud(): Boolean {
+        val meta = cloudGateway.fetchLexiconMeta() ?: return false
+        if (meta.chunkCount <= 0 || meta.version == lexiconVersion) return false
+        val entries = cloudGateway.fetchLexiconEntries(meta.chunkCount)
+        if (entries.isEmpty()) return false
+        try {
+            lexiconCache?.replace(meta.version, entries)
+        } catch (_: Throwable) {
+            // Cache write failure must not block serving the freshly downloaded lexicon in memory.
+        }
+        _dictionary.value = entries.associateBy { ForcedAlignmentEngine.normalizeForAlignment(it.wordNormalized) }
+        lexiconVersion = meta.version
+        return true
+    }
+
+    /**
+     * Downloads public curriculum content (`courses`, `levels`, `tasks`, `lexicon`) from Firestore
      * using delta version checking (`project.md` §3: "Delta-uppdatering via versionscheck;
-     * endast ändrade nivåer hämtas"). Safe no-op fallback if offline.
+     * endast ändrade nivåer hämtas"). Safe no-op fallback if offline. The lexicon syncs
+     * independently of courses/levels/tasks so it is never skipped when courses fail to load.
      */
     suspend fun syncCurriculumFromCloud(): Boolean {
+        val lexiconUpdated = syncLexiconFromCloud()
+
         val remoteCourses = cloudGateway.fetchRemoteCourses()
-        if (remoteCourses.isEmpty()) return false
+        if (remoteCourses.isEmpty()) return lexiconUpdated
 
         val coursesToSync = SyncMergeEngine.selectCoursesNeedingDeltaSync(
             localCourses = _courses.value,
@@ -546,15 +594,7 @@ class LixoRepository(
             _levels.value = mergedLevelsById.values.sortedBy { it.order }
         }
 
-        val remoteDict = cloudGateway.fetchRemoteDictionary()
-        if (remoteDict.isNotEmpty()) {
-            _dictionary.update { current ->
-                val next = current.toMutableMap()
-                remoteDict.forEach { entry -> next[entry.wordNormalized.lowercase()] = entry }
-                next
-            }
-        }
-        return coursesToSync.isNotEmpty() || remoteDict.isNotEmpty()
+        return coursesToSync.isNotEmpty() || lexiconUpdated
     }
 
     companion object {
@@ -875,39 +915,6 @@ class LixoRepository(
             }
 
             return levels.sortedBy { it.order } to tasks
-        }
-
-        fun buildSeedDictionary(): Map<String, DictionaryEntry> {
-            val entries = listOf(
-                DictionaryEntry("riddarvagn", "riddarvagn", "rid-dar-vagn", "En ståtlig vagn som dras av hästar när en riddare åker på uppdrag.", "Riddaren lastade sin sköld på sin riddarvagn."),
-                DictionaryEntry("glittrande", "glittrande", "glitt-ran-de", "Något som blänker och gnistrar i ljuset, som små stjärnor eller diamanter.", "Katten Lixo hittade en glittrande hatt i skogen."),
-                DictionaryEntry("äventyr", "äventyr", "ä-ven-tyr", "En spännande resa eller upplevelse där det händer oväntade och roliga saker.", "Varje ny saga i Lixo är ett magiskt äventyr."),
-                DictionaryEntry("träbron", "träbron", "trä-bron", "En bro byggd av plankor och trä över en bäck eller å.", "Katten smög försiktigt över den gamla träbron."),
-                DictionaryEntry("stjärnstoft", "stjärnstoft", "stjärn-stoft", "Magiskt, glittrande pulver som ser ut att komma direkt från natthimlens stjärnor.", "Trollkarlen strödde lite stjärnstoft i grytan."),
-                DictionaryEntry("fjärilar", "fjärilar", "fjä-ri-lar", "Insekter med vackra, färgglada vingar som flyger mellan blommor på sommaren.", "Små lysande fjärilar flög ut ur sagoboken."),
-                DictionaryEntry("sagoboken", "sagoboken", "sa-go-bo-ken", "En bok full av påhittade berättelser, äventyr och magiska bilder.", "Prinsessan slog upp första sidan i sagoboken."),
-                DictionaryEntry("skogsbrynet", "skogsbrynet", "skogs-bry-net", "Kanten där skogen slutar och en äng eller öppen mark börjar.", "Räven stannade vid skogsbrynet och lyssnade."),
-                DictionaryEntry("hasselnötter", "hasselnötter", "has-sel-nöt-ter", "Små runda nötter med hårt skal som ekorrar tycker mycket om.", "Ekorren gömde fem hasselnötter i det gamla trädet."),
-                DictionaryEntry("näckrosen", "näckrosen", "näck-ro-sen", "En vacker vattenväxt med stora runda blad och blommor som flyter på sjön.", "En grön groda vilade på bladet bredvid näckrosen."),
-                DictionaryEntry("skattkista", "skattkista", "skatt-kis-ta", "En kista av trä och järn där guldmynt, juveler eller hemligheter förvaras.", "På botten av tjärnen glimmade en gammal skattkista."),
-                DictionaryEntry("pergament", "pergament", "per-ga-ment", "Ett tjockt och gammaldags papper som förr användes till viktiga kartor och brev.", "Ugglan rullade försiktigt ut ett gult pergament."),
-                DictionaryEntry("vattenfallet", "vattenfallet", "vat-ten-fal-let", "En plats där vattnet i en fors eller å faller brant nerför en klippa.", "Bruset från vattenfallet hördes långt genom skogen."),
-                DictionaryEntry("mässingskompass", "mässingskompass", "mäs-sings-kom-pass", "Ett vägvisande instrument av guldfärgad metall som visar väderstrecken.", "Lixo höll en blank mässingskompass i tassen."),
-                DictionaryEntry("klocktorn", "klocktorn", "klock-torn", "Ett högt torn med en stor urtavla och klockor som slår varje timme.", "Mitt på torget stod byns gamla klocktorn."),
-                DictionaryEntry("segelbåtarna", "segelbåtarna", "se-gel-bå-tar-na", "Båtar som drivs framåt av vinden med hjälp av stora tygsegel.", "Segelbåtarna gungade lugnt inne i hamnen."),
-                DictionaryEntry("kristallgrottan", "kristallgrottan", "kris-tall-grot-tan", "En underjordisk grotta vars väggar är täckta av lysande kristaller.", "Ljudet ekade vackert inne i kristallgrottan."),
-                DictionaryEntry("månfyren", "månfyren", "mån-fy-ren", "Ett fyrtorn som lyser som månsken för att visa båtar rätt väg på natten.", "Månfyren syntes långt ute över det mörka havet."),
-                DictionaryEntry("brevduva", "brevduva", "brev-du-va", "En smart fågel som kan hitta hem över långa avstånd med ett litet brev.", "En vit brevduva landade mjukt på fönsterblecket."),
-                DictionaryEntry("sagofestival", "sagofestival", "sa-go-fes-ti-val", "En stor och glad fest där alla samlas för att lyssna på och läsa berättelser.", "Hela borgen pyntades inför årets sagofestival."),
-                DictionaryEntry("skymningen", "skymningen", "skym-ning-en", "Tiden på kvällen precis efter att solen har gått ner men innan det blir helt mörkt.", "I skymningen tändes de första stjärnorna."),
-                DictionaryEntry("bibliotek", "bibliotek", "bib-li-o-tek", "Ett rum eller hus fyllt med hyllor av böcker som man får låna och läsa.", "Trollkarlens bibliotek hade böcker ända upp till taket."),
-                DictionaryEntry("stjärnbilder", "stjärnbilder", "stjärn-bil-der", "Mönster av stjärnor på natthimlen som liknar djur eller sagofigurer.", "Vi räknade sju olika stjärnbilder i den klara natten."),
-                DictionaryEntry("norrskenet", "norrskenet", "norr-ske-net", "Ett magiskt grönt och lila ljus som dansar på himlen under kalla vinternätter.", "Norrskenet lyste upp snön runt Stjärnborgen."),
-                DictionaryEntry("observatoriet", "observatoriet", "ob-ser-va-to-ri-et", "En byggnad med stor kikare (teleskop) där man studerar månen, planeter och stjärnor.", "Uppe i observatoriet tittade de på kometen."),
-                DictionaryEntry("teleskopet", "teleskopet", "te-le-sko-pet", "En stark stjärnkikare som gör att saker långt borta i rymden ser nära ut.", "Genom teleskopet såg häxan kometens glittrande svans."),
-                DictionaryEntry("glaciären", "glaciären", "gla-ci-ä-ren", "Ett väldigt tjockt täcke av gammal is och snö högt uppe i bergen.", "Snöleoparden vandrade tyst över glaciären.")
-            )
-            return entries.associateBy { it.wordNormalized }
         }
 
         fun buildSeedAchievements(): List<Achievement> = listOf(

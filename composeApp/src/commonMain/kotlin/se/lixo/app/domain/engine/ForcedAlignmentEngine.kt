@@ -285,6 +285,10 @@ class ForcedAlignmentEngine {
      * - 3 stars: AI mode at >= 1.0x reference WPM
      * - 2 stars: AI mode at >= 0.5x reference WPM
      * - 1 star: Completed reading regardless of time
+     * - AI mode penalty: yellow (needsPractice) words lower the WPM-based star count. Read yellow
+     *   words weigh 1, unread yellow words weigh `BalanceConfig.READING_YELLOW_UNREAD_WEIGHT`. The
+     *   weighted share of the story's words determines the penalty (0/1/2 stars), but the result
+     *   never drops below 1 star.
      * - Manual mode: capped at 1 star, no gift, no pronunciation achievement, no word log, no timed challenge
      */
     fun evaluateSessionScore(
@@ -309,14 +313,26 @@ class ForcedAlignmentEngine {
         }
 
         val wpmRatio = achievedWpm.toFloat() / max(1, referenceWpm).toFloat()
-        val stars = when {
+        val wpmStars = when {
             wpmRatio >= BalanceConfig.READING_THREE_STAR_WPM_RATIO -> 3
             wpmRatio >= BalanceConfig.READING_TWO_STAR_WPM_RATIO -> 2
             else -> 1
         }
 
+        val readYellowCount = state.words.count { it.needsPractice && it.isCompleted }
+        val unreadYellow = state.words.filter { it.needsPractice && !it.isCompleted }
+        val yellowWeight = readYellowCount.toFloat() + unreadYellow.size * BalanceConfig.READING_YELLOW_UNREAD_WEIGHT
+        val yellowRatio = yellowWeight / wordCount.toFloat()
+        val yellowPenalty = when {
+            yellowRatio < BalanceConfig.READING_YELLOW_ONE_STAR_PENALTY_RATIO -> 0
+            yellowRatio < BalanceConfig.READING_YELLOW_TWO_STAR_PENALTY_RATIO -> 1
+            else -> 2
+        }
+        val stars = max(1, wpmStars - yellowPenalty)
+
         val noStruggledWords = state.words.none { it.needsPractice }
         val beatTimeChallenge = state.isTimedChallenge && safeSeconds <= timeRequirementSeconds
+        val struggledWordsToLog = (state.struggledWordsNormalized + unreadYellow.map { it.normalizedText }).toList()
 
         return ReadingScoreResult(
             starsEarned = stars,
@@ -325,7 +341,24 @@ class ForcedAlignmentEngine {
             eligibleForGift = true,
             eligibleForPronunciationAchievement = noStruggledWords,
             eligibleForTimedChallengeReward = beatTimeChallenge,
-            struggledWordsToLog = state.struggledWordsNormalized.toList()
+            struggledWordsToLog = struggledWordsToLog
+        )
+    }
+
+    /**
+     * Lets the child end an AI-Listening session without reading the remaining yellow
+     * (skipped, needs-practice) words ("Gå vidare"). No-op outside of the "awaiting unread
+     * words" state; otherwise marks the session completed while leaving `words` untouched so
+     * the unread yellow words are still counted as unread in [evaluateSessionScore].
+     */
+    fun finishWithUnreadWords(state: ReadingAlignmentSessionState): ReadingAlignmentSessionState {
+        if (state.mode != ReadingMode.AI_LISTENING || state.isCompleted || !state.isAwaitingUnreadWords) {
+            return state
+        }
+        return state.copy(
+            isCompleted = true,
+            isAwaitingUnreadWords = false,
+            isWordStuckSupportVisible = false
         )
     }
 

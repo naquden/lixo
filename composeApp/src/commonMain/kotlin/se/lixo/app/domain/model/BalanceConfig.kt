@@ -25,6 +25,17 @@ object BalanceConfig {
     const val MANUAL_MODE_MAX_STARS = 1
 
     /**
+     * AI-Listening yellow-word penalty (`project.md` §2 "Poängsättning läsning"): read yellow
+     * words weigh 1 and unread yellow words weigh [READING_YELLOW_UNREAD_WEIGHT] when computing
+     * the weighted share of the story's words that were flagged. That share crossing
+     * [READING_YELLOW_ONE_STAR_PENALTY_RATIO] costs 1 star, crossing
+     * [READING_YELLOW_TWO_STAR_PENALTY_RATIO] costs 2 stars (never below 1 star total).
+     */
+    const val READING_YELLOW_UNREAD_WEIGHT = 2f
+    const val READING_YELLOW_ONE_STAR_PENALTY_RATIO = 0.10f
+    const val READING_YELLOW_TWO_STAR_PENALTY_RATIO = 0.25f
+
+    /**
      * Minimum time per word in Manual Reading Mode before "Jag har läst klart" button unlocks.
      * Prevents instant button mashing while remaining fair for fast child readers.
      */

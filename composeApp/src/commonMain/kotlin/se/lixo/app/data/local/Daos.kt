@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -96,6 +97,25 @@ interface LixoDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertDictionaryEntries(entries: List<DictionaryEntryEntity>)
+
+    @Query("SELECT * FROM dictionary_entries")
+    suspend fun getAllDictionaryEntries(): List<DictionaryEntryEntity>
+
+    @Query("DELETE FROM dictionary_entries")
+    suspend fun deleteAllDictionaryEntries()
+
+    @Query("SELECT * FROM lexicon_meta WHERE singletonId = 1 LIMIT 1")
+    suspend fun getLexiconMeta(): LexiconMetaEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertLexiconMeta(meta: LexiconMetaEntity)
+
+    @Transaction
+    suspend fun replaceLexicon(version: Int, entries: List<DictionaryEntryEntity>) {
+        deleteAllDictionaryEntries()
+        upsertDictionaryEntries(entries)
+        upsertLexiconMeta(LexiconMetaEntity(version = version, entryCount = entries.size))
+    }
 
     // --- Friends ---
     @Query("SELECT * FROM friends ORDER BY addedAtEpochMillis DESC")

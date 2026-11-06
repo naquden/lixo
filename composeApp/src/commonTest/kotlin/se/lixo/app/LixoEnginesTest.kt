@@ -7,6 +7,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
+import se.lixo.app.data.local.LexiconCache
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.remote.LIXO_ANDROID_MIN_VERSION
@@ -14,11 +15,14 @@ import se.lixo.app.data.remote.LIXO_ANDROID_PACKAGE_NAME
 import se.lixo.app.data.remote.LIXO_EMAIL_LINK_CONTINUE_URL
 import se.lixo.app.data.remote.LIXO_FIREBASE_HOSTING_DOMAIN
 import se.lixo.app.data.remote.LIXO_IOS_BUNDLE_ID
+import se.lixo.app.data.remote.LexiconMeta
 import se.lixo.app.data.remote.SyncMergeEngine
 import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
+import se.lixo.app.domain.engine.ReadingAlignmentSessionState
+import se.lixo.app.domain.engine.StoryWordToken
 import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.model.AvatarAppearance
@@ -1017,7 +1021,9 @@ class LixoEnginesTest {
                 )
             )
 
-            override suspend fun fetchRemoteDictionary(): List<DictionaryEntry> = listOf(
+            override suspend fun fetchLexiconMeta(): LexiconMeta = LexiconMeta(version = 1, chunkCount = 1)
+
+            override suspend fun fetchLexiconEntries(chunkCount: Int): List<DictionaryEntry> = listOf(
                 DictionaryEntry(
                     wordNormalized = "månfyren",
                     displayWord = "månfyren",
@@ -1028,7 +1034,7 @@ class LixoEnginesTest {
             )
         }
 
-        val repo = LixoRepository(fakeGateway)
+        val repo = LixoRepository(fakeGateway, lexiconCache = null)
         val synced = repo.syncCurriculumFromCloud()
         assertTrue(synced)
         assertEquals(
@@ -1036,5 +1042,198 @@ class LixoEnginesTest {
             repo.courses.value.first { it.id == "course_sv_1" }.title
         )
         assertEquals("mån-fy-ren", repo.lookupDictionaryWord("månfyren").syllables)
+    }
+
+    @Test
+    fun forcedAlignment_finishWithUnreadWordsCompletesAndKeepsYellowUnread() {
+        var session = alignmentEngine.startSession(
+            storyText = "Katten Lixo hittar en stjärna.",
+            mode = ReadingMode.AI_LISTENING,
+            isTimedChallengeRequested = false
+        )
+        // Skip "Lixo" (idx 1) by reading "katten" then jumping to "hittar".
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            listOf(
+                RecognizedSpeechToken("katten", "katten", 0.95f, 100L),
+                RecognizedSpeechToken("hittar", "hittar", 0.95f, 200L),
+                RecognizedSpeechToken("en", "en", 0.95f, 300L),
+                RecognizedSpeechToken("stjärna", "stjärna", 0.95f, 400L)
+            )
+        )
+        assertTrue(session.isAwaitingUnreadWords, "Reaching the end with an unread yellow word must await")
+        assertFalse(session.isCompleted)
+
+        val result = alignmentEngine.finishWithUnreadWords(session)
+        assertTrue(result.isCompleted)
+        assertFalse(result.isAwaitingUnreadWords)
+        assertTrue(result.words[1].needsPractice)
+        assertFalse(result.words[1].isCompleted)
+
+        val score = alignmentEngine.evaluateSessionScore(result, referenceWpm = 40, timeRequirementSeconds = 60)
+        assertTrue(score.struggledWordsToLog.contains("lixo"))
+    }
+
+    @Test
+    fun finishWithUnreadWords_isNoOpInManualModeAndBeforeEnd() {
+        val manualSession = alignmentEngine.startSession(
+            storyText = "Katten läser i lugn takt.",
+            mode = ReadingMode.MANUAL,
+            isTimedChallengeRequested = false
+        )
+        assertEquals(manualSession, alignmentEngine.finishWithUnreadWords(manualSession))
+
+        var aiSession = alignmentEngine.startSession(
+            storyText = "Katten Lixo hittar en stjärna i skogen.",
+            mode = ReadingMode.AI_LISTENING,
+            isTimedChallengeRequested = false
+        )
+        // Skip "Lixo" mid-story; the story is not yet at the end, so finishWithUnreadWords is a no-op.
+        aiSession = alignmentEngine.processRecognizedTokens(
+            aiSession,
+            listOf(
+                RecognizedSpeechToken("katten", "katten", 0.95f, 100L),
+                RecognizedSpeechToken("hittar", "hittar", 0.95f, 200L)
+            )
+        )
+        assertFalse(aiSession.isAwaitingUnreadWords)
+        assertEquals(aiSession, alignmentEngine.finishWithUnreadWords(aiSession))
+    }
+
+    @Test
+    fun evaluateSessionScore_yellowPenaltyTiersAndOneStarFloor() {
+        fun buildState(elapsedMillis: Long, readYellow: Int, unreadYellow: Int): ReadingAlignmentSessionState {
+            val words = (0 until 20).map { idx ->
+                StoryWordToken(
+                    index = idx,
+                    displayText = "ord$idx",
+                    normalizedText = "ord$idx",
+                    isCompleted = idx >= unreadYellow,
+                    needsPractice = idx < readYellow || (idx >= readYellow && idx < readYellow + unreadYellow)
+                )
+            }
+            return ReadingAlignmentSessionState(
+                mode = ReadingMode.AI_LISTENING,
+                isTimedChallenge = false,
+                words = words,
+                currentWordIndex = words.size,
+                elapsedMillis = elapsedMillis,
+                isCompleted = true
+            )
+        }
+
+        // 120 WPM at referenceWpm=40 -> wpmStars = 3.
+        val noYellow = buildState(elapsedMillis = 10_000L, readYellow = 0, unreadYellow = 0)
+        assertEquals(3, alignmentEngine.evaluateSessionScore(noYellow, referenceWpm = 40, timeRequirementSeconds = 60).starsEarned)
+
+        // 1 read yellow out of 20 -> ratio 0.05, below the 0.10 one-star-penalty threshold.
+        val oneReadYellow = buildState(elapsedMillis = 10_000L, readYellow = 1, unreadYellow = 0)
+        assertEquals(3, alignmentEngine.evaluateSessionScore(oneReadYellow, referenceWpm = 40, timeRequirementSeconds = 60).starsEarned)
+
+        // 3 read yellow out of 20 -> ratio 0.15, in the [0.10, 0.25) one-star-penalty band.
+        val threeReadYellow = buildState(elapsedMillis = 10_000L, readYellow = 3, unreadYellow = 0)
+        assertEquals(2, alignmentEngine.evaluateSessionScore(threeReadYellow, referenceWpm = 40, timeRequirementSeconds = 60).starsEarned)
+
+        // 3 unread yellow out of 20 -> weight 6, ratio 0.30, in the two-star-penalty band.
+        val threeUnreadYellow = buildState(elapsedMillis = 10_000L, readYellow = 0, unreadYellow = 3)
+        assertEquals(1, alignmentEngine.evaluateSessionScore(threeUnreadYellow, referenceWpm = 40, timeRequirementSeconds = 60).starsEarned)
+
+        // Slow reading (12 WPM, wpmStars = 1) with 3 unread yellow must still floor at 1 star.
+        val slowWithUnreadYellow = buildState(elapsedMillis = 100_000L, readYellow = 0, unreadYellow = 3)
+        assertEquals(1, alignmentEngine.evaluateSessionScore(slowWithUnreadYellow, referenceWpm = 40, timeRequirementSeconds = 60).starsEarned)
+    }
+
+    private class FakeLexiconCache(
+        var version: Int?,
+        var entries: List<DictionaryEntry>
+    ) : LexiconCache {
+        var replaceCalls = 0
+
+        override suspend fun loadVersion(): Int? = version
+        override suspend fun loadEntries(): List<DictionaryEntry> = entries
+        override suspend fun replace(version: Int, entries: List<DictionaryEntry>) {
+            replaceCalls++
+            this.version = version
+            this.entries = entries
+        }
+    }
+
+    @Test
+    fun lexiconSync_sameVersionSkipsChunkFetch() = runTest {
+        val cache = FakeLexiconCache(
+            version = 3,
+            entries = listOf(
+                DictionaryEntry(
+                    wordNormalized = "på",
+                    displayWord = "på",
+                    syllables = "på",
+                    explanationSv = "Cachad förklaring för 'på'.",
+                    exampleSentenceSv = "Boken ligger på bordet."
+                )
+            )
+        )
+        var entriesFetchCount = 0
+        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
+            override suspend fun fetchRemoteCourses(): List<Course> = emptyList()
+            override suspend fun fetchLexiconMeta(): LexiconMeta = LexiconMeta(version = 3, chunkCount = 1)
+            override suspend fun fetchLexiconEntries(chunkCount: Int): List<DictionaryEntry> {
+                entriesFetchCount++
+                return emptyList()
+            }
+        }
+
+        val repo = LixoRepository(fakeGateway, lexiconCache = cache)
+        repo.loadCachedLexicon()
+        repo.syncCurriculumFromCloud()
+
+        assertEquals(0, entriesFetchCount)
+        assertEquals("Cachad förklaring för 'på'.", repo.lookupDictionaryWord("På,").explanationSv)
+    }
+
+    @Test
+    fun lexiconSync_newVersionReplacesCacheAndMemory() = runTest {
+        val cache = FakeLexiconCache(
+            version = 1,
+            entries = listOf(
+                DictionaryEntry(
+                    wordNormalized = "bor",
+                    displayWord = "bor",
+                    syllables = "bor",
+                    explanationSv = "Gammal förklaring.",
+                    exampleSentenceSv = "Gammal mening."
+                )
+            )
+        )
+        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
+            override suspend fun fetchRemoteCourses(): List<Course> = emptyList()
+            override suspend fun fetchLexiconMeta(): LexiconMeta = LexiconMeta(version = 2, chunkCount = 1)
+            override suspend fun fetchLexiconEntries(chunkCount: Int): List<DictionaryEntry> = listOf(
+                DictionaryEntry(
+                    wordNormalized = "bor",
+                    displayWord = "bor",
+                    syllables = "bor",
+                    explanationSv = "Ny förklaring.",
+                    exampleSentenceSv = "Ny mening."
+                ),
+                DictionaryEntry(
+                    wordNormalized = "skog",
+                    displayWord = "skog",
+                    syllables = "skog",
+                    explanationSv = "En stor plats med många träd.",
+                    exampleSentenceSv = "Vi gick in i skogen."
+                )
+            )
+        }
+
+        val repo = LixoRepository(fakeGateway, lexiconCache = cache)
+        repo.loadCachedLexicon()
+        val synced = repo.syncCurriculumFromCloud()
+
+        assertTrue(synced)
+        assertEquals(1, cache.replaceCalls)
+        assertEquals(2, cache.version)
+        assertEquals("Ny förklaring.", repo.lookupDictionaryWord("bor").explanationSv)
+        assertEquals("En stor plats med många träd.", repo.lookupDictionaryWord("skog.").explanationSv)
+        assertTrue(repo.lookupDictionaryWord("okänt_ord").explanationSv.startsWith("Lyssna på ordet"))
     }
 }

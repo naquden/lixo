@@ -112,7 +112,8 @@ interface CloudSyncGateway {
     suspend fun fetchRemoteCourses(): List<Course>
     suspend fun fetchLevelsForCourse(courseId: String): List<CampaignLevel>
     suspend fun fetchTasksForCourse(courseId: String): List<HomeworkTask>
-    suspend fun fetchRemoteDictionary(): List<DictionaryEntry>
+    suspend fun fetchLexiconMeta(): LexiconMeta?
+    suspend fun fetchLexiconEntries(chunkCount: Int): List<DictionaryEntry>
 
     fun buildEmailLinkActionCodeSettings(): ActionCodeSettings
     suspend fun sendSignInLinkToEmail(email: String): Result<Unit>
@@ -125,6 +126,12 @@ interface CloudSyncGateway {
     suspend fun deleteAccountAndAllCloudData(userId: String): Result<Unit>
     fun setCrashlyticsCollectionEnabled(enabled: Boolean)
 }
+
+@Serializable
+data class LexiconMeta(val version: Int, val chunkCount: Int)
+
+@Serializable
+private data class LexiconChunkDoc(val entries: List<DictionaryEntry>)
 
 @Serializable
 private data class FirestorePublicAvatarDoc(
@@ -186,7 +193,7 @@ class FirebaseSyncService(
     }
 
     override suspend fun fetchRemoteCourses(): List<Course> {
-        // Static curriculum (`courses`, `levels`, `tasks`, `dictionary`) is public read-only in Firestore
+        // Static curriculum (`courses`, `levels`, `tasks`, `lexicon`) is public read-only in Firestore
         // with zero PII uploaded, so it can be downloaded even when user account is in Local-Only mode.
         return try {
             val snapshot = Firebase.firestore.collection("courses").get()
@@ -217,10 +224,21 @@ class FirebaseSyncService(
         }
     }
 
-    override suspend fun fetchRemoteDictionary(): List<DictionaryEntry> {
+    override suspend fun fetchLexiconMeta(): LexiconMeta? {
         return try {
-            val snapshot = Firebase.firestore.collection("dictionary").get()
-            snapshot.documents.map { it.data<DictionaryEntry>() }
+            val snap = Firebase.firestore.collection("lexicon").document("meta").get()
+            if (snap.exists) snap.data<LexiconMeta>() else null
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    override suspend fun fetchLexiconEntries(chunkCount: Int): List<DictionaryEntry> {
+        return try {
+            (0 until chunkCount).flatMap { i ->
+                Firebase.firestore.collection("lexicon").document("chunk_$i").get()
+                    .data<LexiconChunkDoc>().entries
+            }
         } catch (_: Throwable) {
             emptyList()
         }

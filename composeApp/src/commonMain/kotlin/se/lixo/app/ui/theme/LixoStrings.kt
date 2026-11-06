@@ -61,6 +61,8 @@ object LixoStrings {
     const val READING_MODE_LOCKED_BADGE = "Läsläge"
     const val READING_SIMULATE_VOICE_BTN = "Läs nästa ord"
     const val READING_SIMULATE_FULL_SENTENCE_BTN = "Läs hela meningen"
+    /** Debug-only simulation button that skips the current word to make it a yellow unread word. */
+    const val READING_SIMULATE_SKIP_WORD_BTN = "Hoppa över ord"
     const val READING_MANUAL_DONE_BTN = "Klar med läsningen"
     const val READING_MANUAL_CHARGING_LABEL = "Läser..."
     const val READING_STUCK_TITLE = "Hjälp med ordet"
@@ -69,7 +71,8 @@ object LixoStrings {
     const val READING_HELP_EXPLANATION = "Förklaring"
     const val READING_HELP_SKIP_NO_PENALTY = "Gå vidare"
     const val READING_TAP_WORD_HINT = "Gula ord kan behöva övas – tryck på ett ord för hjälp"
-    const val READING_READ_YELLOW_WORDS = "Läs de gula orden för att bli klar"
+    const val READING_READ_YELLOW_WORDS = "Läs de gula orden för fler stjärnor"
+    const val READING_CONTINUE_WITH_YELLOW_BTN = "Gå vidare"
     const val READING_PRACTICE_WORDS_TITLE = "Ord att öva"
     const val READING_TIME_ROW_PREFIX = "Din tid:"
     const val READING_TIME_ROW_BEST_PREFIX = "Bästa:"

@@ -47,6 +47,7 @@ Spelifieringen bygger på ett tydligt orsak-verkan-samband där akademiska prest
   - **2 stjärnor:** AI-läge i minst 0,5 × referenshastighet.
   - **1 stjärna:** Klarad läsning oavsett tid.
   - **Manuellt läsläge:** högst 1 stjärna.
+  - **Gula ord sänker stjärnorna (AI-läge):** lästa gula ord väger 1, olästa gula ord väger 2. Viktad andel av sagans ord ≥ 10 % ger −1 stjärna, ≥ 25 % ger −2 stjärnor, men aldrig under 1 stjärna. Når barnet slutet med olästa gula ord kan det läsa dem för fler stjärnor eller trycka **Gå vidare**.
   - Referens-WPM per nivåspann sätts utifrån TTS/barnläshastighet och justeras efter test. Stjärnkrav för matte bestäms vid matteproduktion.
 - **Epic/Legendary via prestationer:** Speciella föremål endast via unika prestationer (t.ex. hastighet på X sagor, perfekt uttal på X sagor). Uttalsprestationer kräver AI-läge.
 - **Sällsynthet:** Bakgrundsfärg i 2D enligt **Fortnites färgskala** (grå/grön/blå/lila/guld-orange). Legendary har coolast animationer/effekter i 3D. MVP: ca **100+ items** över slots och sällsyntheter.

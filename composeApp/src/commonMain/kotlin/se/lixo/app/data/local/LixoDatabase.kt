@@ -19,9 +19,10 @@ import androidx.room.RoomDatabaseConstructor
         MathErrorEntity::class,
         DictionaryEntryEntity::class,
         FriendEntity::class,
-        AppSettingsEntity::class
+        AppSettingsEntity::class,
+        LexiconMetaEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @ConstructedBy(LixoDatabaseConstructor::class)

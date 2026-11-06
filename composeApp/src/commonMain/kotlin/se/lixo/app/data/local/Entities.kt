@@ -154,6 +154,13 @@ data class DictionaryEntryEntity(
     val languageIso: String
 )
 
+@Entity(tableName = "lexicon_meta")
+data class LexiconMetaEntity(
+    @PrimaryKey val singletonId: Int = 1,
+    val version: Int,
+    val entryCount: Int
+)
+
 @Entity(tableName = "friends")
 data class FriendEntity(
     @PrimaryKey val userId: String,

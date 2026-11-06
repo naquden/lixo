@@ -107,6 +107,7 @@ fun LixoApp(
     val incomingEmailLink by EmailLinkAuthDispatcher.incomingLink.collectAsState()
 
     LaunchedEffect(Unit) {
+        repository.loadCachedLexicon()
         repository.syncCurriculumFromCloud()
     }
 

@@ -89,6 +89,13 @@ expect fun createPlatformSpeechRecognitionEngine(): SpeechRecognitionEngine
 expect fun createPlatformTextToSpeechEngine(): TextToSpeechEngine
 
 /**
+ * Builds the platform's Room database, or `null` when there is no platform context to bind it
+ * to (e.g. the androidHostTest JVM unit tests, where there is no `Context`). Callers must treat
+ * `null` as "fall back to in-memory state" rather than throwing.
+ */
+expect fun createPlatformLixoDatabase(): se.lixo.app.data.local.LixoDatabase?
+
+/**
  * Local persistence for the user's email address when initiating Firebase Email Link Authentication.
  * Required by both Android (`SharedPreferences`) and Apple (`NSUserDefaults`) Email Link Auth guides
  * so the user does not have to re-type their email when opening the sign-in link on the same device.
