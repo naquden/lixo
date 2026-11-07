@@ -14,6 +14,9 @@ interface LixoDao {
     @Query("SELECT * FROM profiles ORDER BY createdAtEpochMillis ASC")
     fun observeProfiles(): Flow<List<ProfileEntity>>
 
+    @Query("SELECT * FROM profiles ORDER BY createdAtEpochMillis ASC")
+    suspend fun getAllProfiles(): List<ProfileEntity>
+
     @Query("SELECT * FROM profiles WHERE id = :profileId LIMIT 1")
     suspend fun getProfileById(profileId: String): ProfileEntity?
 
@@ -59,6 +62,9 @@ interface LixoDao {
     suspend fun insertUnlockedItem(entity: UnlockedInventoryEntity)
 
     // --- Level Progress ---
+    @Query("SELECT * FROM level_progress")
+    suspend fun getAllLevelProgress(): List<LevelProgressEntity>
+
     @Query("SELECT * FROM level_progress WHERE profileId = :profileId")
     fun observeLevelProgress(profileId: String): Flow<List<LevelProgressEntity>>
 

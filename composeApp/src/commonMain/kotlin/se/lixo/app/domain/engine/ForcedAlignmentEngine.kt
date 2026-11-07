@@ -12,7 +12,8 @@ data class StoryWordToken(
     val displayText: String,
     val normalizedText: String,
     val isCompleted: Boolean = false,
-    val needsPractice: Boolean = false
+    val needsPractice: Boolean = false,
+    val heardText: String? = null
 )
 
 data class ReadingAlignmentSessionState(
@@ -25,7 +26,8 @@ data class ReadingAlignmentSessionState(
     val elapsedMillis: Long = 0L,
     val manualModeMinRequiredMillis: Long = 0L,
     val isCompleted: Boolean = false,
-    val isAwaitingUnreadWords: Boolean = false
+    val isAwaitingUnreadWords: Boolean = false,
+    val unmatchedSinceAdvance: List<String> = emptyList()
 ) {
     val progressFraction: Float
         get() = if (words.isEmpty()) 1f else (currentWordIndex.toFloat() / words.size.toFloat()).coerceIn(0f, 1f)
@@ -137,6 +139,7 @@ class ForcedAlignmentEngine {
         var cursor = state.currentWordIndex
         var clearedStuck = state.isWordStuckSupportVisible
         var struggled = state.struggledWordsNormalized
+        val pending = state.unmatchedSinceAdvance.toMutableList()
 
         for (spoken in spokenTokens) {
             val spokenNorm = normalizeForAlignment(spoken.normalizedWord.ifBlank { spoken.rawWord })
@@ -152,6 +155,7 @@ class ForcedAlignmentEngine {
                 clearedStuck = false
                 cursor = (cursor + 1 until workingWords.size).firstOrNull { !workingWords[it].isCompleted }
                     ?: workingWords.size
+                pending.clear()
                 continue
             }
 
@@ -168,23 +172,24 @@ class ForcedAlignmentEngine {
             if (yellowMatchedIndex != -1) {
                 // Keep needsPractice so it still shows up (soft yellow) as "read, but was flagged" in review.
                 workingWords[yellowMatchedIndex] = workingWords[yellowMatchedIndex].copy(isCompleted = true)
+                pending.clear()
                 continue
             }
 
-            if (cursor >= workingWords.size) continue
-
             // 3. Lookahead: the child may have skipped ahead past the cursor word.
-            val maxLookaheadIndex = min(
-                workingWords.size - 1,
-                cursor + BalanceConfig.STT_LOOKAHEAD_WINDOW_WORDS - 1
-            )
-
             var matchedIndex = -1
-            for (candidateIdx in cursor..maxLookaheadIndex) {
-                val targetNorm = workingWords[candidateIdx].normalizedText
-                if (isMatch(spokenNorm, targetNorm, spoken.confidence, confidenceThreshold)) {
-                    matchedIndex = candidateIdx
-                    break
+            if (cursor < workingWords.size) {
+                val maxLookaheadIndex = min(
+                    workingWords.size - 1,
+                    cursor + BalanceConfig.STT_LOOKAHEAD_WINDOW_WORDS - 1
+                )
+
+                for (candidateIdx in cursor..maxLookaheadIndex) {
+                    val targetNorm = workingWords[candidateIdx].normalizedText
+                    if (isMatch(spokenNorm, targetNorm, spoken.confidence, confidenceThreshold)) {
+                        matchedIndex = candidateIdx
+                        break
+                    }
                 }
             }
 
@@ -192,8 +197,18 @@ class ForcedAlignmentEngine {
                 // Words between the cursor and the match were skipped over (misread/not heard): flag them
                 // yellow, but they stay unread (not completed) so the child is never blocked.
                 if (matchedIndex > cursor) {
+                    val skipped = matchedIndex - cursor
                     for (i in cursor until matchedIndex) {
-                        workingWords[i] = workingWords[i].copy(needsPractice = true)
+                        val off = i - cursor
+                        val heard = if (off == skipped - 1 && pending.size > skipped) {
+                            pending.drop(off).joinToString(" ")
+                        } else {
+                            pending.getOrNull(off)
+                        }
+                        workingWords[i] = workingWords[i].copy(
+                            needsPractice = true,
+                            heardText = heard ?: workingWords[i].heardText
+                        )
                         struggled = struggled + workingWords[i].normalizedText
                     }
                 }
@@ -202,6 +217,15 @@ class ForcedAlignmentEngine {
                 // Cursor advances to the next word that still needs to be read (skipping already-completed ones).
                 cursor = (matchedIndex + 1 until workingWords.size).firstOrNull { !workingWords[it].isCompleted }
                     ?: workingWords.size
+                pending.clear()
+            } else {
+                pending.add(spoken.rawWord.trim().ifBlank { spokenNorm })
+                while (pending.size > BalanceConfig.STT_HEARD_TEXT_BUFFER_MAX_WORDS) {
+                    pending.removeAt(0)
+                }
+                if (cursor < workingWords.size && workingWords[cursor].needsPractice) {
+                    workingWords[cursor] = workingWords[cursor].copy(heardText = pending.joinToString(" "))
+                }
             }
         }
 
@@ -213,7 +237,8 @@ class ForcedAlignmentEngine {
             isWordStuckSupportVisible = if (allCompleted) false else clearedStuck,
             struggledWordsNormalized = struggled,
             isCompleted = allCompleted,
-            isAwaitingUnreadWords = reachedEnd && !allCompleted
+            isAwaitingUnreadWords = reachedEnd && !allCompleted,
+            unmatchedSinceAdvance = pending.toList()
         )
     }
 
@@ -250,7 +275,15 @@ class ForcedAlignmentEngine {
         // Hesitation only flags the word yellow (still has to be read); it never skips it.
         val nextWords = if (showSupport && state.currentWord != null) {
             state.words.mapIndexed { idx, word ->
-                if (idx == state.currentWordIndex) word.copy(needsPractice = true) else word
+                if (idx == state.currentWordIndex) {
+                    word.copy(
+                        needsPractice = true,
+                        heardText = word.heardText
+                            ?: state.unmatchedSinceAdvance.joinToString(" ").ifBlank { null }
+                    )
+                } else {
+                    word
+                }
             }
         } else {
             state.words

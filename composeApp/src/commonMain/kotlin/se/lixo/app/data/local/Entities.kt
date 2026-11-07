@@ -23,7 +23,11 @@ data class ProfileEntity(
     val dailyMathGoalProblems: Int,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
-    val chestProgressHalfPoints: Int = 0
+    val chestProgressHalfPoints: Int = 0,
+    @ColumnInfo(defaultValue = "'{}'") val achievementProgressJson: String = "{}",
+    @ColumnInfo(defaultValue = "'{}'") val achievementCountedLevelIdsJson: String = "{}",
+    @ColumnInfo(defaultValue = "'[]'") val unlockedAchievementIdsJson: String = "[]",
+    @ColumnInfo(defaultValue = "'[]'") val pendingAchievementRewardIdsJson: String = "[]"
 )
 
 @Entity(tableName = "courses")

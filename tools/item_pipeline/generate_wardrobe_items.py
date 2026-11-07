@@ -9,6 +9,13 @@ feature. Builds `--per-slot` items for each of the 9 EquipmentSlot values, with:
   - Rarity split per slot of roughly 40/25/17/12/6% (COMMON..LEGENDARY), at least 1 of each.
   - Pattern/ornament escalating with rarity.
   - No duplicate (styleIndex, colorway) within a slot.
+  - A small subset of COMMON/UNCOMMON items per slot (STAR_UNLOCKABLE_COMMON_CAP/
+    STAR_UNLOCKABLE_UNCOMMON_CAP) is star-unlockable, assigned one global, unique, widening-gap
+    threshold curve from ~31 to 250 stars (see _global_star_unlock_thresholds), interleaved
+    round-robin across slots with all COMMON items unlocking before any UNCOMMON item.
+  - 8 RARE/EPIC/LEGENDARY items (one per slot, see STAR_ACHIEVEMENT_REWARDS) are reserved as
+    star-collection achievement rewards (`unlockAchievementId = "ach_stars_<N>"`), matching
+    BalanceConfig.STAR_ACHIEVEMENT_MILESTONES (see doc/plans/004).
 
 Item ids are content-derived and stable: `item_<slot_id>_<styleKey>_<colorwayKey>`, where each key
 is `slug_key()` of the Swedish display string (lowercase, å/ä/ö -> a/a/o, all non-[a-z0-9] removed),
@@ -189,6 +196,7 @@ class GeneratedItem:
     unlock_achievement_id: Optional[str]
     is_weekly_streak_set_piece: bool
     mesh_node_name: str
+    is_star_unlockable: bool = False
 
 
 def _split_counts(total: int) -> Dict[str, int]:
@@ -239,25 +247,49 @@ def _rarity_pattern_ornament(rarity: str, rng: random.Random) -> Tuple[str, str]
 # unlockStarRequirement = 0, i.e. only obtainable via level rewards, chests, or gifts).
 # Without this cap, every generated item star-unlocks once totalStars is high enough, which
 # auto-unlocks the whole 576-item catalog and makes gift/chest rolls always hit duplicates.
+# With --per-slot 64 (default), this gives 6+2=8 star-unlockable items per slot x 9 slots = 72
+# items total, assigned one global, widening-gap threshold curve from ~31 to 250 stars (see
+# `_global_star_unlock_thresholds` / `_assign_global_star_thresholds`), interleaved round-robin
+# across slots (COMMON first, then UNCOMMON) so consecutive unlocks never land on the same slot
+# and rarer items unlock later.
 STAR_UNLOCKABLE_COMMON_CAP = 6
 STAR_UNLOCKABLE_UNCOMMON_CAP = 2
 
+# The onboarding reward track (BalanceConfig.ONBOARDING_REWARD_LEVELS) covers early levels, so the
+# star curve only needs to start once that track has mostly run its course (`doc/plans/
+# 001-reward-pacing-early-chests.md`). It starts just after the KNIGHT avatar unlock at 30 stars,
+# so the two moments never coincide.
+STAR_CURVE_FIRST = 31
+STAR_CURVE_LAST = 250
+STAR_CURVE_MIN_GAP = 2.0
 
-def _star_unlock_thresholds(count: int, slot_index: int) -> List[int]:
-    """Spreads `count` star-unlock thresholds evenly over ~2..250 stars. The lowest threshold is
-    staggered per `slot_index` (2..6) so different slots' first star-unlockable item doesn't all
-    land on the same star count -- otherwise every slot would pop its first unlock simultaneously."""
+
+def _global_star_unlock_thresholds(count: int) -> List[int]:
+    """One global, strictly ascending sequence of `count` star-unlock thresholds from
+    STAR_CURVE_FIRST to STAR_CURVE_LAST, with gaps growing linearly from STAR_CURVE_MIN_GAP."""
     if count <= 0:
         return []
-    first = 2 + (slot_index % (STAR_UNLOCKABLE_COMMON_CAP - 1))
     if count == 1:
-        return [first]
-    last = 250
-    return [round(first + k * (last - first) / (count - 1)) for k in range(count)]
+        return [STAR_CURVE_FIRST]
+
+    m = count - 1
+    span = STAR_CURVE_LAST - STAR_CURVE_FIRST
+    a = STAR_CURVE_MIN_GAP
+    b = max(0.0, 2 * (span - a * m) / (m * m))
+    if b <= 0:
+        a = span / m
+        b = 0.0
+
+    thresholds = [round(STAR_CURVE_FIRST + a * k + b * k * k / 2) for k in range(count)]
+    for i in range(1, len(thresholds)):
+        assert thresholds[i] > thresholds[i - 1], (
+            f"Star curve thresholds must be strictly ascending, got {thresholds}"
+        )
+    return thresholds
 
 
 def generate_items_for_slot(
-    slot: SlotDef, per_slot: int, rng: random.Random, slot_index: int = 0
+    slot: SlotDef, per_slot: int, rng: random.Random
 ) -> List[GeneratedItem]:
     rarity_counts = _split_counts(per_slot)
     rarity_sequence: List[str] = []
@@ -274,14 +306,10 @@ def generate_items_for_slot(
     style_sequence = style_sequence[:per_slot]
 
     # Only a small subset of COMMON/UNCOMMON items are star-unlockable; see
-    # STAR_UNLOCKABLE_COMMON_CAP/STAR_UNLOCKABLE_UNCOMMON_CAP. Thresholds are precomputed here
-    # (count is known up-front from rarity_counts) and handed out in generation order.
+    # STAR_UNLOCKABLE_COMMON_CAP/STAR_UNLOCKABLE_UNCOMMON_CAP. Thresholds themselves are assigned
+    # later, across the whole catalog, by `_assign_global_star_thresholds`.
     common_unlockable_cap = min(STAR_UNLOCKABLE_COMMON_CAP, rarity_counts["COMMON"])
     uncommon_unlockable_cap = min(STAR_UNLOCKABLE_UNCOMMON_CAP, rarity_counts["UNCOMMON"])
-    star_unlock_thresholds = _star_unlock_thresholds(
-        common_unlockable_cap + uncommon_unlockable_cap, slot_index
-    )
-    next_threshold_index = 0
 
     # Dedupe on (style, colorway) only (not pattern) -- nameSv is derived purely from colorway +
     # style noun, so deduping on the full (style, colorway, pattern) combo previously let two
@@ -323,11 +351,7 @@ def generate_items_for_slot(
             (rarity == "COMMON" and position_in_bucket < common_unlockable_cap)
             or (rarity == "UNCOMMON" and position_in_bucket < uncommon_unlockable_cap)
         )
-        if is_star_unlockable:
-            unlock_star_requirement = star_unlock_thresholds[next_threshold_index]
-            next_threshold_index += 1
-        else:
-            unlock_star_requirement = 0
+        unlock_star_requirement = 0
 
         is_weekly_streak_set_piece = False
         if rarity == "LEGENDARY" and not legendary_set_piece_assigned:
@@ -358,26 +382,102 @@ def generate_items_for_slot(
                 ornament=ornament,
                 scale_multiplier=scale_multiplier,
                 unlock_star_requirement=unlock_star_requirement,
-                # No per-generated-item achievement exists in buildSeedAchievements(), so we never
-                # set unlockAchievementId here (the only valid achievement ids are the 4 handwritten
-                # ones, each already tied to a specific handmade or generated-by-id reward item).
+                # unlock_achievement_id defaults to None here; `_assign_star_achievement_items`
+                # (post-pass, like `_assign_global_star_thresholds`) reserves exactly 8 of these
+                # items -- one per STAR_ACHIEVEMENT_REWARDS milestone -- for the star-collection
+                # achievements (doc/plans/004). The other 4 achievement ids are handwritten and
+                # already tied to a specific handmade or generated-by-id reward item.
                 unlock_achievement_id=None,
                 is_weekly_streak_set_piece=is_weekly_streak_set_piece,
                 mesh_node_name=mesh_node_name,
+                is_star_unlockable=is_star_unlockable,
             )
         )
 
     return items
 
 
+def _assign_global_star_thresholds(catalog: Dict[str, List[GeneratedItem]]) -> None:
+    """Assigns one global, widening-gap star-threshold curve (STAR_CURVE_FIRST..STAR_CURVE_LAST)
+    across every star-unlockable item in the catalog. Items are ordered round-robin across slots
+    (in SLOTS order) so consecutive unlocks are always different slots, with all COMMON items
+    assigned first and all UNCOMMON items last, so rarer items unlock later."""
+    common_by_slot = [
+        [item for item in catalog[slot.slot_id] if item.is_star_unlockable and item.rarity == "COMMON"]
+        for slot in SLOTS
+    ]
+    uncommon_by_slot = [
+        [item for item in catalog[slot.slot_id] if item.is_star_unlockable and item.rarity == "UNCOMMON"]
+        for slot in SLOTS
+    ]
+
+    ordered: List[GeneratedItem] = []
+    for bucket in (common_by_slot, uncommon_by_slot):
+        max_len = max((len(lst) for lst in bucket), default=0)
+        for j in range(max_len):
+            for lst in bucket:
+                if j < len(lst):
+                    ordered.append(lst[j])
+
+    thresholds = _global_star_unlock_thresholds(len(ordered))
+    for item, threshold in zip(ordered, thresholds):
+        item.unlock_star_requirement = threshold
+
+
+# The 8 star-collection achievement reward items (doc/plans/004). Must match
+# BalanceConfig.STAR_ACHIEVEMENT_MILESTONES.
+STAR_ACHIEVEMENT_REWARDS: List[Tuple[int, str]] = [
+    (20, "RARE"),
+    (45, "RARE"),
+    (75, "RARE"),
+    (120, "EPIC"),
+    (175, "EPIC"),
+    (250, "EPIC"),
+    (350, "LEGENDARY"),
+    (480, "LEGENDARY"),
+]
+
+
+def _assign_star_achievement_items(catalog: Dict[str, List[GeneratedItem]]) -> None:
+    """Reserves one item per STAR_ACHIEVEMENT_REWARDS milestone, each in a different slot, setting
+    its unlock_achievement_id to `ach_stars_<N>`. Picks the first item (in generation order) of
+    the milestone's slot and rarity that isn't already a set piece, star-unlockable, or
+    achievement-gated."""
+    assert len(STAR_ACHIEVEMENT_REWARDS) <= len(SLOTS), (
+        "Need one distinct slot per star achievement reward"
+    )
+    for i, (stars, rarity) in enumerate(STAR_ACHIEVEMENT_REWARDS):
+        slot = SLOTS[i]
+        achievement_id = f"ach_stars_{stars}"
+        candidate = next(
+            (
+                item
+                for item in catalog[slot.slot_id]
+                if item.rarity == rarity
+                and not item.is_weekly_streak_set_piece
+                and not item.is_star_unlockable
+                and item.unlock_star_requirement == 0
+                and item.unlock_achievement_id is None
+            ),
+            None,
+        )
+        if candidate is None:
+            raise RuntimeError(
+                f"No eligible {rarity} item in slot {slot.slot_id} for star achievement {achievement_id}"
+            )
+        candidate.unlock_achievement_id = achievement_id
+
+
 def generate_catalog(per_slot: int = 64, seed: int = 42) -> Dict[str, List[GeneratedItem]]:
     rng = random.Random(seed)
     catalog: Dict[str, List[GeneratedItem]] = {}
-    for slot_index, slot in enumerate(SLOTS):
+    for slot in SLOTS:
         # Give each slot its own sub-seed derived deterministically from the base seed so that
         # changing --per-slot doesn't ripple unrelated changes into other slots' RNG streams.
         slot_rng = random.Random(f"{seed}:{slot.slot_id}")
-        catalog[slot.slot_id] = generate_items_for_slot(slot, per_slot, slot_rng, slot_index)
+        catalog[slot.slot_id] = generate_items_for_slot(slot, per_slot, slot_rng)
+    _assign_global_star_thresholds(catalog)
+    _assign_star_achievement_items(catalog)
     return catalog
 
 

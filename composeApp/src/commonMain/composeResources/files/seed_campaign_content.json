@@ -1989,8 +1989,7 @@
       "subject": "SWEDISH",
       "textContent": "Lixo är en katt. Lixo bor i en stor skog. Solen är varm. Lixo vill sova. Men en myra kittlar Lixo på nosen. Atjo!",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hat_2"
+      "englishItems": []
     },
     {
       "id": "task_2",
@@ -2102,8 +2101,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_3"
+      "englishItems": []
     },
     {
       "id": "task_3",
@@ -2112,8 +2110,7 @@
       "subject": "SWEDISH",
       "textContent": "Lixo ser en fågel. Fågeln är liten och gul. Den sjunger fint. Lixo vill också sjunga. Men Lixo kan bara säga mjau. Fågeln skrattar.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hat_4"
+      "englishItems": []
     },
     {
       "id": "task_4",
@@ -2225,8 +2222,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_5"
+      "englishItems": []
     },
     {
       "id": "task_5",
@@ -2257,8 +2253,7 @@
           "simpleSentenceEn": "The friendly dog wags its tail.",
           "simpleSentenceSv": "Den vänliga hunden viftar på svansen."
         }
-      ],
-      "rewardItemId": "item_hat_6"
+      ]
     },
     {
       "id": "task_6",
@@ -2370,8 +2365,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_7"
+      "englishItems": []
     },
     {
       "id": "task_7",
@@ -2380,8 +2374,7 @@
       "subject": "SWEDISH",
       "textContent": "Här är hunden Bo. Bo har en röd boll. Lixo kastar bollen. Bo springer fort. Men Bo kommer tillbaka med en sko! Vems sko är det?",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hat_8"
+      "englishItems": []
     },
     {
       "id": "task_8",
@@ -2493,8 +2486,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_9"
+      "englishItems": []
     },
     {
       "id": "task_9",
@@ -2503,8 +2495,7 @@
       "subject": "SWEDISH",
       "textContent": "Lixo är hungrig. Lixo hittar blåbär. Lixo äter och äter. Nu är nosen blå. Bo skrattar: ”Du har en blå nos!”",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hat_10"
+      "englishItems": []
     },
     {
       "id": "task_10",
@@ -2535,8 +2526,7 @@
           "simpleSentenceEn": "The knight holds a shiny shield.",
           "simpleSentenceSv": "Riddaren håller en blank sköld."
         }
-      ],
-      "rewardItemId": "item_hat_11"
+      ]
     },
     {
       "id": "task_11",
@@ -2545,8 +2535,7 @@
       "subject": "SWEDISH",
       "textContent": "Det regnar i skogen. Lixo blir blöt. Lixo springer in under en gran. Där sitter en groda. Grodan säger: ”Vilket fint väder!” Lixo tycker inte det.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hat_12"
+      "englishItems": []
     },
     {
       "id": "task_12",
@@ -2658,8 +2647,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_1"
+      "englishItems": []
     },
     {
       "id": "task_13",
@@ -2668,8 +2656,7 @@
       "subject": "SWEDISH",
       "textContent": "I ett högt träd bor en uggla. Ugglan är klok. Hon kan läsa. Varje kväll läser hon en saga för Lixo. Men i kväll somnar ugglan först. Hon snarkar!",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_2"
+      "englishItems": []
     },
     {
       "id": "task_14",
@@ -2815,8 +2802,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_3"
+      "englishItems": []
     },
     {
       "id": "task_15",
@@ -2847,8 +2833,7 @@
           "simpleSentenceEn": "The princess looks out from the tower.",
           "simpleSentenceSv": "Prinsessan tittar ut från tornet."
         }
-      ],
-      "rewardItemId": "item_shoulders_back_4"
+      ]
     },
     {
       "id": "task_16",
@@ -2994,8 +2979,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_5"
+      "englishItems": []
     },
     {
       "id": "task_17",
@@ -3004,8 +2988,7 @@
       "subject": "SWEDISH",
       "textContent": "Lixo går över en liten bro. Under bron rinner en bäck. I bäcken simmar en fisk. Lixo vill säga hej. Lixo lutar sig fram och plask! Nu simmar Lixo också.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_6"
+      "englishItems": []
     },
     {
       "id": "task_18",
@@ -3151,8 +3134,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_7"
+      "englishItems": []
     },
     {
       "id": "task_19",
@@ -3161,8 +3143,7 @@
       "subject": "SWEDISH",
       "textContent": "En ekorre samlar nötter. Den gömmer en nöt här och en nöt där. Men var är nötterna nu? Ekorren har glömt! Lixo och Bo letar. De hittar sju nötter.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_8"
+      "englishItems": []
     },
     {
       "id": "task_20",
@@ -3193,8 +3174,7 @@
           "simpleSentenceEn": "The boat sails on the river.",
           "simpleSentenceSv": "Båten seglar på floden."
         }
-      ],
-      "rewardItemId": "item_shoulders_back_9"
+      ]
     },
     {
       "id": "task_21",
@@ -3203,8 +3183,7 @@
       "subject": "SWEDISH",
       "textContent": "Lixo kommer till en by. Mitt i byn står ett torn med en stor klocka. Klockan slår tre slag. Ding, dong, ding! Bo tror att det är dags för mat. Han springer till bagaren.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_10"
+      "englishItems": []
     },
     {
       "id": "task_22",
@@ -3350,8 +3329,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_11"
+      "englishItems": []
     },
     {
       "id": "task_23",
@@ -3360,8 +3338,7 @@
       "subject": "SWEDISH",
       "textContent": "Bagaren är ledsen. Han har tappat sin nyckel. Nu kan han inte öppna sitt bageri. Lixo och Bo letar. Bo hittar en sko, en pinne och till slut nyckeln! Bagaren ger dem en bulle var.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_12"
+      "englishItems": []
     },
     {
       "id": "task_24",
@@ -3507,8 +3484,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_1"
+      "englishItems": []
     },
     {
       "id": "task_25",
@@ -3539,8 +3515,7 @@
           "simpleSentenceEn": "A colorful rainbow shines after the rain.",
           "simpleSentenceSv": "En färgglad regnbåge lyser efter regnet."
         }
-      ],
-      "rewardItemId": "item_arms_gloves_2"
+      ]
     },
     {
       "id": "task_26",
@@ -3686,8 +3661,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_3"
+      "englishItems": []
     },
     {
       "id": "task_27",
@@ -3696,8 +3670,7 @@
       "subject": "SWEDISH",
       "textContent": "Trollkarlen har en stor gryta. Han lägger i blåbär och lite socker. Då börjar grytan sjunga! Den sjunger fel och mycket högt. Lixo håller för öronen. Trollkarlen dansar ändå.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_4"
+      "englishItems": []
     },
     {
       "id": "task_28",
@@ -3843,8 +3816,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_5"
+      "englishItems": []
     },
     {
       "id": "task_29",
@@ -3853,8 +3825,7 @@
       "subject": "SWEDISH",
       "textContent": "Prinsessan Mira och Bo bygger ett torn av kuddar. Sedan öppnar de en sagobok. Små fjärilar flyger ut. En fjäril landar på Bos nos. Bo tittar på den. Oj, nu går ögonen i kors!",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_6"
+      "englishItems": []
     },
     {
       "id": "task_30",
@@ -3885,8 +3856,7 @@
           "simpleSentenceEn": "The friendly dog wags its tail.",
           "simpleSentenceSv": "Den vänliga hunden viftar på svansen."
         }
-      ],
-      "rewardItemId": "item_arms_gloves_7"
+      ]
     },
     {
       "id": "task_31",
@@ -3895,8 +3865,7 @@
       "subject": "SWEDISH",
       "textContent": "Ugglan har en gammal karta. På kartan finns en stig. Stigen går förbi en sjö och upp på ett berg. Lixo vill gå dit. Men vänta! Ugglan håller kartan upp och ner.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_8"
+      "englishItems": []
     },
     {
       "id": "task_32",
@@ -4042,8 +4011,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_9"
+      "englishItems": []
     },
     {
       "id": "task_33",
@@ -4052,8 +4020,7 @@
       "subject": "SWEDISH",
       "textContent": "Lixo hittar en kompass i mossan. Nålen snurrar runt, runt, runt. Lixo snurrar också. Nu är Lixo yr! Till slut pekar nålen mot ett gammalt äppelträd. Vad finns där?",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_10"
+      "englishItems": []
     },
     {
       "id": "task_34",
@@ -4199,8 +4166,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_11"
+      "englishItems": []
     },
     {
       "id": "task_35",
@@ -4231,8 +4197,7 @@
           "simpleSentenceEn": "The knight holds a shiny shield.",
           "simpleSentenceSv": "Riddaren håller en blank sköld."
         }
-      ],
-      "rewardItemId": "item_arms_gloves_12"
+      ]
     },
     {
       "id": "task_36",
@@ -4378,8 +4343,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_1"
+      "englishItems": []
     },
     {
       "id": "task_37",
@@ -4388,8 +4352,7 @@
       "subject": "SWEDISH",
       "textContent": "Vid den lugna sjön låg en vit näckros på vattnet. Hunden Bo doppade försiktigt tassen. Då såg han något som glimmade på botten. Det var en liten skattkista! Lixo och Bo drog upp den med ett rep. Inuti fanns inget guld, bara en gammal strumpa och en lapp från ugglan: ”Tack för att ni hittade min strumpa!”",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_2"
+      "englishItems": []
     },
     {
       "id": "task_38",
@@ -4535,8 +4498,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_3"
+      "englishItems": []
     },
     {
       "id": "task_39",
@@ -4545,8 +4507,7 @@
       "subject": "SWEDISH",
       "textContent": "På lördagen var det marknad i Sifferdalen. Lixo hade tio kronor i fickan. Det fanns äpplen, bullar och färgglada ballonger. Lixo köpte ett äpple för fem kronor och en ballong för fem kronor. Nu var pengarna slut. Plötsligt blåste det till, och ballongen lyfte Bo en liten bit upp i luften! Han landade mjukt i en hög med mjöl hos bagaren.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_4"
+      "englishItems": []
     },
     {
       "id": "task_40",
@@ -4577,8 +4538,7 @@
           "simpleSentenceEn": "The princess looks out from the tower.",
           "simpleSentenceSv": "Prinsessan tittar ut från tornet."
         }
-      ],
-      "rewardItemId": "item_armor_shirt_5"
+      ]
     },
     {
       "id": "task_41",
@@ -4587,8 +4547,7 @@
       "subject": "SWEDISH",
       "textContent": "Nere i Glosornas Hamn gungade segelbåtarna i vinden. Lixo satt på bryggan och räknade dem: sju vita och tre blå. En sjöman från England vinkade och ropade ”Hello!” Lixo kände igen ordet från engelskan och ropade ”Hello!” tillbaka. Bo ville också vara med, men det blev bara ”voff”. Sjömannen skrattade och bjöd dem på en båttur.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_6"
+      "englishItems": []
     },
     {
       "id": "task_42",
@@ -4734,8 +4693,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_7"
+      "englishItems": []
     },
     {
       "id": "task_43",
@@ -4744,8 +4702,7 @@
       "subject": "SWEDISH",
       "textContent": "När solen gick ner promenerade Lixo längs stranden. Överallt låg vackra snäckor som glittrade i kvällsljuset. Lixo lyfte upp den största snäckan för att lyssna på havet. Men ut ur snäckan kikade en liten krabba, som nös rakt på Lixos nos! Lixo ställde försiktigt tillbaka snäckan och sa förlåt.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_8"
+      "englishItems": []
     },
     {
       "id": "task_44",
@@ -4925,8 +4882,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_9"
+      "englishItems": []
     },
     {
       "id": "task_45",
@@ -4957,8 +4913,7 @@
           "simpleSentenceEn": "The boat sails on the river.",
           "simpleSentenceSv": "Båten seglar på floden."
         }
-      ],
-      "rewardItemId": "item_armor_shirt_10"
+      ]
     },
     {
       "id": "task_46",
@@ -5138,8 +5093,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_11"
+      "englishItems": []
     },
     {
       "id": "task_47",
@@ -5148,8 +5102,7 @@
       "subject": "SWEDISH",
       "textContent": "Längst ut på klippan stod en hög fyr. Varje kväll klättrade fyrvaktaren upp för den långa trappan och putsade det stora glaset. En kväll hade hon glömt sina glasögon. Hon putsade och putsade, men det var inte glaset. Det var en mås som satt i fönstret! Måsen tyckte att det kittlades. Sedan tände hon lampan, så att båtarna hittade hem.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_12"
+      "englishItems": []
     },
     {
       "id": "task_48",
@@ -5329,8 +5282,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_1"
+      "englishItems": []
     },
     {
       "id": "task_49",
@@ -5339,8 +5291,7 @@
       "subject": "SWEDISH",
       "textContent": "En morgon landade en vit brevduva på fönsterbrädan. I näbben hade den ett kuvert av guldpapper. Det var en inbjudan till den stora sagofestivalen i Stjärnborgen! Lixo blev så glad att det pirrade i magen. Lixo skrev ett svar och gav det till duvan. Tyvärr var duvan hungrig och åt upp halva brevet på vägen hem.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_pants_2"
+      "englishItems": []
     },
     {
       "id": "task_50",
@@ -5371,8 +5322,7 @@
           "simpleSentenceEn": "A colorful rainbow shines after the rain.",
           "simpleSentenceSv": "En färgglad regnbåge lyser efter regnet."
         }
-      ],
-      "rewardItemId": "item_pants_3"
+      ]
     },
     {
       "id": "task_51",
@@ -5381,8 +5331,7 @@
       "subject": "SWEDISH",
       "textContent": "När det blev kväll i skogen hände något märkligt. Små svampar mellan stenarna började lysa i grönt och blått. Ljuset visade vägen för alla djur som var på väg hem. Bo viftade så glatt på svansen att den svepte över svamparna. Då började hela svansen lysa! Lixo behövde ingen lampa resten av vägen hem.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_pants_4"
+      "englishItems": []
     },
     {
       "id": "task_52",
@@ -5528,8 +5477,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_5"
+      "englishItems": []
     },
     {
       "id": "task_53",
@@ -5538,8 +5486,7 @@
       "subject": "SWEDISH",
       "textContent": "I trollkarlens bibliotek fanns böcker från golv till tak. En dag hade böckerna fått små vingar av papper. När Lixo viskade namnet på sin favoritbok svävade den sakta ner från hyllan. Men då nös trollkarlen, och alla böcker flög iväg på en gång. En kokbok fastnade i taklampan, och en tjock ordbok jagade trollkarlen runt bordet.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_pants_6"
+      "englishItems": []
     },
     {
       "id": "task_54",
@@ -5685,8 +5632,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_7"
+      "englishItems": []
     },
     {
       "id": "task_55",
@@ -5717,8 +5663,7 @@
           "simpleSentenceEn": "The friendly dog wags its tail.",
           "simpleSentenceSv": "Den vänliga hunden viftar på svansen."
         }
-      ],
-      "rewardItemId": "item_pants_8"
+      ]
     },
     {
       "id": "task_56",
@@ -5864,8 +5809,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_9"
+      "englishItems": []
     },
     {
       "id": "task_57",
@@ -5874,8 +5818,7 @@
       "subject": "SWEDISH",
       "textContent": "Högt uppe i bergen satt en liten grön drake och huttrade i snön. Den hade tappat sin halsduk i blåsten. Prinsessan Mira tog fram garn och stickor. Hela kvällen stickade hon en lång, randig halsduk. Den blev så lång att draken kunde linda den tolv varv runt halsen och ändå ha en bit över till svansen.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_pants_10"
+      "englishItems": []
     },
     {
       "id": "task_58",
@@ -6021,8 +5964,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_11"
+      "englishItems": []
     },
     {
       "id": "task_59",
@@ -6031,8 +5973,7 @@
       "subject": "SWEDISH",
       "textContent": "Riddaren Ruben kröp försiktigt in i en mörk grotta. Plötsligt började väggarna lysa i blått och lila. Det var kristaller! Varje gång han tog ett steg hördes en klar ton, precis som från ett piano. Ruben blev så glad att han började dansa. Det lät som världens konstigaste konsert, och ekot svarade med en hel låt.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_pants_12"
+      "englishItems": []
     },
     {
       "id": "task_60",
@@ -6063,8 +6004,7 @@
           "simpleSentenceEn": "The knight holds a shiny shield.",
           "simpleSentenceSv": "Riddaren håller en blank sköld."
         }
-      ],
-      "rewardItemId": "item_shoes_1"
+      ]
     },
     {
       "id": "task_61",
@@ -6073,8 +6013,7 @@
       "subject": "SWEDISH",
       "textContent": "Tidigt på morgonen tog riddaren Ruben på sig sin blå mantel. Han lastade sin sköld på riddarvagnen och åkte genom dalen. Bönderna behövde hjälp, eftersom en stor sten låg mitt på vägen. Ruben drog och drog, men stenen rörde sig inte. Då nös stenen! Det var ingen sten alls, utan ett trött troll som hade somnat på vägen.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_2"
+      "englishItems": []
     },
     {
       "id": "task_62",
@@ -6220,8 +6159,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_3"
+      "englishItems": []
     },
     {
       "id": "task_63",
@@ -6230,8 +6168,7 @@
       "subject": "SWEDISH",
       "textContent": "Mellan två bergstoppar hängde en smal bro av rep och plankor. Långt där nere brusade en flod. Hunden Bo gick först, och Lixo följde tätt efter. Mitt på bron mötte de en get som också ville över. Ingen ville backa. Till slut bjöd Lixo geten på ett äpple, och då gick hon glatt baklänges hela vägen tillbaka.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_4"
+      "englishItems": []
     },
     {
       "id": "task_64",
@@ -6377,8 +6314,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_5"
+      "englishItems": []
     },
     {
       "id": "task_65",
@@ -6409,8 +6345,7 @@
           "simpleSentenceEn": "The princess looks out from the tower.",
           "simpleSentenceSv": "Prinsessan tittar ut från tornet."
         }
-      ],
-      "rewardItemId": "item_shoes_6"
+      ]
     },
     {
       "id": "task_66",
@@ -6556,8 +6491,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_7"
+      "englishItems": []
     },
     {
       "id": "task_67",
@@ -6566,8 +6500,7 @@
       "subject": "SWEDISH",
       "textContent": "I den nyfallna snön syntes runda tassavtryck. Lixo och Bo följde spåren uppför berget. De ledde till en solig bergshylla där en snöleopard låg och vilade. Den var inte farlig alls, utan vänlig och lite blyg. Den hade gått i cirklar hela morgonen, eftersom den hade följt sina egna spår! Nu visade den dem en hemlig väg genom bergen.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_8"
+      "englishItems": []
     },
     {
       "id": "task_68",
@@ -6713,8 +6646,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_9"
+      "englishItems": []
     },
     {
       "id": "task_69",
@@ -6723,8 +6655,7 @@
       "subject": "SWEDISH",
       "textContent": "Spegelsjön låg så blank och stilla att molnen såg ut att simma under ytan. På andra sidan sjön fanns en port i berget, men den var låst. I porten fanns en gåta inristad. Den sa att porten bara öppnades för den som kunde räkna stjärnbilderna i vattnet. Lixo väntade tålmodigt tills det blev mörkt och räknade sedan till sju. Bo räknade till åtta, men den åttonde stjärnan var bara hans egen blöta nos i vattnet. Till slut gled porten långsamt upp med ett mjukt mullrande.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_10"
+      "englishItems": []
     },
     {
       "id": "task_70",
@@ -6755,8 +6686,7 @@
           "simpleSentenceEn": "The boat sails on the river.",
           "simpleSentenceSv": "Båten seglar på floden."
         }
-      ],
-      "rewardItemId": "item_shoes_11"
+      ]
     },
     {
       "id": "task_71",
@@ -6765,8 +6695,7 @@
       "subject": "SWEDISH",
       "textContent": "Byns smed stod vid sin glödande ässja medan gnistorna yrde omkring honom. Av en bit gammal stjärnmalm, som hade fallit från himlen för länge sedan, smidde han en lätt men hållbar sköld. Med en fin mejsel prydde han den med siffror och runor. Skölden blev så blank att riddaren Ruben, som kom för att hämta den, blev rädd för sin egen spegelbild och gömde sig bakom en tunna. Smeden skrattade så att hans mustasch fladdrade.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_shoes_12"
+      "englishItems": []
     },
     {
       "id": "task_72",
@@ -6912,8 +6841,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_1"
+      "englishItems": []
     },
     {
       "id": "task_73",
@@ -6922,8 +6850,7 @@
       "subject": "SWEDISH",
       "textContent": "Mitt i Sifferdalen stod ett gammalt klocktorn av röd sten. Varje gång visarna pekade på en hel timme öppnades en liten lucka högst upp. Ut kom mekaniska fåglar av mässing som spelade en vacker trudelutt för byborna. En dag tystnade fåglarna. Lixo klättrade upp i tornet och upptäckte att en kugge hade lossnat. Efter lite skruvande sjöng fåglarna igen, men nu slog klockan tretton slag i stället för tolv. Byborna bestämde genast att klockan tretton skulle vara den nya fikatiden.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_2"
+      "englishItems": []
     },
     {
       "id": "task_74",
@@ -7069,8 +6996,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_3"
+      "englishItems": []
     },
     {
       "id": "task_75",
@@ -7101,8 +7027,7 @@
           "simpleSentenceEn": "A colorful rainbow shines after the rain.",
           "simpleSentenceSv": "En färgglad regnbåge lyser efter regnet."
         }
-      ],
-      "rewardItemId": "item_hand_right_4"
+      ]
     },
     {
       "id": "task_76",
@@ -7248,8 +7173,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_5"
+      "englishItems": []
     },
     {
       "id": "task_77",
@@ -7258,8 +7182,7 @@
       "subject": "SWEDISH",
       "textContent": "Uppe i den högsta granen satt ugglan och rullade ut ett gulnat pergament. Den här gången höll hon det åt rätt håll, vilket hon var mycket stolt över. På kartan syntes en slingrande stig som ledde förbi det dånande vattenfallet och vidare upp mot Stjärnborgen. Ugglan förklarade att kartan var flera hundra år gammal och att bara den som var modig och nyfiken kunde följa den hela vägen. Lixo stoppade kartan i ryggsäcken och började vandra.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_6"
+      "englishItems": []
     },
     {
       "id": "task_78",
@@ -7405,8 +7328,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_7"
+      "englishItems": []
     },
     {
       "id": "task_79",
@@ -7415,8 +7337,7 @@
       "subject": "SWEDISH",
       "textContent": "En gnistrande kall vinterkväll samlades alla vännerna på slottets takterrass med filtar och varm choklad. Plötsligt började himlen skimra. Gröna och violetta band av ljus slingrade sig fram över stjärnorna, som om någon målade med en jättestor pensel. Häxan Hilda påstod att norrskenet dansade vals, medan riddaren Ruben tyckte att det var en polka. Bo försökte dansa med, trasslade in sig i filtarna och rullade som en korv över hela terrassen. Sedan satt alla tysta och tittade upp, alldeles förtrollade.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_8"
+      "englishItems": []
     },
     {
       "id": "task_80",
@@ -7447,8 +7368,7 @@
           "simpleSentenceEn": "The friendly dog wags its tail.",
           "simpleSentenceSv": "Den vänliga hunden viftar på svansen."
         }
-      ],
-      "rewardItemId": "item_hand_right_9"
+      ]
     },
     {
       "id": "task_81",
@@ -7457,8 +7377,7 @@
       "subject": "SWEDISH",
       "textContent": "Bakom slottets växthus växte en solros som var nästan lika hög som ett äppelträd. Varje morgon vände den sitt gula ansikte mot solen och hälsade artigt god morgon till alla som gick förbi. Trädgårdsmästaren påstod att den hade börjat prata efter en natt med stjärnfall. Lixo var tveksam ända tills solrosen en dag frågade vilken bok Lixo läste just nu. Sedan gav solrosen boktips i en hel timme, och Lixo kom för sent till middagen.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_10"
+      "englishItems": []
     },
     {
       "id": "task_82",
@@ -7604,8 +7523,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_11"
+      "englishItems": []
     },
     {
       "id": "task_83",
@@ -7614,8 +7532,7 @@
       "subject": "SWEDISH",
       "textContent": "På skrivbordet i observatoriet stod ett stort timglas fyllt med gyllene sand. Astronomen förklarade att timglaset var förtrollat. Den som läste ett helt kapitel högt innan sanden hade runnit ut fick ge namn åt en ny stjärna. Lixo vände på timglaset, tog ett djupt andetag och började läsa. Precis när det sista sandkornet föll vände Lixo den sista sidan. Astronomen applåderade så ivrigt att hon välte sin tekopp över stjärnkartan, och sedan dess ser Karlavagnen ut att ha badat i te.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_right_12"
+      "englishItems": []
     },
     {
       "id": "task_84",
@@ -7761,8 +7678,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_1"
+      "englishItems": []
     },
     {
       "id": "task_85",
@@ -7793,8 +7709,7 @@
           "simpleSentenceEn": "The knight holds a shiny shield.",
           "simpleSentenceSv": "Riddaren håller en blank sköld."
         }
-      ],
-      "rewardItemId": "item_hand_left_2"
+      ]
     },
     {
       "id": "task_86",
@@ -7940,8 +7855,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_3"
+      "englishItems": []
     },
     {
       "id": "task_87",
@@ -7950,8 +7864,7 @@
       "subject": "SWEDISH",
       "textContent": "Genom teleskopet i det högsta tornet upptäckte häxan Hilda en komet med en lång, silvervit svans. Hon förklarade för Lixo att kometen bara passerade jorden vart tionde år. Medan de tittade tycktes kometen blinka mot dem, nästan som en hälsning. Hilda sa att den som ser en komet ska önska något klokt. Lixo önskade att alla barn skulle få läsa spännande sagor. Hilda önskade sig en kvast som inte gnisslade varje gång hon svängde åt vänster.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_4"
+      "englishItems": []
     },
     {
       "id": "task_88",
@@ -8097,8 +8010,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_5"
+      "englishItems": []
     },
     {
       "id": "task_89",
@@ -8107,8 +8019,7 @@
       "subject": "SWEDISH",
       "textContent": "Utanför Stjärnborgens murar låg en kulle som var täckt av mossa och ljung. En morgon märkte Lixo att kullen sakta höjdes och sänktes, som om den andades. Det var ingen kulle alls, utan en vänlig jätte som hade sovit i över hundra år! När jätten vaknade gäspade han så stort att fåglarna flög upp ur träden. Lixo berättade allt som hade hänt medan han sov, men det som förvånade jätten mest var att det fanns kanelbullar. Han åt fyrtio stycken till frukost, och bagaren fick baka hela dagen.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_6"
+      "englishItems": []
     },
     {
       "id": "task_90",
@@ -8139,8 +8050,7 @@
           "simpleSentenceEn": "The princess looks out from the tower.",
           "simpleSentenceSv": "Prinsessan tittar ut från tornet."
         }
-      ],
-      "rewardItemId": "item_hand_left_7"
+      ]
     },
     {
       "id": "task_91",
@@ -8149,8 +8059,7 @@
       "subject": "SWEDISH",
       "textContent": "Häxan Hilda flög lågt över ängen där klöver och blåklockor doftade sommar. Nedanför såg hon den lilla ekorren, som precis som förra året hade glömt var den hade gömt sina nötter. Vintern närmade sig, och förrådet i eken var fortfarande nästan tomt. Hilda landade, svängde med sin trollstav och lät en mild vind skaka hasselbuskarna. Snart regnade det nötter över gräset, och ekorren tackade henne med ett glatt litet skutt. En hasselnöt hade dock fastnat i Hildas hatt, och den upptäckte hon inte förrän på kvällen.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_8"
+      "englishItems": []
     },
     {
       "id": "task_92",
@@ -8296,8 +8205,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_9"
+      "englishItems": []
     },
     {
       "id": "task_93",
@@ -8306,8 +8214,7 @@
       "subject": "SWEDISH",
       "textContent": "Från Stjärnborgens högsta torn kunde man ibland se ett skepp som seglade bland molnen. Seglen var vävda av spindeltråd och dimma, och skeppet styrdes av en gammal kapten med ett långt, vitt skägg. En kväll kastade kaptenen ner en repstege och bjöd in Lixo på en resa. Medan skeppet gled tyst över de sovande byarna fick Lixo lära sig att navigera efter stjärnorna. När vinden plötsligt mojnade hängde kaptenen upp sitt skägg som extra segel, och så seglade de vidare.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_10"
+      "englishItems": []
     },
     {
       "id": "task_94",
@@ -8453,8 +8360,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hand_left_11"
+      "englishItems": []
     },
     {
       "id": "task_95",
@@ -8485,8 +8391,7 @@
           "simpleSentenceEn": "The boat sails on the river.",
           "simpleSentenceSv": "Båten seglar på floden."
         }
-      ],
-      "rewardItemId": "item_hand_left_12"
+      ]
     },
     {
       "id": "task_96",
@@ -8632,8 +8537,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_1"
+      "englishItems": []
     },
     {
       "id": "task_97",
@@ -8642,8 +8546,7 @@
       "subject": "SWEDISH",
       "textContent": "Djupt inne i Stjärnborgen fanns en hemlig läsesal som vaktades av en gammal drake med runda glasögon. Draken släppte bara in besökare som kunde lösa en av hans gåtor. Han frågade vad det är som har en rygg men ingen mage, och massor av sidor men inga armar. Lixo funderade en stund och svarade att det måste vara en bok. Sedan frågade Lixo vad det är som går och går men aldrig kommer fram. Draken funderade så länge att han somnade, så Lixo viskade svaret i hans öra: klockan.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_tail_2"
+      "englishItems": []
     },
     {
       "id": "task_98",
@@ -8789,8 +8692,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_3"
+      "englishItems": []
     },
     {
       "id": "task_99",
@@ -8799,8 +8701,7 @@
       "subject": "SWEDISH",
       "textContent": "Äntligen öppnades de tunga ekportarna till Stjärnborgens innersta sal. Lixo klev försiktigt in och tappade nästan andan. Hyllorna sträckte sig ända upp mot det välvda taket, och där väntade tusentals berättelser och kloka gåtor. Alla vänner från resan stod redan där: ugglan, Bo, prinsessan Mira, riddaren Ruben, häxan Hilda och till och med det trötta trollet. Brevduvan kom flygande med andra halvan av Lixos brev, bagaren bjöd på kanelbullar, och trollkarlens gryta sjöng falskt men glatt. Tillsammans firade de att Lixo hade läst sig hela vägen genom sagoriket.",
       "mathProblems": [],
-      "englishItems": [],
-      "rewardItemId": "item_tail_4"
+      "englishItems": []
     },
     {
       "id": "task_100",
@@ -8831,8 +8732,7 @@
           "simpleSentenceEn": "A colorful rainbow shines after the rain.",
           "simpleSentenceSv": "En färgglad regnbåge lyser efter regnet."
         }
-      ],
-      "rewardItemId": "item_tail_5"
+      ]
     },
     {
       "id": "task_101",
@@ -8978,8 +8878,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_6"
+      "englishItems": []
     },
     {
       "id": "task_102",
@@ -9125,8 +9024,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_7"
+      "englishItems": []
     },
     {
       "id": "task_103",
@@ -9306,8 +9204,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_8"
+      "englishItems": []
     },
     {
       "id": "task_104",
@@ -9487,8 +9384,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_9"
+      "englishItems": []
     },
     {
       "id": "task_105",
@@ -9668,8 +9564,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_10"
+      "englishItems": []
     },
     {
       "id": "task_106",
@@ -9835,8 +9730,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_11"
+      "englishItems": []
     },
     {
       "id": "task_107",
@@ -10002,8 +9896,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_tail_12"
+      "englishItems": []
     },
     {
       "id": "task_108",
@@ -10171,8 +10064,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_starter_explorer"
+      "englishItems": []
     },
     {
       "id": "task_109",
@@ -10338,8 +10230,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_2"
+      "englishItems": []
     },
     {
       "id": "task_110",
@@ -10485,8 +10376,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_3"
+      "englishItems": []
     },
     {
       "id": "task_111",
@@ -10632,8 +10522,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_4"
+      "englishItems": []
     },
     {
       "id": "task_112",
@@ -10779,8 +10668,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_5"
+      "englishItems": []
     },
     {
       "id": "task_113",
@@ -10926,8 +10814,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_6"
+      "englishItems": []
     },
     {
       "id": "task_114",
@@ -11073,8 +10960,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_7"
+      "englishItems": []
     },
     {
       "id": "task_115",
@@ -11220,8 +11106,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_8"
+      "englishItems": []
     },
     {
       "id": "task_116",
@@ -11367,8 +11252,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_9"
+      "englishItems": []
     },
     {
       "id": "task_117",
@@ -11540,8 +11424,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_10"
+      "englishItems": []
     },
     {
       "id": "task_118",
@@ -11717,8 +11600,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_11"
+      "englishItems": []
     },
     {
       "id": "task_119",
@@ -11896,8 +11778,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_hat_12"
+      "englishItems": []
     },
     {
       "id": "task_120",
@@ -12043,8 +11924,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_1"
+      "englishItems": []
     },
     {
       "id": "task_121",
@@ -12190,8 +12070,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_2"
+      "englishItems": []
     },
     {
       "id": "task_122",
@@ -12337,8 +12216,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_3"
+      "englishItems": []
     },
     {
       "id": "task_123",
@@ -12525,8 +12403,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_4"
+      "englishItems": []
     },
     {
       "id": "task_124",
@@ -12712,8 +12589,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_5"
+      "englishItems": []
     },
     {
       "id": "task_125",
@@ -12900,8 +12776,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_6"
+      "englishItems": []
     },
     {
       "id": "task_126",
@@ -13081,8 +12956,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_7"
+      "englishItems": []
     },
     {
       "id": "task_127",
@@ -13262,8 +13136,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_8"
+      "englishItems": []
     },
     {
       "id": "task_128",
@@ -13443,8 +13316,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_9"
+      "englishItems": []
     },
     {
       "id": "task_129",
@@ -13624,8 +13496,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_10"
+      "englishItems": []
     },
     {
       "id": "task_130",
@@ -13805,8 +13676,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_11"
+      "englishItems": []
     },
     {
       "id": "task_131",
@@ -13986,8 +13856,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_shoulders_back_12"
+      "englishItems": []
     },
     {
       "id": "task_132",
@@ -14167,8 +14036,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_1"
+      "englishItems": []
     },
     {
       "id": "task_133",
@@ -14385,8 +14253,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_2"
+      "englishItems": []
     },
     {
       "id": "task_134",
@@ -14607,8 +14474,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_3"
+      "englishItems": []
     },
     {
       "id": "task_135",
@@ -14829,8 +14695,7 @@
           ]
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_4"
+      "englishItems": []
     },
     {
       "id": "task_136",
@@ -15010,8 +14875,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_5"
+      "englishItems": []
     },
     {
       "id": "task_137",
@@ -15191,8 +15055,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_6"
+      "englishItems": []
     },
     {
       "id": "task_138",
@@ -15372,8 +15235,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_7"
+      "englishItems": []
     },
     {
       "id": "task_139",
@@ -15553,8 +15415,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_8"
+      "englishItems": []
     },
     {
       "id": "task_140",
@@ -15734,8 +15595,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_9"
+      "englishItems": []
     },
     {
       "id": "task_141",
@@ -15915,8 +15775,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_10"
+      "englishItems": []
     },
     {
       "id": "task_142",
@@ -16096,8 +15955,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_11"
+      "englishItems": []
     },
     {
       "id": "task_143",
@@ -16277,8 +16135,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_arms_gloves_12"
+      "englishItems": []
     },
     {
       "id": "task_144",
@@ -16458,8 +16315,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_1"
+      "englishItems": []
     },
     {
       "id": "task_145",
@@ -16639,8 +16495,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_2"
+      "englishItems": []
     },
     {
       "id": "task_146",
@@ -16820,8 +16675,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_3"
+      "englishItems": []
     },
     {
       "id": "task_147",
@@ -17001,8 +16855,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_4"
+      "englishItems": []
     },
     {
       "id": "task_148",
@@ -17182,8 +17035,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_5"
+      "englishItems": []
     },
     {
       "id": "task_149",
@@ -17363,8 +17215,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_6"
+      "englishItems": []
     },
     {
       "id": "task_150",
@@ -17544,8 +17395,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_7"
+      "englishItems": []
     },
     {
       "id": "task_151",
@@ -17725,8 +17575,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_8"
+      "englishItems": []
     },
     {
       "id": "task_152",
@@ -17906,8 +17755,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_9"
+      "englishItems": []
     },
     {
       "id": "task_153",
@@ -18087,8 +17935,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_10"
+      "englishItems": []
     },
     {
       "id": "task_154",
@@ -18268,8 +18115,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_11"
+      "englishItems": []
     },
     {
       "id": "task_155",
@@ -18449,8 +18295,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_armor_shirt_12"
+      "englishItems": []
     },
     {
       "id": "task_156",
@@ -18630,8 +18475,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_1"
+      "englishItems": []
     },
     {
       "id": "task_157",
@@ -18811,8 +18655,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_2"
+      "englishItems": []
     },
     {
       "id": "task_158",
@@ -18992,8 +18835,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_3"
+      "englishItems": []
     },
     {
       "id": "task_159",
@@ -19176,8 +19018,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_4"
+      "englishItems": []
     },
     {
       "id": "task_160",
@@ -19360,8 +19201,7 @@
           "visualMoneyBreakdownKr": []
         }
       ],
-      "englishItems": [],
-      "rewardItemId": "item_pants_5"
+      "englishItems": []
     }
   ],
   "wardrobeItems": [

@@ -1,11 +1,14 @@
 package se.lixo.app.ui.components.celebration
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,7 +25,8 @@ import se.lixo.app.ui.theme.LixoStrings
 
 /**
  * Shared "Bana klar!" card used by both activity screens: animated stars, a counting-up "+N
- * stjärnor" line, caller-provided extra content (time rows, practice words, …), and the
+ * stjärnor" line, caller-provided extra content (time rows, practice words, …), an optional
+ * [cornerContent] slot (the Flitkista holo chest meter) pinned to the top-right corner, and the
  * back-to-map button. [CelebrationSequenceHost] runs above this for chests and unlock dialogs.
  */
 @Composable
@@ -35,6 +39,7 @@ fun LevelCompleteCard(
     onContinue: () -> Unit,
     modifier: Modifier = Modifier,
     continueEnabled: Boolean = true,
+    cornerContent: (@Composable BoxScope.() -> Unit)? = null,
     extraContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     LixoCard(
@@ -98,6 +103,14 @@ fun LevelCompleteCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = Color.White
                 )
+            }
+        }
+
+        cornerContent?.let { corner ->
+            Box(
+                modifier = Modifier.align(Alignment.TopEnd).offset(x = 14.dp, y = (-14).dp)
+            ) {
+                corner()
             }
         }
     }

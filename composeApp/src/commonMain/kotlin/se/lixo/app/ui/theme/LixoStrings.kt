@@ -1,10 +1,10 @@
 package se.lixo.app.ui.theme
 
 import se.lixo.app.domain.model.AvatarType
-import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.Rarity
+import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.Subject
 
 /**
@@ -26,6 +26,10 @@ object LixoStrings {
     const val PROFILE_ADD_SIBLING = "Ny profil"
     const val PROFILE_NEW_NAME_LABEL = "Barnets namn"
     const val PROFILE_CREATE_BTN = "Skapa profil"
+    const val PROFILE_NAME_PLACEHOLDER = "T.ex. Alva"
+    const val FIRST_PROFILE_TITLE = "Välkommen till Lixo!"
+    const val FIRST_PROFILE_SUBTITLE = "Vad heter du?"
+    const val FIRST_PROFILE_AGE_LABEL = "Hur gammal är du?"
 
     // Tutorial
     const val TUTORIAL_WELCOME_TITLE = "Välkommen till Lixo"
@@ -64,6 +68,13 @@ object LixoStrings {
     const val READING_SIMULATE_FULL_SENTENCE_BTN = "Läs hela meningen"
     /** Debug-only simulation button that skips the current word to make it a yellow unread word. */
     const val READING_SIMULATE_SKIP_WORD_BTN = "Hoppa över ord"
+    /** Debug-only simulation button that sends a deliberately wrong word for the current cursor word. */
+    const val READING_SIMULATE_WRONG_WORD_BTN = "Säg fel ord"
+    const val READING_HEARD_WORD_LABEL = "Ordet:"
+    const val READING_HEARD_AI_LABEL = "Jag hörde:"
+    const val READING_HEARD_AI_FIRST_LABEL = "Först hörde jag:"
+    const val READING_HEARD_NOTHING = "Jag hörde inget tydligt"
+    const val READING_HEARD_TRY_AGAIN_HINT = "Säg ordet igen – jag lyssnar!"
     const val READING_MANUAL_DONE_BTN = "Klar med läsningen"
     const val READING_MANUAL_CHARGING_LABEL = "Läser..."
     const val READING_STUCK_TITLE = "Hjälp med ordet"
@@ -88,11 +99,16 @@ object LixoStrings {
     const val ENGLISH_SECTION_TITLE = "Engelska glosor"
     const val ACTIVITY_FINISH_CELEBRATION_TITLE = "Bana klar!"
     const val ACTIVITY_BACK_TO_MAP_BTN = "Fortsätt"
-    const val GIFT_UNLOCKED_TITLE = "Ny present!"
     const val GIFT_DUPLICATE_NOTE = "Presenten innehöll en dubblett"
     const val CHEST_TAP_TO_OPEN = "Tryck för att öppna!"
     const val CHEST_OPENED = "Flitkista öppnad!"
     const val CHEST_DUPLICATE_NOTE = "Flitkistan innehöll en dubblett"
+    const val CHEST_METER_EMPTY = "Flitkistan: tom"
+    const val CHEST_METER_LOW = "Flitkistan: lite fylld"
+    const val CHEST_METER_HALF = "Flitkistan: halvfull"
+    const val CHEST_METER_ALMOST_FULL = "Flitkistan: nästan full"
+    const val CHEST_METER_INFO_TITLE = "Flitkistan"
+    const val CHEST_METER_INFO = "Spela banor för att fylla Flitkistan. När den är full får du en present!"
     const val ITEM_UNLOCKED_TITLE = "Nytt föremål!"
     const val EQUIP_NOW_BTN = "Ta på nu"
     const val EQUIPPED_CONFIRM = "Påtagen!"
@@ -196,20 +212,26 @@ object LixoStrings {
         Rarity.LEGENDARY -> "Legendarisk"
     }
 
+    /**
+     * Base label for [source] (e.g. "Prestation"), plus [detail] appended as "$base: $detail"
+     * when present and non-blank (e.g. "Prestation: Blixtläsaren" for an achievement chest).
+     */
+    fun rewardSourceLabel(source: RewardSource, detail: String? = null): String {
+        val base = when (source) {
+            RewardSource.LEVEL -> "Banbelöning"
+            RewardSource.STARS -> "Stjärnbelöning"
+            RewardSource.FLITKISTA -> "Flitkistan"
+            RewardSource.GIFT -> "Present"
+            RewardSource.WEEKLY_STREAK -> "Veckans streak"
+            RewardSource.ACHIEVEMENT -> "Prestation"
+        }
+        return if (detail.isNullOrBlank()) base else "$base: $detail"
+    }
+
     fun subjectName(subject: Subject): String = when (subject) {
         Subject.SWEDISH -> "Svenska"
         Subject.MATH -> "Matematik"
         Subject.ENGLISH -> "Engelska"
-    }
-
-    /**
-     * Renders chest progress half-points as a Swedish-decimal-comma label, e.g. "7,5 / 10 p".
-     */
-    fun chestProgress(halfPoints: Int): String {
-        val whole = halfPoints / 2
-        val fraction = if (halfPoints % 2 == 1) ",5" else ""
-        val threshold = BalanceConfig.CHEST_POINTS_THRESHOLD_HALF / 2
-        return "Flitkista: $whole$fraction / $threshold p"
     }
 
     fun mathTypeName(type: MathProblemType): String = when (type) {

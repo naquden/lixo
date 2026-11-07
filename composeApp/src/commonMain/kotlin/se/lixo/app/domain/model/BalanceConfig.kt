@@ -14,6 +14,14 @@ object BalanceConfig {
         "Hatten lyser med varmt guld när Lixo läser högt. " +
         "Nu börjar ett magiskt äventyr bland sagor och stjärnor!"
 
+    // --- Profile Creation (first-run setup & sibling profiles) ---
+    /** Lowest age offered when creating a profile. */
+    const val PROFILE_MIN_AGE_YEARS = 6
+    /** Highest age offered when creating a profile. */
+    const val PROFILE_MAX_AGE_YEARS = 12
+    /** Default pre-selected age when creating a profile. */
+    const val PROFILE_DEFAULT_AGE_YEARS = 8
+
     // --- Reading Star Thresholds (§2 "Poängsättning läsning") ---
     /**
      * 3 stars: AI mode at >= 1.0x reference WPM (approx. TTS reading tempo).
@@ -67,6 +75,9 @@ object BalanceConfig {
      */
     const val STT_LOOKAHEAD_WINDOW_WORDS = 3
 
+    /** Max recent unmatched STT words kept to show "Jag hörde" for yellow words. */
+    const val STT_HEARD_TEXT_BUFFER_MAX_WORDS = 4
+
     /**
      * Milliseconds without word progress before showing gentle support options
      * (listen via TTS, see syllables, see explanation, or move on without penalty).
@@ -113,4 +124,53 @@ object BalanceConfig {
 
     /** Half-points awarded for replaying an already-passed level with no new stars (0.5 point). */
     const val CHEST_POINTS_REPLAY_RUN_HALF = 1
+
+    // --- Reward pacing (§2 "Belöningskurva") ---
+    /**
+     * Reward pacing has three layers that each cover a different part of a profile's lifetime:
+     * 1. **Onboarding track** ([ONBOARDING_REWARD_LEVELS]): early, paced by levels cleared across
+     *    all subjects, independent of how many stars a run earns.
+     * 2. **Flitkistan**: unchanged, every 10 progress runs (see [CHEST_POINTS_THRESHOLD_HALF]).
+     * 3. **Star curve**: a single global, widening-gap sequence from ~31 to 250 stars, generated
+     *    by `tools/item_pipeline/generate_wardrobe_items.py`.
+     */
+
+    /**
+     * Cleared-level counts (across all subjects) that award an onboarding item on the *next*
+     * level cleared, i.e. `clearedLevelsCountBeforeRun + 1 in ONBOARDING_REWARD_LEVELS`:
+     *
+     * | Levels cleared | Cadence |
+     * |---|---|
+     * | 1–6 | every level |
+     * | 7–20 | every 2nd level (8, 10, …, 20) |
+     * | 21–40 | every 3rd level (23, 26, …, 38) |
+     *
+     * 19 slots in total.
+     */
+    val ONBOARDING_REWARD_LEVELS: Set<Int> = buildSet {
+        addAll(1..6)
+        addAll(8..20 step 2)
+        addAll(23..40 step 3)
+    }
+
+    /**
+     * Max items awarded per [RewardSource] in a single run. LEVEL and STARS share one
+     * "progression" slot (an onboarding/level item defers a star unlock to a later run); other
+     * sources (FLITKISTA, GIFT, WEEKLY_STREAK, ACHIEVEMENT) may stack with it and each other.
+     * ACHIEVEMENT is also capped at [MAX_ITEMS_PER_SOURCE_PER_RUN] per run: any further unlocks in
+     * the same run stay unlocked and queue their reward item ids in
+     * [ChildProfile.pendingAchievementRewardIds] for a later run (see doc/plans/004).
+     */
+    const val MAX_ITEMS_PER_SOURCE_PER_RUN = 1
+
+    // --- Star-collection achievements (§2 "Epic/Legendary via prestationer", see doc/plans/004) ---
+    /**
+     * Star milestones for the `ach_stars_<N>` achievements. 160 levels x 3 stars = 480 max, on a
+     * widening-gap curve, deliberately kept off the [AvatarType] unlock milestones (12, 30, 55,
+     * 90, 135) so the big moments don't land in the same run. See doc/plans/004.
+     */
+    val STAR_ACHIEVEMENT_MILESTONES: List<Int> = listOf(20, 45, 75, 120, 175, 250, 350, 480)
+
+    /** The achievement id for a given [STAR_ACHIEVEMENT_MILESTONES] entry. */
+    fun starAchievementId(stars: Int): String = "ach_stars_$stars"
 }

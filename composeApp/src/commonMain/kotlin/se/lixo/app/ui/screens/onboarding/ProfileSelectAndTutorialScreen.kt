@@ -21,8 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -61,6 +59,7 @@ import se.lixo.app.ui.theme.LixoProgressBar
 import se.lixo.app.ui.theme.LixoStrings
 import se.lixo.app.ui.theme.StatPill
 import se.lixo.app.ui.theme.TtsIconButton
+import se.lixo.app.ui.theme.dashedBorder
 
 /**
  * Duolingo-styled Onboarding & Profile Selection:
@@ -68,6 +67,8 @@ import se.lixo.app.ui.theme.TtsIconButton
  * - Profile cards with avatar, stats, and 3D lip.
  * - Simple "+ Ny profil" card.
  * - Clean two-step tutorial with microphone permission and reading demo.
+ * - [startTutorialImmediately] opens the tutorial straight after first-run profile creation,
+ *   instead of landing on the profile list.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -80,10 +81,11 @@ fun ProfileSelectAndTutorialScreen(
     showSwedishTtsButtons: Boolean,
     onSelectProfile: (ChildProfile) -> Unit,
     onCreateSiblingProfile: (String) -> Unit,
+    startTutorialImmediately: Boolean = false,
     onTutorialCompleted: (ChildProfile) -> Unit
 ) {
     var showTutorialStage by remember(activeProfile.id, activeProfile.tutorialCompleted) {
-        mutableStateOf(false)
+        mutableStateOf(startTutorialImmediately && !activeProfile.tutorialCompleted)
     }
     var showCreateSiblingForm by remember { mutableStateOf(false) }
     var newSiblingName by remember { mutableStateOf("") }
@@ -247,22 +249,9 @@ fun ProfileSelectAndTutorialScreen(
                     cornerRadius = 18.dp
                 ) {
                     Column {
-                        Text(
-                            text = LixoStrings.PROFILE_NEW_NAME_LABEL,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = LixoColors.TextPrimary
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = newSiblingName,
-                            onValueChange = { newSiblingName = it },
-                            placeholder = { Text("T.ex. Saga") },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = LixoColors.Blue,
-                                unfocusedBorderColor = LixoColors.Border
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                        ProfileNameForm(
+                            name = newSiblingName,
+                            onNameChange = { newSiblingName = it }
                         )
                         Spacer(Modifier.height(14.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -471,8 +460,12 @@ fun ProfileSelectAndTutorialScreen(
                             val isCurrent = idx == sessionState.currentWordIndex &&
                                 sessionState.mode == ReadingMode.AI_LISTENING &&
                                 !sessionState.isCompleted
+                            val isYellowUnread = token.needsPractice && !token.isCompleted && !isCurrent
+                            val isYellowRead = token.needsPractice && token.isCompleted
                             val (bg, border, fg) = when {
                                 isCurrent -> Triple(LixoColors.BlueTint, LixoColors.Blue, LixoColors.Blue)
+                                isYellowUnread -> Triple(LixoColors.GoldTint, LixoColors.Gold, LixoColors.GoldLip)
+                                isYellowRead -> Triple(LixoColors.GoldTint, Color.Transparent, LixoColors.GoldLip)
                                 token.isCompleted -> Triple(LixoColors.GreenTint, LixoColors.GreenLip, LixoColors.GreenLip)
                                 else -> Triple(Color.Transparent, Color.Transparent, LixoColors.TextPrimary)
                             }
@@ -481,8 +474,11 @@ fun ProfileSelectAndTutorialScreen(
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(bg)
                                     .then(
-                                        if (isCurrent) Modifier.border(1.5.dp, border, RoundedCornerShape(8.dp))
-                                        else Modifier
+                                        when {
+                                            isYellowUnread -> Modifier.dashedBorder(border, 8.dp)
+                                            isCurrent -> Modifier.border(1.5.dp, border, RoundedCornerShape(8.dp))
+                                            else -> Modifier
+                                        }
                                     )
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
@@ -500,7 +496,42 @@ fun ProfileSelectAndTutorialScreen(
                 Spacer(Modifier.height(20.dp))
 
                 if (!sessionState.isCompleted) {
-                    if (selectedMode == ReadingMode.AI_LISTENING) {
+                    if (sessionState.isAwaitingUnreadWords) {
+                        LixoCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = LixoColors.GoldTint,
+                            borderColor = LixoColors.GoldLip,
+                            cornerRadius = 14.dp,
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                LixoIcon(icon = LixoIcons.Star, tint = LixoColors.GoldLip, size = 20.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = LixoStrings.READING_READ_YELLOW_WORDS,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LixoColors.TextPrimary
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+                        LixoButton(
+                            onClick = {
+                                sessionState = alignmentEngine.finishWithUnreadWords(sessionState)
+                            },
+                            variant = LixoButtonVariant.PRIMARY,
+                            height = 52.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = LixoStrings.READING_CONTINUE_WITH_YELLOW_BTN.uppercase(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
+                        }
+                    } else if (selectedMode == ReadingMode.AI_LISTENING) {
                         LixoButton(
                             onClick = {
                                 val nextWord = sessionState.currentWord?.normalizedText ?: return@LixoButton

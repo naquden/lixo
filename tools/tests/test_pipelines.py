@@ -1,3 +1,4 @@
+import copy
 import json
 import re
 from pathlib import Path
@@ -8,9 +9,11 @@ from tools.asset_pipeline.blender_avatar_pipeline import (
     inject_modular_sockets_into_gltf_dict,
     inspect_glb_file,
 )
+from tools.content_pipeline.upload_content import validate_bundle
 from tools.item_pipeline.generate_wardrobe_items import (
     RARITIES,
     SLOTS,
+    STAR_ACHIEVEMENT_REWARDS,
     generate_catalog,
     render_kotlin,
     slug_key,
@@ -55,6 +58,19 @@ class LixoPipelineAndSpecificationTests(unittest.TestCase):
             self.assertIn(lvl["taskId"], task_ids)
         riddarvagn = next(d for d in bundle["dictionary"] if d["wordNormalized"] == "riddarvagn")
         self.assertEqual(riddarvagn["syllables"], "rid-dar-vagn")
+
+    def test_seed_bundle_tasks_have_no_reward_item_id(self) -> None:
+        bundle = load_seed_bundle()
+        for t in bundle["tasks"]:
+            self.assertNotIn("rewardItemId", t)
+        self.assertEqual(validate_bundle(bundle), [])
+
+    def test_validate_bundle_rejects_task_with_reward_item_id(self) -> None:
+        bundle = copy.deepcopy(load_seed_bundle())
+        bundle["tasks"][0]["rewardItemId"] = "item_hat_2"
+        errors = validate_bundle(bundle)
+        matching = [e for e in errors if bundle["tasks"][0]["id"] in e and "rewardItemId" in e]
+        self.assertEqual(len(matching), 1)
 
     def test_swedish_stories_are_unique_and_progress_in_difficulty(self) -> None:
         bundle = load_seed_bundle()
@@ -294,7 +310,6 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
                     self.assertEqual(item.unlock_star_requirement, 0)
             thresholds = sorted(i.unlock_star_requirement for i in star_unlockable)
             self.assertEqual(len(thresholds), len(set(thresholds)), f"slot {slot.slot_id} has duplicate star thresholds")
-            self.assertLessEqual(thresholds[0], 10, f"slot {slot.slot_id}'s first star unlock should be low")
             self.assertLessEqual(thresholds[-1], 250)
 
     def test_star_unlock_thresholds_are_staggered_across_slots(self) -> None:
@@ -307,6 +322,33 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
             star_unlockable = [i.unlock_star_requirement for i in items if i.unlock_star_requirement > 0]
             first_thresholds.add(min(star_unlockable))
         self.assertGreater(len(first_thresholds), 1, "all slots unlock their first item on the same star count")
+
+    def test_star_unlock_thresholds_form_one_global_widening_curve(self) -> None:
+        catalog = generate_catalog(per_slot=64, seed=42)
+        all_items = [i for slot in SLOTS for i in catalog[slot.slot_id] if i.unlock_star_requirement > 0]
+        all_items.sort(key=lambda i: i.unlock_star_requirement)
+
+        self.assertEqual(len(all_items), 72)
+        thresholds = [i.unlock_star_requirement for i in all_items]
+        self.assertEqual(len(thresholds), len(set(thresholds)), "star thresholds must be unique")
+        self.assertGreaterEqual(thresholds[0], 25)
+        self.assertLessEqual(thresholds[-1], 250)
+
+        for i in range(2, len(thresholds)):
+            gap = thresholds[i] - thresholds[i - 1]
+            prev_gap = thresholds[i - 1] - thresholds[i - 2]
+            self.assertGreaterEqual(gap, prev_gap - 1, f"gap at index {i} must not shrink by more than 1")
+
+        for i in range(1, len(all_items)):
+            self.assertNotEqual(
+                all_items[i].slot.slot_id,
+                all_items[i - 1].slot.slot_id,
+                "consecutive star unlocks must be different slots",
+            )
+
+        max_common = max(i.unlock_star_requirement for i in all_items if i.rarity == "COMMON")
+        min_uncommon = min(i.unlock_star_requirement for i in all_items if i.rarity == "UNCOMMON")
+        self.assertLess(max_common, min_uncommon)
 
     def test_item_ids_are_unique_and_follow_convention(self) -> None:
         catalog = generate_catalog(per_slot=64, seed=42)
@@ -356,6 +398,27 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
             set_pieces = [i for i in items if i.is_weekly_streak_set_piece]
             self.assertEqual(len(set_pieces), 1, f"slot {slot.slot_id} must have exactly 1 set piece")
             self.assertEqual(set_pieces[0].rarity, "LEGENDARY")
+
+    def test_star_achievement_items_reserved(self) -> None:
+        catalog = generate_catalog(per_slot=64, seed=42)
+        all_items = [i for slot in SLOTS for i in catalog[slot.slot_id]]
+
+        stars_seen = [stars for stars, _rarity in STAR_ACHIEVEMENT_REWARDS]
+        self.assertEqual(stars_seen, sorted(set(stars_seen)), "milestones must be strictly ascending")
+        self.assertLessEqual(max(stars_seen), 480)
+
+        matched_slots = []
+        for stars, rarity in STAR_ACHIEVEMENT_REWARDS:
+            achievement_id = f"ach_stars_{stars}"
+            matches = [i for i in all_items if i.unlock_achievement_id == achievement_id]
+            self.assertEqual(len(matches), 1, f"expected exactly 1 item for {achievement_id}")
+            item = matches[0]
+            self.assertEqual(item.rarity, rarity)
+            self.assertEqual(item.unlock_star_requirement, 0)
+            self.assertFalse(item.is_weekly_streak_set_piece)
+            matched_slots.append(item.slot.slot_id)
+
+        self.assertEqual(len(matched_slots), len(set(matched_slots)), "all 8 slots must differ")
 
     def test_rejects_per_slot_smaller_than_rarity_count(self) -> None:
         with self.assertRaises(ValueError):

@@ -1,19 +1,28 @@
 package se.lixo.app.data.repository
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import se.lixo.app.data.local.LexiconCache
+import se.lixo.app.data.local.ProfileStore
 import se.lixo.app.data.local.createPlatformLexiconCache
+import se.lixo.app.data.local.createPlatformProfileStore
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.remote.SyncMergeEngine
 import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
+import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.model.Achievement
 import se.lixo.app.domain.model.AddFriendError
 import se.lixo.app.domain.model.AddFriendException
@@ -40,6 +49,7 @@ import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.PendingEmailLinkStorage
+import se.lixo.app.platform.PlatformFeatureFlags
 
 data class AppPrivacySettings(
     val isLocalOnlyMode: Boolean = true,
@@ -60,7 +70,16 @@ data class AppPrivacySettings(
  */
 class LixoRepository(
     private val cloudGateway: CloudSyncGateway = FirebaseSyncService(),
-    private val lexiconCache: LexiconCache? = createPlatformLexiconCache()
+    private val lexiconCache: LexiconCache? = createPlatformLexiconCache(),
+    /**
+     * Debug builds seed the dummy "Saga" profile (`DEBUG_SAGA_PROFILE_ID`) only when it is
+     * missing from [profileStore] -- never modifying or removing other profiles, including a
+     * user-edited Saga. Release builds seed no profile; the first profile comes from
+     * [se.lixo.app.ui.screens.onboarding.FirstProfileSetupScreen]. Profiles, the active profile
+     * id and the universal unlocked-item pool persist in Room through [profileStore].
+     */
+    private val isDebugBuild: Boolean = PlatformFeatureFlags().isDebugBuild,
+    private val profileStore: ProfileStore? = createPlatformProfileStore()
 ) {
     private var lexiconVersion: Int? = null
 
@@ -117,37 +136,164 @@ class LixoRepository(
     private val _privacySettings = MutableStateFlow(AppPrivacySettings())
     val privacySettings: StateFlow<AppPrivacySettings> = _privacySettings.asStateFlow()
 
+    private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val profileWrites = Channel<suspend () -> Unit>(Channel.UNLIMITED)
+    private val _profilesLoaded = MutableStateFlow(profileStore == null)
+    val profilesLoaded: StateFlow<Boolean> = _profilesLoaded.asStateFlow()
+
     init {
         seedInitialData()
+        val store = profileStore
+        if (store != null) {
+            persistScope.launch {
+                loadPersistedProfiles(store)
+                for (op in profileWrites) {
+                    runCatching { op() }.onFailure { println("LixoProfiles: WARN profile store write failed: $it") }
+                }
+            }
+        }
+    }
+
+    private fun buildDebugSagaProfile(now: Long): ChildProfile = ChildProfile(
+        id = DEBUG_SAGA_PROFILE_ID,
+        displayName = "Saga",
+        publicUsername = "saga_stjarna",
+        ageYears = 8,
+        tutorialCompleted = true,
+        tutorialSkippableByParent = false,
+        appearance = AvatarAppearance(
+            avatarType = AvatarType.CAT,
+            primaryTintHex = 0xFFF5A623,
+            equippedItems = mapOf(EquipmentSlot.HAT to BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID)
+        ),
+        unlockedAvatars = setOf(AvatarType.CAT),
+        currentLevelOrder = 1,
+        totalStars = 0,
+        currentStreakDays = 0,
+        bestStreakDays = 0,
+        createdAtEpochMillis = now,
+        updatedAtEpochMillis = now
+    )
+
+    /**
+     * Reads the persisted profiles, unlocked item ids, active profile id and per-level progress
+     * from [store], merges them with whatever is already in memory (in-memory wins so a user
+     * edit made before the load finished is never clobbered), and resolves the active profile
+     * id. Any failure is treated as "store is empty" so a corrupt/missing DB never blocks the UI
+     * (`finally` always flips [_profilesLoaded] to true).
+     */
+    private suspend fun loadPersistedProfiles(store: ProfileStore) {
+        try {
+            val persisted = runCatching { store.loadProfiles() }
+                .onFailure { println("LixoProfiles: WARN loadProfiles failed: $it") }
+                .getOrDefault(emptyList())
+            var persistedUnlocked = runCatching { store.loadUnlockedItemIds() }
+                .onFailure { println("LixoProfiles: WARN loadUnlockedItemIds failed: $it") }
+                .getOrDefault(emptySet())
+            val persistedActiveId = runCatching { store.loadActiveProfileId() }
+                .onFailure { println("LixoProfiles: WARN loadActiveProfileId failed: $it") }
+                .getOrNull()
+            val persistedProgress = runCatching { store.loadLevelProgress() }
+                .onFailure { println("LixoProfiles: WARN loadLevelProgress failed: $it") }
+                .getOrDefault(emptyList())
+
+            var profilesToMerge = persisted
+            if (isDebugBuild && persisted.none { it.id == DEBUG_SAGA_PROFILE_ID }) {
+                val now = Clock.System.now().toEpochMilliseconds()
+                val saga = buildDebugSagaProfile(now)
+                profilesToMerge = persisted + saga
+                persistedUnlocked = persistedUnlocked + BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID
+                runCatching { store.saveProfile(saga) }
+                    .onFailure { println("LixoProfiles: WARN debug saveProfile(saga) failed: $it") }
+                runCatching { store.saveUnlockedItem(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID, "DEBUG_SEED") }
+                    .onFailure { println("LixoProfiles: WARN debug saveUnlockedItem failed: $it") }
+            }
+
+            _profiles.update { mem ->
+                val memIds = mem.map { it.id }.toSet()
+                profilesToMerge.filterNot { it.id in memIds } + mem
+            }
+            _unlockedItemIds.update { it + persistedUnlocked }
+            _levelProgressByProfile.update { mem ->
+                val persistedByProfile = persistedProgress.groupBy { it.profileId }
+                    .mapValues { (_, rows) -> rows.associateBy { it.levelId } }
+                (persistedByProfile.keys + mem.keys).associateWith { pid ->
+                    persistedByProfile[pid].orEmpty() + mem[pid].orEmpty()
+                }
+            }
+
+            val merged = _profiles.value
+            val resolvedActiveId = _activeProfileId.value?.takeIf { id -> merged.any { it.id == id } }
+                ?: persistedActiveId?.takeIf { id -> merged.any { it.id == id } }
+                ?: merged.firstOrNull()?.id
+            _activeProfileId.value = resolvedActiveId
+            if (resolvedActiveId != null && resolvedActiveId != persistedActiveId) {
+                enqueueProfileWrite { saveActiveProfileId(resolvedActiveId) }
+            }
+        } catch (t: Throwable) {
+            println("LixoProfiles: WARN loadPersistedProfiles failed, treating store as empty: $t")
+            // Treat as empty; debug Saga seed below still applies so a debug build never ends up
+            // with zero profiles just because the store failed to read.
+            if (isDebugBuild && _profiles.value.none { it.id == DEBUG_SAGA_PROFILE_ID }) {
+                val now = Clock.System.now().toEpochMilliseconds()
+                val saga = buildDebugSagaProfile(now)
+                _profiles.update { it + saga }
+                _unlockedItemIds.update { it + BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID }
+                _activeProfileId.value = _activeProfileId.value ?: saga.id
+            }
+        } finally {
+            _profilesLoaded.value = true
+        }
+    }
+
+    private fun enqueueProfileWrite(op: suspend ProfileStore.() -> Unit) {
+        val store = profileStore ?: return
+        profileWrites.trySend { store.op() }
+    }
+
+    /**
+     * Updates [_profiles] and persists only the profiles that actually changed, in enqueue order
+     * (a single FIFO [profileWrites] consumer, never one launch per mutation, so concurrent
+     * writes on [Dispatchers.Default] can never finish out of order and persist a stale profile).
+     */
+    private fun updateProfiles(transform: (List<ChildProfile>) -> List<ChildProfile>) {
+        var before: List<ChildProfile> = emptyList()
+        var after: List<ChildProfile> = emptyList()
+        _profiles.update { cur ->
+            before = cur
+            transform(cur).also { after = it }
+        }
+        val beforeById = before.associateBy { it.id }
+        after.filter { beforeById[it.id] != it }.forEach { p ->
+            enqueueProfileWrite { saveProfile(p) }
+        }
+    }
+
+    /** Lets unit tests wait for all previously enqueued profile writes to finish. */
+    internal suspend fun awaitPendingProfileWrites() {
+        if (profileStore == null) return
+        val done = CompletableDeferred<Unit>()
+        profileWrites.send { done.complete(Unit) }
+        done.await()
     }
 
     private fun seedInitialData() {
         val now = Clock.System.now().toEpochMilliseconds()
 
-        // Default child profile starting in Zero-State ("Ingenting är upplåst första gången;
-        // spelaren börjar med en ren bas-avatar utan extra tillbehör" - project.md §2)
-        val defaultChild = ChildProfile(
-            id = "profile_child_1",
-            displayName = "Saga",
-            publicUsername = "saga_stjarna",
-            ageYears = 8,
-            tutorialCompleted = false,
-            tutorialSkippableByParent = false,
-            appearance = AvatarAppearance(
-                avatarType = AvatarType.CAT,
-                primaryTintHex = 0xFFF5A623,
-                equippedItems = emptyMap() // Zero-state: nothing equipped at start
-            ),
-            unlockedAvatars = setOf(AvatarType.CAT),
-            currentLevelOrder = 1,
-            totalStars = 0,
-            currentStreakDays = 0,
-            bestStreakDays = 0,
-            createdAtEpochMillis = now,
-            updatedAtEpochMillis = now
-        )
-        _profiles.value = listOf(defaultChild)
-        _activeProfileId.value = defaultChild.id
+        // Debug builds seed a dummy "Saga" profile with the tutorial already completed, ending
+        // in the same state as finishing it (LixoApp onTutorialCompleted): starter hat unlocked
+        // and equipped. Release builds seed no profile ("Ingenting är upplåst första gången;
+        // spelaren börjar med en ren bas-avatar utan extra tillbehör" - project.md §2): profiles
+        // stays empty, activeProfileId stays null, and nothing is unlocked until the player
+        // creates their first profile via FirstProfileSetupScreen. When a [profileStore] exists,
+        // the debug Saga seed happens in [loadPersistedProfiles] instead, only if Saga is
+        // missing, so a persisted/edited Saga is never duplicated or overwritten.
+        if (profileStore == null && isDebugBuild) {
+            val saga = buildDebugSagaProfile(now)
+            _profiles.value = listOf(saga)
+            _unlockedItemIds.value = setOf(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID)
+            _activeProfileId.value = saga.id
+        }
 
         // Seed Courses (baseline version 1 so Firestore version 2+ triggers delta download)
         val seedTimestamp = 1730000000000L
@@ -170,7 +316,7 @@ class LixoRepository(
         _levels.value = generatedLevels
         _tasksById.value = generatedTasks
 
-        // Seed Epic & Legendary Achievements
+        // Seed Epic & Legendary Achievements, plus the 8 star-collection achievements (doc/plans/004)
         _achievements.value = buildSeedAchievements()
     }
 
@@ -199,39 +345,44 @@ class LixoRepository(
 
     fun selectProfile(profileId: String) {
         _activeProfileId.value = profileId
+        enqueueProfileWrite { saveActiveProfileId(profileId) }
     }
 
-    fun createSiblingProfile(displayName: String, ageYears: Int): ChildProfile {
+    /** Creates and activates a new profile; used both for the first-run profile and for siblings. */
+    fun createProfile(displayName: String, ageYears: Int): ChildProfile {
         val now = Clock.System.now().toEpochMilliseconds()
         val newProfile = ChildProfile(
             id = "profile_${now}_${displayName.lowercase().hashCode().toUInt()}",
             displayName = displayName.trim().ifBlank { "Syskon" },
-            ageYears = ageYears.coerceIn(6, 12),
+            ageYears = ageYears.coerceIn(BalanceConfig.PROFILE_MIN_AGE_YEARS, BalanceConfig.PROFILE_MAX_AGE_YEARS),
             tutorialCompleted = false,
             appearance = AvatarAppearance(avatarType = AvatarType.CAT),
             unlockedAvatars = setOf(AvatarType.CAT),
             createdAtEpochMillis = now,
             updatedAtEpochMillis = now
         )
-        _profiles.update { it + newProfile }
+        updateProfiles { it + newProfile }
         _activeProfileId.value = newProfile.id
+        enqueueProfileWrite { saveActiveProfileId(newProfile.id) }
         return newProfile
     }
 
     fun updateProfile(updated: ChildProfile) {
-        _profiles.update { list ->
+        updateProfiles { list ->
             list.map { if (it.id == updated.id) updated else it }
         }
     }
 
     fun unlockWardrobeItem(itemId: String) {
+        val isNew = itemId !in _unlockedItemIds.value
         _unlockedItemIds.update { it + itemId }
+        if (isNew) enqueueProfileWrite { saveUnlockedItem(itemId, "REWARD") }
     }
 
     fun equipItemOnActiveProfile(slot: EquipmentSlot, itemId: String?) {
         val activeId = _activeProfileId.value ?: return
         val now = Clock.System.now().toEpochMilliseconds()
-        _profiles.update { list ->
+        updateProfiles { list ->
             list.map { profile ->
                 if (profile.id != activeId) profile
                 else {
@@ -253,7 +404,7 @@ class LixoRepository(
     fun selectAvatarTypeOnActiveProfile(avatarType: AvatarType) {
         val activeId = _activeProfileId.value ?: return
         val now = Clock.System.now().toEpochMilliseconds()
-        _profiles.update { list ->
+        updateProfiles { list ->
             list.map { profile ->
                 if (profile.id != activeId || !profile.unlockedAvatars.contains(avatarType)) profile
                 else profile.copy(
@@ -271,7 +422,7 @@ class LixoRepository(
     ) {
         val activeId = _activeProfileId.value ?: return
         val now = Clock.System.now().toEpochMilliseconds()
-        _profiles.update { list ->
+        updateProfiles { list ->
             list.map { profile ->
                 if (profile.id != activeId) profile
                 else profile.copy(
@@ -292,6 +443,7 @@ class LixoRepository(
             currentForProfile[progress.levelId] = progress
             map + (progress.profileId to currentForProfile)
         }
+        enqueueProfileWrite { saveLevelProgress(progress) }
     }
 
     fun saveDailyActivity(record: DailyActivityRecord) {
@@ -584,9 +736,15 @@ class LixoRepository(
                 .filter { it.levelId in syncedLevelIds }
 
             if (remoteTasks.isNotEmpty()) {
+                val levelRewardPool = buildLevelRewardPool(_wardrobeCatalog.value)
                 _tasksById.update { current ->
                     val next = current.toMutableMap()
-                    remoteTasks.forEach { task -> next[task.id] = task }
+                    remoteTasks.forEach { task ->
+                        // The app owns wardrobe item ids (doc/plans/002); any remote rewardItemId is ignored.
+                        val rewardItemId = current[task.id]?.rewardItemId
+                            ?: mergedLevelsById[task.levelId]?.order?.let { levelRewardItemIdFor(it, levelRewardPool) }
+                        next[task.id] = task.copy(rewardItemId = rewardItemId)
+                    }
                     next
                 }
             }
@@ -599,6 +757,8 @@ class LixoRepository(
     }
 
     companion object {
+        const val DEBUG_SAGA_PROFILE_ID = "profile_child_1"
+
         fun splitSwedishSyllablesHeuristic(word: String): String {
             if (word.length <= 4) return word
             val vowels = setOf('a', 'e', 'i', 'o', 'u', 'y', 'å', 'ä', 'ö')
@@ -757,6 +917,46 @@ class LixoRepository(
         }
 
         /**
+         * Curated, app-owned pool for level `rewardItemId`s (doc/plans/002-level-reward-item-ids.md):
+         * the app, not curriculum content, is the single source of truth for which catalog item a
+         * level rewards. Chest-eligible items (see [ProgressionAndGiftEngine.isChestEligible]),
+         * excluding the tutorial starter hat, are split into items preferred for the onboarding
+         * track ([ProgressionAndGiftEngine.isOnboardingPreferred]) and the rest, each round-robined
+         * across equipment slots so no single slot dominates; preferred items come first so that
+         * orders 1..160 draw from COMMON/UNCOMMON, non-star-curve items whenever possible.
+         */
+        fun buildLevelRewardPool(wardrobeItems: List<WardrobeItem>): List<WardrobeItem> {
+            val eligible = wardrobeItems.filter {
+                ProgressionAndGiftEngine.isChestEligible(it) && it.id != BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID
+            }
+            val (preferred, rest) = eligible.partition { ProgressionAndGiftEngine.isOnboardingPreferred(it) }
+            return roundRobinBySlot(preferred) + roundRobinBySlot(rest)
+        }
+
+        /**
+         * Round-robins [items] across all equipment slots, so a reward pool indexed in order
+         * doesn't over-represent any one slot (doc/plans/002-level-reward-item-ids.md).
+         */
+        private fun roundRobinBySlot(items: List<WardrobeItem>): List<WardrobeItem> {
+            val bySlot = EquipmentSlot.entries.associateWith { slot -> items.filter { it.slot == slot } }
+            val maxPerSlot = bySlot.values.maxOfOrNull { it.size } ?: 0
+            return buildList {
+                for (i in 0 until maxPerSlot) {
+                    for (slot in EquipmentSlot.entries) {
+                        bySlot[slot]?.getOrNull(i)?.let { add(it) }
+                    }
+                }
+            }
+        }
+
+        /**
+         * Looks up the curated `rewardItemId` for a level's [order] in [pool]
+         * (doc/plans/002-level-reward-item-ids.md). Returns null for an invalid order or empty pool.
+         */
+        fun levelRewardItemIdFor(order: Int, pool: List<WardrobeItem>): String? =
+            if (order < 1 || pool.isEmpty()) null else pool[(order - 1) % pool.size].id
+
+        /**
          * Builds the 160 campaign levels + tasks. Swedish (40) and English (20) are interleaved
          * across orders 1..100 (order%5==0 -> English, else even -> math slot, else Swedish);
          * the 100 math levels are built separately from [MathCurriculum] and sit at the even,
@@ -770,25 +970,9 @@ class LixoRepository(
 
             val biomes = MathCurriculum.BIOMES
 
-            // Reward pool for each level's `rewardItemId`, round-robin across all 9 equipment
-            // slots. `wardrobeItems.getOrNull(order % wardrobeItems.size)` previously indexed
-            // straight into the catalog, whose first ~160 entries are almost all HAT items (the
-            // handmade items + the first couple of generated slots), so orders 1..160 only ever
-            // rewarded a few slots. Achievement-gated and weekly-streak-set-piece items are
-            // excluded here (they have their own unlock path), and generated items are preferred
-            // (kept in their generator order) over the handful of handmade ones.
-            val levelRewardPool: List<WardrobeItem> = run {
-                val eligible = wardrobeItems.filter { it.unlockAchievementId == null && !it.isWeeklyStreakSetPiece }
-                val bySlot = EquipmentSlot.entries.associateWith { slot -> eligible.filter { it.slot == slot } }
-                val maxPerSlot = bySlot.values.maxOfOrNull { it.size } ?: 0
-                buildList {
-                    for (i in 0 until maxPerSlot) {
-                        for (slot in EquipmentSlot.entries) {
-                            bySlot[slot]?.getOrNull(i)?.let { add(it) }
-                        }
-                    }
-                }
-            }
+            // Reward pool for each level's `rewardItemId` (doc/plans/002-level-reward-item-ids.md):
+            // see [buildLevelRewardPool].
+            val levelRewardPool = buildLevelRewardPool(wardrobeItems)
 
             // Ordered by difficulty: 40 unique stories, one per Swedish level (no repeats).
             // 1-14 = course_sv_1 (grade 1), 15-27 = course_sv_2 (grade 2), 28-40 = course_sv_3 (grade 3).
@@ -859,7 +1043,7 @@ class LixoRepository(
                 }
                 val levelId = "level_$order"
                 val taskId = "task_$order"
-                val rewardItem = levelRewardPool.getOrNull(order % levelRewardPool.size)
+                val rewardItemId = levelRewardItemIdFor(order, levelRewardPool)
                 val refWpm = BalanceConfig.referenceWpmForDifficulty(difficulty)
 
                 val currentStory = if (subject == Subject.SWEDISH) {
@@ -894,7 +1078,7 @@ class LixoRepository(
                             type = TaskType.READING,
                             subject = Subject.SWEDISH,
                             textContent = currentStory?.second,
-                            rewardItemId = rewardItem?.id
+                            rewardItemId = rewardItemId
                         )
                     }
                     else -> {
@@ -927,7 +1111,7 @@ class LixoRepository(
                                     simpleSentenceSv = "Riddaren bor i ett slott."
                                 )
                             ),
-                            rewardItemId = rewardItem?.id
+                            rewardItemId = rewardItemId
                         )
                     }
                 }
@@ -939,7 +1123,7 @@ class LixoRepository(
                 val order = spec.order
                 val levelId = "level_$order"
                 val taskId = "task_$order"
-                val rewardItem = levelRewardPool.getOrNull(order % levelRewardPool.size)
+                val rewardItemId = levelRewardItemIdFor(order, levelRewardPool)
 
                 levels.add(
                     CampaignLevel(
@@ -962,13 +1146,31 @@ class LixoRepository(
                     type = TaskType.MATH,
                     subject = Subject.MATH,
                     mathProblems = MathCurriculum.buildMathProblems(n, order),
-                    rewardItemId = rewardItem?.id
+                    rewardItemId = rewardItemId
                 )
             }
 
             return levels.sortedBy { it.order } to tasks
         }
 
+        /** Titles for the 8 star-collection achievements, keyed by [BalanceConfig.STAR_ACHIEVEMENT_MILESTONES] entry. */
+        private val STAR_ACHIEVEMENT_TITLES_SV: Map<Int, String> = mapOf(
+            20 to "Stjärnfrö",
+            45 to "Stjärnplockare",
+            75 to "Stjärnsamlare",
+            120 to "Stjärnjägare",
+            175 to "Stjärnväktare",
+            250 to "Stjärnkapten",
+            350 to "Stjärnmästare",
+            480 to "Stjärnlegend (alla stjärnor)"
+        )
+
+        /**
+         * Seed Epic & Legendary Achievements, plus the 8 star-collection achievements
+         * (doc/plans/004-achievement-tracking.md). All start at 0 progress / locked: progress and
+         * unlocks are tracked per-profile ([ChildProfile.achievementProgress] /
+         * [ChildProfile.unlockedAchievementIds]), not in this static list.
+         */
         fun buildSeedAchievements(): List<Achievement> = listOf(
             Achievement(
                 id = "ach_speed_reader_5",
@@ -977,7 +1179,7 @@ class LixoRepository(
                 rarity = Rarity.EPIC,
                 requiresAiMode = true,
                 targetCount = 5,
-                currentCount = 2,
+                currentCount = 0,
                 isUnlocked = false,
                 rewardItemId = "item_shoulders_back_sv_cape_1"
             ),
@@ -988,7 +1190,7 @@ class LixoRepository(
                 rarity = Rarity.LEGENDARY,
                 requiresAiMode = true,
                 targetCount = 10,
-                currentCount = 4,
+                currentCount = 0,
                 isUnlocked = false,
                 rewardItemId = "item_armor_shirt_crystal_voice"
             ),
@@ -999,7 +1201,7 @@ class LixoRepository(
                 rarity = Rarity.EPIC,
                 requiresAiMode = false,
                 targetCount = 15,
-                currentCount = 6,
+                currentCount = 0,
                 isUnlocked = false,
                 rewardItemId = "item_hand_right_clock_money"
             ),
@@ -1010,10 +1212,25 @@ class LixoRepository(
                 rarity = Rarity.LEGENDARY,
                 requiresAiMode = false,
                 targetCount = 7,
-                currentCount = 1,
+                currentCount = 0,
                 isUnlocked = false,
                 rewardItemId = "item_hat_weekly_hero"
             )
-        )
+        ) + BalanceConfig.STAR_ACHIEVEMENT_MILESTONES.map { stars ->
+            val id = BalanceConfig.starAchievementId(stars)
+            val item = GENERATED_WARDROBE_ITEMS.firstOrNull { it.unlockAchievementId == id }
+                ?: error("No generated wardrobe item has unlockAchievementId=$id; re-run tools/item_pipeline/generate_wardrobe_items.py")
+            Achievement(
+                id = id,
+                titleSv = STAR_ACHIEVEMENT_TITLES_SV.getValue(stars),
+                descriptionSv = "Samla $stars stjärnor i kampanjen.",
+                rarity = item.rarity,
+                requiresAiMode = false,
+                targetCount = stars,
+                currentCount = 0,
+                isUnlocked = false,
+                rewardItemId = item.id
+            )
+        }
     }
 }

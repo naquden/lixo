@@ -157,7 +157,11 @@ data class ChildProfile(
     val dailyMathGoalProblems: Int = 10,
     val createdAtEpochMillis: Long = 0L,
     val updatedAtEpochMillis: Long = 0L,
-    val chestProgressHalfPoints: Int = 0
+    val chestProgressHalfPoints: Int = 0,
+    val achievementProgress: Map<String, Int> = emptyMap(),
+    val achievementCountedLevelIds: Map<String, Set<String>> = emptyMap(),
+    val unlockedAchievementIds: Set<String> = emptySet(),
+    val pendingAchievementRewardIds: Set<String> = emptySet()
 )
 
 /**
@@ -197,6 +201,22 @@ data class WardrobeItem(
     val pattern: ItemPattern = ItemPattern.NONE,
     val ornament: ItemOrnament = ItemOrnament.NONE
 )
+
+/**
+ * Source of a single unlocked reward within a run (`project.md` §2 "Belöningskurva"). The
+ * declaration order below is also the celebration order within a run: progression (LEVEL or
+ * STARS, which share one progression slot per run), then FLITKISTA, GIFT, WEEKLY_STREAK and
+ * finally ACHIEVEMENT.
+ */
+enum class RewardSource { LEVEL, STARS, FLITKISTA, GIFT, WEEKLY_STREAK, ACHIEVEMENT }
+
+/**
+ * A single reward moment produced by [se.lixo.app.domain.engine.ProgressionAndGiftEngine.recordLevelCompletion]:
+ * the unlocked item and which [RewardSource] produced it. Not persisted. [labelDetailSv] carries an
+ * extra celebration detail for the reward's label, e.g. the achievement's `titleSv` for ACHIEVEMENT
+ * rewards ("Prestation: Blixtläsaren").
+ */
+data class UnlockedReward(val item: WardrobeItem, val source: RewardSource, val labelDetailSv: String? = null)
 
 /**
  * Firestore / local Course model (`courses/{courseId}`).
@@ -275,6 +295,7 @@ data class HomeworkTask(
     val textContent: String? = null,
     val mathProblems: List<MathProblem> = emptyList(),
     val englishItems: List<EnglishGlosaItem> = emptyList(),
+    /** App-assigned (LixoRepository.levelRewardItemIdFor); curriculum JSON/Firestore must not carry it. Used as the onboarding-track item, see doc/plans/002. */
     val rewardItemId: String? = null
 )
 

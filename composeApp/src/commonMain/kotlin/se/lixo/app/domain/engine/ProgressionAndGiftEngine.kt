@@ -4,6 +4,7 @@ import kotlin.math.max
 import kotlin.random.Random
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
+import se.lixo.app.domain.model.Achievement
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.CampaignLevel
@@ -11,7 +12,9 @@ import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.DailyActivityRecord
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.Rarity
+import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.Subject
+import se.lixo.app.domain.model.UnlockedReward
 import se.lixo.app.domain.model.WardrobeItem
 
 data class GiftRollOutcome(
@@ -25,12 +28,16 @@ data class LevelCompletionOutcome(
     val updatedLevelProgress: LevelProgress,
     val netNewStarsAwarded: Int,
     val newlyUnlockedAvatars: Set<AvatarType>,
-    val newlyUnlockedItems: List<WardrobeItem>,
+    val newlyUnlockedRewards: List<UnlockedReward>,
     val giftOutcome: GiftRollOutcome?,
     val streakIncrementedToday: Boolean,
     val chestOutcome: GiftRollOutcome? = null,
-    val chestPointsAwardedHalf: Int = 0
-)
+    val chestPointsAwardedHalf: Int = 0,
+    val newlyUnlockedAchievements: List<Achievement> = emptyList()
+) {
+    /** Derived view of [newlyUnlockedRewards] for call sites that only care about the items. */
+    val newlyUnlockedItems: List<WardrobeItem> get() = newlyUnlockedRewards.map { it.item }
+}
 
 /**
  * Progression, Linear Campaign, Calendar-Day Streak, and Non-Lootbox Gift Engine
@@ -54,10 +61,52 @@ data class LevelCompletionOutcome(
  *   gifts: nothing unlocks. The pool has no subject bias.
  * - Calendar-Day Streak (00:00–24:00 local time): a streak day is earned when at least 1 reading task
  *   AND 1 math task are completed on that calendar date.
+ * - Reward pacing (`doc/plans/001-reward-pacing-early-chests.md`, `project.md` §2 "Belöningskurva"):
+ *   three layers avoid both floods and droughts. (1) An **onboarding track**
+ *   ([BalanceConfig.ONBOARDING_REWARD_LEVELS]) awards one item on specific levels-cleared counts,
+ *   tapering from every level to every 2nd to every 3rd. (2) **Flitkistan**, unchanged. (3) A
+ *   **star curve** that only starts once the onboarding track has mostly run its course. At most
+ *   [BalanceConfig.MAX_ITEMS_PER_SOURCE_PER_RUN] item is awarded per [RewardSource] per run; LEVEL
+ *   and STARS share one "progression" slot, so an onboarding/task item in a run defers any star
+ *   unlock to a later run (the star item stays eligible, since `unlockStarRequirement <= newTotalStars`
+ *   keeps holding). Other sources may stack in the same run. The celebration order of
+ *   [LevelCompletionOutcome.newlyUnlockedRewards] is: progression (LEVEL or STARS), FLITKISTA,
+ *   GIFT, WEEKLY_STREAK, ACHIEVEMENT. The onboarding-track
+ *   item is the level's curated, app-owned `rewardItemId`
+ *   ([se.lixo.app.data.repository.LixoRepository.buildLevelRewardPool], see
+ *   `doc/plans/002-level-reward-item-ids.md`) when it resolves, is unowned, and is chest-eligible;
+ *   otherwise it falls back to [rollOnboardingItem]. Off-schedule clears and replays ignore
+ *   `rewardItemIdForTask` entirely.
+ * - Achievements (`doc/plans/004-achievement-tracking.md`): [AchievementEngine] evaluates the
+ *   profile's definitions against a [RunFacts] built from the run. At most
+ *   [BalanceConfig.MAX_ITEMS_PER_SOURCE_PER_RUN] achievement reward (1) is handed out per run, in
+ *   `achievementDefinitions` order, merging any already-pending ids
+ *   ([ChildProfile.pendingAchievementRewardIds]) with newly unlocked ones; the rest stay queued
+ *   for a later run.
  */
 class ProgressionAndGiftEngine(
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val achievementEngine: AchievementEngine = AchievementEngine()
 ) {
+
+    companion object {
+        /**
+         * Shared eligibility filter for chest/onboarding/level rolls: excludes weekly-streak set
+         * pieces and achievement-linked items, which have their own dedicated reward moments.
+         */
+        fun isChestEligible(item: WardrobeItem): Boolean =
+            !item.isWeeklyStreakSetPiece && item.unlockAchievementId == null
+
+        /**
+         * Items preferred for the onboarding track (`doc/plans/002-level-reward-item-ids.md`):
+         * chest-eligible, COMMON/UNCOMMON and not part of the star curve, so onboarding never eats
+         * into the star curve's items.
+         */
+        fun isOnboardingPreferred(item: WardrobeItem): Boolean =
+            isChestEligible(item) &&
+                (item.rarity == Rarity.COMMON || item.rarity == Rarity.UNCOMMON) &&
+                item.unlockStarRequirement == 0
+    }
 
     /**
      * Checks whether a campaign level is unlocked for the given profile.
@@ -102,6 +151,16 @@ class ProgressionAndGiftEngine(
     /**
      * Processes level completion, calculates net star gain (preventing farming on maxed levels),
      * unlocks eligible avatars/items, rolls a repetition gift if applicable, and updates calendar-day streak.
+     *
+     * Rewards are collected as [UnlockedReward]s in celebration order: progression (curated level
+     * item or onboarding roll, else a star-threshold item — these share one slot per run), then
+     * Flitkistan, the repetition gift, and the weekly streak set piece. See the class KDoc for the
+     * full reward-pacing rules.
+     *
+     * @param rewardItemIdForTask the level's app-owned curated item id
+     * ([se.lixo.app.data.repository.LixoRepository.levelRewardItemIdFor]), used as the
+     * onboarding-track item on scheduled first clears only; ignored on replays and off-schedule
+     * clears.
      */
     fun recordLevelCompletion(
         profile: ChildProfile,
@@ -114,10 +173,13 @@ class ProgressionAndGiftEngine(
         completedTimedChallenge: Boolean,
         eligibleForRepetitionGift: Boolean,
         rewardItemIdForTask: String?,
+        clearedLevelsCountBeforeRun: Int,
         allWardrobeItems: List<WardrobeItem>,
         currentlyUnlockedItemIds: Set<String>,
         todayActivityBeforeRun: DailyActivityRecord,
-        nowEpochMillis: Long
+        nowEpochMillis: Long,
+        achievementDefinitions: List<Achievement> = emptyList(),
+        runFacts: RunFacts? = null
     ): LevelCompletionOutcome {
         val clampedStars = earnedStarsThisRun.coerceIn(1, 3)
         val previousBestStars = previousProgress?.starsEarned ?: 0
@@ -141,51 +203,58 @@ class ProgressionAndGiftEngine(
             updatedAtEpochMillis = nowEpochMillis
         )
 
-        val newlyUnlockedItems = mutableListOf<WardrobeItem>()
+        val newlyUnlockedRewards = mutableListOf<UnlockedReward>()
         val workingUnlockedIds = currentlyUnlockedItemIds.toMutableSet()
 
-        // 1. Direct level reward item on first completion
-        if (rewardItemIdForTask != null && !workingUnlockedIds.contains(rewardItemIdForTask)) {
-            allWardrobeItems.find { it.id == rewardItemIdForTask }?.let { item ->
-                newlyUnlockedItems.add(item)
-                workingUnlockedIds.add(item.id)
-            }
+        fun award(item: WardrobeItem, source: RewardSource, labelDetailSv: String? = null) {
+            newlyUnlockedRewards += UnlockedReward(item, source, labelDetailSv)
+            workingUnlockedIds += item.id
         }
 
-        // 2. Star-threshold item unlocks matching subject
-        for (item in allWardrobeItems) {
-            if (!workingUnlockedIds.contains(item.id) &&
-                item.unlockAchievementId == null &&
-                !item.isWeeklyStreakSetPiece &&
-                item.unlockStarRequirement in 1..newTotalStars
-            ) {
-                newlyUnlockedItems.add(item)
-                workingUnlockedIds.add(item.id)
+        // 1. Progression slot: at most 1 item, shared by LEVEL (curated level item or onboarding
+        // roll) and STARS. An onboarding/task item in this run defers any star unlock to a later run.
+
+        // 1a/1b. Onboarding track (`BalanceConfig.ONBOARDING_REWARD_LEVELS`): on a scheduled first
+        // clear, award the level's curated, app-owned item (`rewardItemIdForTask`,
+        // doc/plans/002-level-reward-item-ids.md) if it resolves to a catalog item, isn't already
+        // owned, and is chest-eligible; otherwise fall back to 001's random roll. Off-schedule
+        // clears and replays never award a level item.
+        val onOnboardingSlot = !isReplay && (clearedLevelsCountBeforeRun + 1) in BalanceConfig.ONBOARDING_REWARD_LEVELS
+        val taskRewardItem = rewardItemIdForTask?.let { id ->
+            allWardrobeItems.find { it.id == id }.also {
+                if (it == null) println("LixoRewards: WARN ${level.id} rewardItemId=$id is not in the wardrobe catalog; using the onboarding roll instead")
             }
         }
+        val curatedItem = taskRewardItem?.takeIf { onOnboardingSlot && it.id !in workingUnlockedIds && isChestEligible(it) }
+        val progressionItem = when {
+            !onOnboardingSlot -> null
+            curatedItem != null -> curatedItem.also { println("LixoRewards: ${level.id} clear #${clearedLevelsCountBeforeRun + 1} awarded curated level item ${it.id}") }
+            else -> rollOnboardingItem(allWardrobeItems, workingUnlockedIds)
+        }
+        progressionItem?.let { award(it, RewardSource.LEVEL) }
 
-        // 3. Avatar unlocks via star milestones
+        // 1c. Star-threshold item unlocks, lowest eligible first, limited to the remaining
+        // progression slot(s) for this run.
+        val progressionSlotsLeft = BalanceConfig.MAX_ITEMS_PER_SOURCE_PER_RUN - newlyUnlockedRewards.size
+        if (progressionSlotsLeft > 0) {
+            allWardrobeItems
+                .filter { item ->
+                    item.id !in workingUnlockedIds &&
+                        item.unlockAchievementId == null &&
+                        !item.isWeeklyStreakSetPiece &&
+                        item.unlockStarRequirement in 1..newTotalStars
+                }
+                .sortedWith(compareBy({ it.unlockStarRequirement }, { it.id }))
+                .take(progressionSlotsLeft)
+                .forEach { award(it, RewardSource.STARS) }
+        }
+
+        // 2. Avatar unlocks via star milestones
         val newlyUnlockedAvatars = AvatarType.entries
             .filter { !profile.unlockedAvatars.contains(it) && newTotalStars >= it.unlockStarsRequired }
             .toSet()
 
-        // 4. Extra repetition gift roll (`project.md` §2 "Extra repetition ger en present med ett föremål. Dubblett -> ingenting händer.")
-        val giftOutcome = if (isReplay && eligibleForRepetitionGift && allWardrobeItems.isNotEmpty()) {
-            val outcome = rollPresentGift(
-                subject = level.subject,
-                allItems = allWardrobeItems,
-                unlockedItemIds = workingUnlockedIds
-            )
-            if (outcome.newlyUnlockedItem != null) {
-                newlyUnlockedItems.add(outcome.newlyUnlockedItem)
-                workingUnlockedIds.add(outcome.newlyUnlockedItem.id)
-            }
-            outcome
-        } else {
-            null
-        }
-
-        // 4b. Effort chest "Flitkistan" points (`project.md` §2 "Presenter / gåvor"): 1 point for a
+        // 3. Effort chest "Flitkistan" points (`project.md` §2 "Presenter / gåvor"): 1 point for a
         // run that earns new stars or clears a new level, 0.5 point for a replay with no new stars,
         // 0 in manual / non-gift-eligible mode. At 10 points (20 half-points) a chest is rolled and
         // the counter keeps the overflow.
@@ -198,8 +267,21 @@ class ProgressionAndGiftEngine(
         val chestOutcome = if (chestProgress >= BalanceConfig.CHEST_POINTS_THRESHOLD_HALF) {
             chestProgress -= BalanceConfig.CHEST_POINTS_THRESHOLD_HALF
             rollChest(allWardrobeItems, workingUnlockedIds)?.also { o ->
-                o.newlyUnlockedItem?.let { newlyUnlockedItems.add(it); workingUnlockedIds.add(it.id) }
+                o.newlyUnlockedItem?.let { award(it, RewardSource.FLITKISTA) }
             }
+        } else {
+            null
+        }
+
+        // 4. Extra repetition gift roll (`project.md` §2 "Extra repetition ger en present med ett föremål. Dubblett -> ingenting händer.")
+        val giftOutcome = if (isReplay && eligibleForRepetitionGift && allWardrobeItems.isNotEmpty()) {
+            val outcome = rollPresentGift(
+                subject = level.subject,
+                allItems = allWardrobeItems,
+                unlockedItemIds = workingUnlockedIds
+            )
+            outcome.newlyUnlockedItem?.let { award(it, RewardSource.GIFT) }
+            outcome
         } else {
             null
         }
@@ -229,9 +311,38 @@ class ProgressionAndGiftEngine(
 
         // 6. Unlock Weekly Streak Set piece if reaching 7-day streak multiple
         if (didIncrementStreak && nextStreakDays > 0 && nextStreakDays % BalanceConfig.WEEKLY_STREAK_DAYS_FOR_SET_REWARD == 0) {
-            allWardrobeItems.firstOrNull { it.isWeeklyStreakSetPiece && !workingUnlockedIds.contains(it.id) }?.let { setPiece ->
-                newlyUnlockedItems.add(setPiece)
-                workingUnlockedIds.add(setPiece.id)
+            allWardrobeItems.firstOrNull {
+                it.isWeeklyStreakSetPiece && it.unlockAchievementId == null && it.id !in workingUnlockedIds
+            }?.let { setPiece ->
+                award(setPiece, RewardSource.WEEKLY_STREAK)
+            }
+        }
+
+        // 7. Achievements (`doc/plans/004-achievement-tracking.md`): evaluate against the
+        // post-run streak/star values, then award at most 1 chest this run (progression-defined
+        // order), merging already-pending ids with newly unlocked ones; the rest stay pending.
+        val facts = (runFacts ?: RunFacts(level.subject, level.id, completedInAiMode))
+            .copy(streakDaysAfterRun = nextStreakDays, totalStarsAfterRun = newTotalStars)
+        val evaluation = achievementEngine.evaluate(facts, AchievementState.of(profile), achievementDefinitions)
+        val newlyIds = evaluation.newlyUnlocked.map { it.id }.toSet()
+        val queue = achievementDefinitions.filter { it.id in profile.pendingAchievementRewardIds || it.id in newlyIds }
+        var slotsLeft = BalanceConfig.MAX_ITEMS_PER_SOURCE_PER_RUN
+        val stillPending = linkedSetOf<String>()
+        for (ach in queue) {
+            val item = allWardrobeItems.find { it.id == ach.rewardItemId }
+            if (item == null) {
+                println("LixoRewards: WARN achievement ${ach.id} rewardItemId=${ach.rewardItemId} not in catalog")
+                continue
+            }
+            if (item.id in workingUnlockedIds) {
+                continue
+            }
+            if (slotsLeft > 0) {
+                award(item, RewardSource.ACHIEVEMENT, ach.titleSv)
+                slotsLeft--
+                println("LixoRewards: achievement ${ach.id} awarded ${item.id}")
+            } else {
+                stillPending += ach.id
             }
         }
 
@@ -244,7 +355,11 @@ class ProgressionAndGiftEngine(
             bestStreakDays = nextBestStreak,
             lastStreakDateIso = nextLastStreakDate,
             updatedAtEpochMillis = nowEpochMillis,
-            chestProgressHalfPoints = chestProgress
+            chestProgressHalfPoints = chestProgress,
+            achievementProgress = evaluation.state.progress,
+            achievementCountedLevelIds = evaluation.state.countedLevelIds,
+            unlockedAchievementIds = evaluation.state.unlockedIds,
+            pendingAchievementRewardIds = stillPending
         )
 
         return LevelCompletionOutcome(
@@ -252,11 +367,12 @@ class ProgressionAndGiftEngine(
             updatedLevelProgress = updatedProgress,
             netNewStarsAwarded = netNewStars,
             newlyUnlockedAvatars = newlyUnlockedAvatars,
-            newlyUnlockedItems = newlyUnlockedItems,
+            newlyUnlockedRewards = newlyUnlockedRewards,
             giftOutcome = giftOutcome,
             streakIncrementedToday = didIncrementStreak,
             chestOutcome = chestOutcome,
-            chestPointsAwardedHalf = chestPointsAwardedHalf
+            chestPointsAwardedHalf = chestPointsAwardedHalf,
+            newlyUnlockedAchievements = evaluation.newlyUnlocked
         )
     }
 
@@ -269,8 +385,9 @@ class ProgressionAndGiftEngine(
         allItems: List<WardrobeItem>,
         unlockedItemIds: Set<String>
     ): GiftRollOutcome {
-        val candidatePool = allItems.filter { it.subjectTheme == subject }.ifEmpty { allItems }
-        return rollWeighted(candidatePool, unlockedItemIds)
+        val eligible = allItems.filter { isChestEligible(it) }.ifEmpty { allItems }
+        val pool = eligible.filter { it.subjectTheme == subject }.ifEmpty { eligible }
+        return rollWeighted(pool, unlockedItemIds)
     }
 
     /**
@@ -282,9 +399,25 @@ class ProgressionAndGiftEngine(
         allItems: List<WardrobeItem>,
         unlockedItemIds: Set<String>
     ): GiftRollOutcome? {
-        val candidatePool = allItems.filter { !it.isWeeklyStreakSetPiece && it.unlockAchievementId == null }
+        val candidatePool = allItems.filter { isChestEligible(it) }
         if (candidatePool.isEmpty()) return null
         return rollWeighted(candidatePool, unlockedItemIds)
+    }
+
+    /**
+     * Rolls the onboarding-track item for a run matching [BalanceConfig.ONBOARDING_REWARD_LEVELS]
+     * (`doc/plans/001-reward-pacing-early-chests.md`). This is the fallback used when the level's
+     * curated item (`rewardItemIdForTask`, doc/plans/002-level-reward-item-ids.md) is missing or
+     * already owned. The pool excludes already-owned items up front, so an onboarding slot can
+     * never land a duplicate. Prefers COMMON/UNCOMMON items that aren't also part of the star curve
+     * (`unlockStarRequirement == 0`), so onboarding never eats into the star curve's items; falls
+     * back to the whole pool if that's empty. Returns null if there's nothing left to award.
+     */
+    fun rollOnboardingItem(allItems: List<WardrobeItem>, unlockedItemIds: Set<String>): WardrobeItem? {
+        val pool = allItems.filter { isChestEligible(it) && it.id !in unlockedItemIds }
+        if (pool.isEmpty()) return null
+        val preferred = pool.filter { isOnboardingPreferred(it) }
+        return rollWeighted(preferred.ifEmpty { pool }, unlockedItemIds).newlyUnlockedItem
     }
 
     /**

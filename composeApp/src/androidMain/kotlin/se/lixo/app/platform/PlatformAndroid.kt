@@ -33,6 +33,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
+import se.lixo.app.data.local.ProfileStore
+import se.lixo.app.data.local.RoomProfileStore
 import java.util.Locale
 
 object AndroidPlatformContext {
@@ -342,24 +344,35 @@ actual fun createPlatformTextToSpeechEngine(): TextToSpeechEngine =
 
 private var cachedLixoDatabase: LixoDatabase? = null
 
+private fun buildLixoDatabase(ctx: Context, fileName: String): LixoDatabase =
+    Room.databaseBuilder<LixoDatabase>(
+        context = ctx,
+        name = ctx.getDatabasePath(fileName).absolutePath
+    )
+        .setDriver(BundledSQLiteDriver())
+        .setQueryCoroutineContext(Dispatchers.IO)
+        // Every LixoDatabase version bump needs a Migration in LIXO_MIGRATIONS (no destructive fallback).
+        .addMigrations(*LIXO_MIGRATIONS)
+        .build()
+
 actual fun createPlatformLixoDatabase(): LixoDatabase? {
     cachedLixoDatabase?.let { return it }
     val ctx = AndroidPlatformContext.applicationContext ?: return null
     return try {
-        Room.databaseBuilder<LixoDatabase>(
-            context = ctx,
-            name = ctx.getDatabasePath("lixo.db").absolutePath
-        )
-            .setDriver(BundledSQLiteDriver())
-            .setQueryCoroutineContext(Dispatchers.IO)
-            // Every LixoDatabase version bump needs a Migration in LIXO_MIGRATIONS (no destructive fallback).
-            .addMigrations(*LIXO_MIGRATIONS)
-            .build()
-            .also { cachedLixoDatabase = it }
+        buildLixoDatabase(ctx, "lixo.db").also { cachedLixoDatabase = it }
     } catch (_: Throwable) {
         null
     }
 }
+
+/**
+ * For instrumented tests only: builds a [ProfileStore] backed by a separate Room database file
+ * (not "lixo.db" and not cached), so a test never reads or writes the real app database.
+ * androidApp has no Room on its androidTest classpath, so this returns the [ProfileStore]
+ * interface rather than [LixoDatabase] / `LixoDao` directly.
+ */
+fun createAndroidProfileStore(context: Context, dbFileName: String): ProfileStore =
+    RoomProfileStore(buildLixoDatabase(context.applicationContext, dbFileName).lixoDao())
 
 actual object PendingEmailLinkStorage {
     private const val PREFS_NAME = "lixo_email_link_auth_prefs"

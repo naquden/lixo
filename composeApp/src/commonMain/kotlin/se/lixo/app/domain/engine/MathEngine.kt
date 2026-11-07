@@ -22,7 +22,9 @@ data class MathSessionScoreResult(
     val totalProblems: Int,
     val totalWrongAttempts: Int,
     val totalHintsUsed: Int,
-    val completedTimedChallenge: Boolean
+    val completedTimedChallenge: Boolean,
+    /** Problems solved first-try (no wrong attempts, no hints), grouped by type (doc/plans/004). */
+    val firstTryCorrectByType: Map<MathProblemType, Int> = emptyMap()
 )
 
 /**
@@ -73,12 +75,18 @@ class MathEngine {
             (if (elapsedSeconds <= timeRequirementSeconds) 1 else 0) +
             (if (totalWrong == 0) 1 else 0)
 
+        val firstTryCorrectByType = states
+            .filter { it.isSolved && it.wrongAttempts == 0 && it.hintsRevealed == 0 }
+            .groupingBy { it.problem.type }
+            .eachCount()
+
         return MathSessionScoreResult(
             starsEarned = stars,
             totalProblems = states.size,
             totalWrongAttempts = totalWrong,
             totalHintsUsed = totalHints,
-            completedTimedChallenge = isTimedChallenge && elapsedSeconds <= timeRequirementSeconds
+            completedTimedChallenge = isTimedChallenge && elapsedSeconds <= timeRequirementSeconds,
+            firstTryCorrectByType = firstTryCorrectByType
         )
     }
 

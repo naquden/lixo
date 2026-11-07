@@ -64,7 +64,10 @@ import se.lixo.app.domain.model.TaskType
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.celebration.CelebrationSequenceHost
+import se.lixo.app.ui.components.celebration.FlitChestMeter
 import se.lixo.app.ui.components.celebration.LevelCompleteCard
+import se.lixo.app.ui.components.celebration.chestFillAnimation
+import se.lixo.app.ui.components.celebration.chestMeterStartDelayMillis
 import se.lixo.app.ui.feedback.SfxCue
 import se.lixo.app.ui.feedback.rememberLixoHaptics
 import se.lixo.app.ui.theme.ChoiceCard
@@ -412,18 +415,28 @@ fun MathActivityScreen(
                     showDuplicateChestNote = completion.chestOutcome?.isDuplicate == true,
                     onContinue = onCloseToMap,
                     continueEnabled = celebrationSequenceFinished,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerContent = {
+                        FlitChestMeter(
+                            halfPoints = completion.updatedProfile.chestProgressHalfPoints,
+                            size = 44.dp,
+                            animation = chestFillAnimation(
+                                completion.updatedProfile.chestProgressHalfPoints,
+                                completion.chestPointsAwardedHalf,
+                                completion.chestOutcome != null
+                            ),
+                            startDelayMillis = chestMeterStartDelayMillis(score.starsEarned)
+                        )
+                    }
                 ) {
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = if (completion.chestOutcome != null && completion.chestOutcome.newlyUnlockedItem != null) {
-                            LixoStrings.CHEST_OPENED
-                        } else {
-                            LixoStrings.chestProgress(completion.updatedProfile.chestProgressHalfPoints)
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LixoColors.TextSecondary
-                    )
+                    if (completion.chestOutcome?.newlyUnlockedItem != null) {
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = LixoStrings.CHEST_OPENED,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextSecondary
+                        )
+                    }
                 }
             }
         }

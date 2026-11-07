@@ -43,7 +43,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -593,3 +597,23 @@ fun LixoCircleIconButton(
         LixoIcon(icon = icon, tint = tint, size = size * 0.5f)
     }
 }
+
+/**
+ * Dashed rounded outline for unread yellow (needs-practice) word chips.
+ */
+internal fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: Dp = 1.5.dp): Modifier =
+    this.drawWithCache {
+        val stroke = Stroke(
+            width = strokeWidth.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f)
+        )
+        val radiusPx = cornerRadius.toPx()
+        onDrawWithContent {
+            drawContent()
+            drawRoundRect(
+                color = color,
+                cornerRadius = CornerRadius(radiusPx, radiusPx),
+                style = stroke
+            )
+        }
+    }

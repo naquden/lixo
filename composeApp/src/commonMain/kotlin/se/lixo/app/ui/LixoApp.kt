@@ -36,9 +36,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.Clock
 import se.lixo.app.data.repository.LixoRepository
+import se.lixo.app.domain.engine.AchievementEngine
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
+import se.lixo.app.domain.engine.RunFacts
 import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.DailyActivityRecord
@@ -52,6 +54,7 @@ import se.lixo.app.platform.createPlatformSpeechRecognitionEngine
 import se.lixo.app.platform.createPlatformTextToSpeechEngine
 import se.lixo.app.ui.screens.map.CampaignMapScreen
 import se.lixo.app.ui.screens.math.MathActivityScreen
+import se.lixo.app.ui.screens.onboarding.FirstProfileSetupScreen
 import se.lixo.app.ui.screens.onboarding.ProfileSelectAndTutorialScreen
 import se.lixo.app.ui.screens.parent.ParentGateAndDashboardScreen
 import se.lixo.app.ui.screens.reading.ReadingActivityScreen
@@ -107,6 +110,7 @@ fun LixoApp(
     val friendsByProfile by repository.friendsByProfile.collectAsState()
     val privacySettings by repository.privacySettings.collectAsState()
     val incomingEmailLink by EmailLinkAuthDispatcher.incomingLink.collectAsState()
+    val profilesLoaded by repository.profilesLoaded.collectAsState()
 
     LaunchedEffect(Unit) {
         repository.loadCachedLexicon()
@@ -121,7 +125,7 @@ fun LixoApp(
         }
     }
 
-    val activeProfile = profiles.find { it.id == activeProfileId } ?: profiles.first()
+    val activeProfile = profiles.find { it.id == activeProfileId } ?: profiles.firstOrNull()
     val catalogById = remember(wardrobeCatalog) { wardrobeCatalog.associateBy { it.id } }
     val ttsAvailable by ttsEngine.isAvailable.collectAsState()
     val showSwedishTts = featureFlags.isSwedishTtsSupported && ttsAvailable
@@ -130,6 +134,7 @@ fun LixoApp(
         mutableStateOf(LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL)
     }
     var activeGameplayLevel by remember { mutableStateOf<CampaignLevel?>(null) }
+    var autoStartTutorialForProfileId by remember { mutableStateOf<String?>(null) }
 
     // Selected subject "world" on the campaign map (plan: "Ämnesväljare med tre världar").
     // Survives tab switches/rotation; after finishing a level the child returns to the same world.
@@ -161,7 +166,23 @@ fun LixoApp(
             val playingLevel = activeGameplayLevel
             val playingTask = playingLevel?.let { tasksById[it.taskId] }
 
-            if (playingLevel != null && playingTask != null) {
+            if (!profilesLoaded) {
+                // Profiles are still loading from Room: show just the sky background (no white
+                // flash, no setup-screen flash) instead of deciding too early that there is no
+                // active profile.
+                Box(Modifier.fillMaxSize())
+            } else if (activeProfile == null) {
+                FirstProfileSetupScreen(
+                    ttsEngine = ttsEngine,
+                    showSwedishTtsButtons = showSwedishTts,
+                    onCreateProfile = { name, age ->
+                        val created = repository.createProfile(name, age)
+                        autoStartTutorialForProfileId = created.id
+                        activeGameplayLevel = null
+                        currentDestination = LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL
+                    }
+                )
+            } else if (playingLevel != null && playingTask != null) {
                 // Fullscreen Homework Activity View (Reading, Math, or English)
                 if (playingTask.type == TaskType.READING) {
                     ReadingActivityScreen(
@@ -179,6 +200,7 @@ fun LixoApp(
                             }
                             val todayIso = repository.currentLocalDateIso()
                             val prevProgress = levelProgressByProfile[activeProfile.id]?.get(playingLevel.id)
+                            val clearedLevelsCountBeforeRun = levelProgressByProfile[activeProfile.id].orEmpty().size
                             val todayRecord = dailyActivityByProfile[activeProfile.id]?.get(todayIso)
                                 ?: DailyActivityRecord(activeProfile.id, todayIso)
 
@@ -193,10 +215,20 @@ fun LixoApp(
                                 completedTimedChallenge = scoreResult.eligibleForTimedChallengeReward,
                                 eligibleForRepetitionGift = scoreResult.eligibleForGift,
                                 rewardItemIdForTask = playingTask.rewardItemId,
+                                clearedLevelsCountBeforeRun = clearedLevelsCountBeforeRun,
                                 allWardrobeItems = wardrobeCatalog,
                                 currentlyUnlockedItemIds = unlockedItemIds,
                                 todayActivityBeforeRun = todayRecord,
-                                nowEpochMillis = Clock.System.now().toEpochMilliseconds()
+                                nowEpochMillis = Clock.System.now().toEpochMilliseconds(),
+                                achievementDefinitions = achievements,
+                                runFacts = RunFacts(
+                                    subject = playingLevel.subject,
+                                    levelId = playingLevel.id,
+                                    isAiMode = scoreResult.eligibleForGift,
+                                    achievedWpm = scoreResult.achievedWpm,
+                                    referenceWpm = scoreResult.referenceWpm,
+                                    pronunciationEligible = scoreResult.eligibleForPronunciationAchievement
+                                )
                             )
                             repository.updateProfile(outcome.updatedProfile)
                             repository.saveLevelProgress(outcome.updatedLevelProgress)
@@ -226,6 +258,7 @@ fun LixoApp(
                         onFinishMathSession = { scoreResult, elapsedSeconds ->
                             val todayIso = repository.currentLocalDateIso()
                             val prevProgress = levelProgressByProfile[activeProfile.id]?.get(playingLevel.id)
+                            val clearedLevelsCountBeforeRun = levelProgressByProfile[activeProfile.id].orEmpty().size
                             val todayRecord = dailyActivityByProfile[activeProfile.id]?.get(todayIso)
                                 ?: DailyActivityRecord(activeProfile.id, todayIso)
 
@@ -240,10 +273,18 @@ fun LixoApp(
                                 completedTimedChallenge = scoreResult.completedTimedChallenge,
                                 eligibleForRepetitionGift = true,
                                 rewardItemIdForTask = playingTask.rewardItemId,
+                                clearedLevelsCountBeforeRun = clearedLevelsCountBeforeRun,
                                 allWardrobeItems = wardrobeCatalog,
                                 currentlyUnlockedItemIds = unlockedItemIds,
                                 todayActivityBeforeRun = todayRecord,
-                                nowEpochMillis = Clock.System.now().toEpochMilliseconds()
+                                nowEpochMillis = Clock.System.now().toEpochMilliseconds(),
+                                achievementDefinitions = achievements,
+                                runFacts = RunFacts(
+                                    subject = playingLevel.subject,
+                                    levelId = playingLevel.id,
+                                    isAiMode = true,
+                                    mathFirstTryByType = scoreResult.firstTryCorrectByType
+                                )
                             )
                             repository.updateProfile(outcome.updatedProfile)
                             repository.saveLevelProgress(outcome.updatedLevelProgress)
@@ -269,9 +310,11 @@ fun LixoApp(
                     sttEngine = sttEngine,
                     ttsEngine = ttsEngine,
                     showSwedishTtsButtons = showSwedishTts,
-                    onSelectProfile = { repository.selectProfile(it.id) },
-                    onCreateSiblingProfile = { name -> repository.createSiblingProfile(name, 8) },
+                    onSelectProfile = { autoStartTutorialForProfileId = null; repository.selectProfile(it.id) },
+                    onCreateSiblingProfile = { name -> repository.createProfile(name, BalanceConfig.PROFILE_DEFAULT_AGE_YEARS) },
+                    startTutorialImmediately = autoStartTutorialForProfileId == activeProfile.id,
                     onTutorialCompleted = { profile ->
+                        autoStartTutorialForProfileId = null
                         repository.unlockWardrobeItem(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID)
                         val updated = profile.copy(
                             tutorialCompleted = true,
@@ -370,7 +413,7 @@ fun LixoApp(
                                 )
                             }
                             LixoMainDestination.TROPHIES -> {
-                                TrophiesScreen(achievements = achievements)
+                                TrophiesScreen(achievements = AchievementEngine.withProfileProgress(achievements, activeProfile))
                             }
                             LixoMainDestination.PARENT_SETTINGS -> {
                                 ParentGateAndDashboardScreen(

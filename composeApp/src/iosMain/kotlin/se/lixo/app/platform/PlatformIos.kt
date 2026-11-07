@@ -124,8 +124,11 @@ actual fun createPlatformSpeechRecognitionEngine(): SpeechRecognitionEngine =
 actual fun createPlatformTextToSpeechEngine(): TextToSpeechEngine =
     IosTextToSpeechEngine()
 
+private var cachedLixoDatabase: LixoDatabase? = null
+
 @OptIn(ExperimentalForeignApi::class)
 actual fun createPlatformLixoDatabase(): LixoDatabase? {
+    cachedLixoDatabase?.let { return it }
     val dir = NSFileManager.defaultManager.URLForDirectory(
         directory = NSDocumentDirectory,
         inDomain = NSUserDomainMask,
@@ -140,6 +143,7 @@ actual fun createPlatformLixoDatabase(): LixoDatabase? {
             // Every LixoDatabase version bump needs a Migration in LIXO_MIGRATIONS (no destructive fallback).
             .addMigrations(*LIXO_MIGRATIONS)
             .build()
+            .also { cachedLixoDatabase = it }
     } catch (_: Throwable) {
         null
     }

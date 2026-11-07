@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -71,6 +72,7 @@ import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
+import se.lixo.app.ui.components.celebration.FlitChestMeter
 import se.lixo.app.ui.theme.LixoBottomSheet
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
@@ -82,6 +84,12 @@ import se.lixo.app.ui.theme.LixoSpacing
 import se.lixo.app.ui.theme.LixoStrings
 import se.lixo.app.ui.theme.StatPill
 import se.lixo.app.ui.theme.TtsIconButton
+
+/**
+ * Prefix for the semantics testTag on each [CampaignLevelNode], used by instrumented tests to
+ * locate a specific level node and assert its locked/unlocked state (doc/plans/010).
+ */
+const val MAP_LEVEL_NODE_TAG_PREFIX = "map_level_node_"
 
 /**
  * Duolingo-style Campaign Map with three subject "worlds" (plan: "Ämnesväljare med tre världar"):
@@ -106,6 +114,7 @@ fun CampaignMapScreen(
     onSwitchProfileClick: () -> Unit
 ) {
     var selectedLevelForSheet by remember { mutableStateOf<CampaignLevel?>(null) }
+    var showChestInfo by remember { mutableStateOf(false) }
 
     val worlds = SubjectWorlds
     val initialPage = worlds.indexOfFirst { it.subject == selectedSubject }.coerceAtLeast(0)
@@ -149,7 +158,7 @@ fun CampaignMapScreen(
             .background(animatedBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top HUD Bar: Avatar profile selector (left) | Stars & Streak (right)
+            // Top HUD Bar: Avatar profile selector (left) | Stars, Streak & Flitkista (right)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -191,6 +200,11 @@ fun CampaignMapScreen(
                         icon = LixoIcons.Flame,
                         value = "${profile.currentStreakDays}",
                         tint = LixoColors.Orange
+                    )
+                    FlitChestMeter(
+                        halfPoints = profile.chestProgressHalfPoints,
+                        size = 32.dp,
+                        onClick = { showChestInfo = true }
                     )
                 }
             }
@@ -418,6 +432,44 @@ fun CampaignMapScreen(
                         color = Color.White
                     )
                 }
+            }
+        }
+
+        // Flitkista tooltip sheet, opened by tapping the HUD chest meter.
+        LixoBottomSheet(
+            visible = showChestInfo,
+            onDismiss = { showChestInfo = false },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FlitChestMeter(halfPoints = profile.chestProgressHalfPoints, size = 56.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = LixoStrings.CHEST_METER_INFO_TITLE,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = LixoColors.TextPrimary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = LixoStrings.CHEST_METER_INFO,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LixoColors.TextSecondary
+                    )
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            LixoButton(
+                onClick = { showChestInfo = false },
+                variant = LixoButtonVariant.PRIMARY,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = LixoStrings.SHEET_CLOSE_BTN,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Color.White
+                )
             }
         }
     }
@@ -766,6 +818,7 @@ private fun CampaignLevelNode(
     Box(
         modifier = Modifier
             .size(72.dp)
+            .testTag(MAP_LEVEL_NODE_TAG_PREFIX + level.id)
             .graphicsLayer {
                 scaleX = pulseScale
                 scaleY = pulseScale

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,15 +36,16 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.ui.feedback.SfxCue
 import se.lixo.app.ui.feedback.rememberLixoHaptics
@@ -146,9 +148,9 @@ fun RewardChest(
     ) {
         val w = size.width
         val h = size.height
-        val bodyTop = h * 0.42f
+        val bodyTop = chestBodyRect(size).top
         val lidBottom = bodyTop
-        val lidTop = h * 0.06f
+        val lidTop = h * CHEST_LID_TOP_FRACTION
 
         // Pulsing gold glow behind the chest.
         drawCircle(
@@ -165,7 +167,7 @@ fun RewardChest(
         val plankColor = Color(0xFF6B4220)
 
         // Body
-        val bodyRect = androidx.compose.ui.geometry.Rect(0f, bodyTop, w, h)
+        val bodyRect = chestBodyRect(size)
         drawRoundRect(
             color = woodColor,
             topLeft = bodyRect.topLeft,
@@ -199,15 +201,7 @@ fun RewardChest(
             translate(0f, lidDy.value)
             rotate(lidRot.value, pivot = Offset(0f, lidBottom))
         }) {
-            val lidPath = Path().apply {
-                moveTo(0f, lidBottom)
-                lineTo(0f, lidTop + 14f)
-                quadraticBezierTo(0f, lidTop, 14f, lidTop)
-                lineTo(w - 14f, lidTop)
-                quadraticBezierTo(w, lidTop, w, lidTop + 14f)
-                lineTo(w, lidBottom)
-                close()
-            }
+            val lidPath = chestLidPath(size, 14f)
             drawPath(path = lidPath, color = woodColor.copy(alpha = lidAlpha.value))
             drawRect(
                 color = LixoColors.Gold.copy(alpha = lidAlpha.value),
@@ -245,11 +239,15 @@ fun RewardChest(
 /**
  * Full-screen chest-opening stage: scrim, title, the chest itself with its "tap to open" hint,
  * and once opened, [LightBurst] behind + [ItemReveal] on top. Auto-finishes 2.2s after opening,
- * or sooner on a scrim tap.
+ * or sooner on a scrim tap. The title shows [source]'s label (e.g. "Banbelöning") until opened,
+ * plus [labelDetailSv] when present (e.g. "Prestation: Blixtläsaren"), then switches to
+ * [LixoStrings.ITEM_UNLOCKED_TITLE].
  */
 @Composable
 internal fun ChestRevealStage(
     item: WardrobeItem,
+    source: RewardSource,
+    labelDetailSv: String? = null,
     onOpened: () -> Unit,
     onFinished: () -> Unit
 ) {
@@ -279,10 +277,12 @@ internal fun ChestRevealStage(
                 text = if (chestState == ChestState.OPENED) {
                     LixoStrings.ITEM_UNLOCKED_TITLE
                 } else {
-                    LixoStrings.GIFT_UNLOCKED_TITLE
+                    LixoStrings.rewardSourceLabel(source, labelDetailSv)
                 },
                 style = MaterialTheme.typography.headlineLarge,
-                color = Color.White
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 24.dp)
             )
 
             val bounce = rememberInfiniteTransition(label = "chestHintBounce").animateFloat(

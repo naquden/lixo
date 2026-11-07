@@ -9,10 +9,13 @@ import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.Rarity
+import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.Subject
+import se.lixo.app.domain.model.UnlockedReward
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.ui.components.celebration.CelebrationStep
 import se.lixo.app.ui.components.celebration.buildCelebrationSteps
+import se.lixo.app.ui.theme.LixoStrings
 
 class CelebrationStepsTest {
 
@@ -26,7 +29,7 @@ class CelebrationStepsTest {
     )
 
     private fun outcome(
-        items: List<WardrobeItem> = emptyList(),
+        rewards: List<UnlockedReward> = emptyList(),
         avatars: Set<AvatarType> = emptySet(),
         gift: GiftRollOutcome? = null
     ) = LevelCompletionOutcome(
@@ -42,7 +45,7 @@ class CelebrationStepsTest {
         ),
         netNewStarsAwarded = 3,
         newlyUnlockedAvatars = avatars,
-        newlyUnlockedItems = items,
+        newlyUnlockedRewards = rewards,
         giftOutcome = gift,
         streakIncrementedToday = false
     )
@@ -57,13 +60,15 @@ class CelebrationStepsTest {
     fun twoItems_chestAndEquipPerItemInOrder() {
         val a = item("a")
         val b = item("b")
-        val steps = buildCelebrationSteps(outcome(items = listOf(a, b)))
+        val steps = buildCelebrationSteps(
+            outcome(rewards = listOf(UnlockedReward(a, RewardSource.LEVEL), UnlockedReward(b, RewardSource.LEVEL)))
+        )
         assertEquals(
             listOf(
                 CelebrationStep.Stars,
-                CelebrationStep.Chest(a),
+                CelebrationStep.Chest(a, RewardSource.LEVEL),
                 CelebrationStep.EquipPrompt(a),
-                CelebrationStep.Chest(b),
+                CelebrationStep.Chest(b, RewardSource.LEVEL),
                 CelebrationStep.EquipPrompt(b)
             ),
             steps
@@ -74,12 +79,15 @@ class CelebrationStepsTest {
     fun avatarsAndItem_avatarsSortedByUnlockStarsRequired() {
         val a = item("a")
         val steps = buildCelebrationSteps(
-            outcome(items = listOf(a), avatars = setOf(AvatarType.KNIGHT, AvatarType.DOG))
+            outcome(
+                rewards = listOf(UnlockedReward(a, RewardSource.LEVEL)),
+                avatars = setOf(AvatarType.KNIGHT, AvatarType.DOG)
+            )
         )
         assertEquals(
             listOf(
                 CelebrationStep.Stars,
-                CelebrationStep.Chest(a),
+                CelebrationStep.Chest(a, RewardSource.LEVEL),
                 CelebrationStep.EquipPrompt(a),
                 CelebrationStep.AvatarPrompt(AvatarType.DOG),
                 CelebrationStep.AvatarPrompt(AvatarType.KNIGHT)
@@ -109,7 +117,7 @@ class CelebrationStepsTest {
         val duplicateRoll = item("dup")
         val steps = buildCelebrationSteps(
             outcome(
-                items = listOf(reward),
+                rewards = listOf(UnlockedReward(reward, RewardSource.LEVEL)),
                 gift = GiftRollOutcome(
                     rolledItem = duplicateRoll,
                     isDuplicate = true,
@@ -120,10 +128,64 @@ class CelebrationStepsTest {
         assertEquals(
             listOf(
                 CelebrationStep.Stars,
-                CelebrationStep.Chest(reward),
+                CelebrationStep.Chest(reward, RewardSource.LEVEL),
                 CelebrationStep.EquipPrompt(reward)
             ),
             steps
         )
+    }
+
+    @Test
+    fun stackedSources_oneChestPerRewardWithMatchingSourceInOrder() {
+        val a = item("a")
+        val b = item("b")
+        val c = item("c")
+        val steps = buildCelebrationSteps(
+            outcome(
+                rewards = listOf(
+                    UnlockedReward(a, RewardSource.LEVEL),
+                    UnlockedReward(b, RewardSource.FLITKISTA),
+                    UnlockedReward(c, RewardSource.WEEKLY_STREAK)
+                )
+            )
+        )
+        assertEquals(
+            listOf(
+                CelebrationStep.Stars,
+                CelebrationStep.Chest(a, RewardSource.LEVEL),
+                CelebrationStep.EquipPrompt(a),
+                CelebrationStep.Chest(b, RewardSource.FLITKISTA),
+                CelebrationStep.EquipPrompt(b),
+                CelebrationStep.Chest(c, RewardSource.WEEKLY_STREAK),
+                CelebrationStep.EquipPrompt(c)
+            ),
+            steps
+        )
+    }
+
+    @Test
+    fun achievementReward_carriesLabelDetailSvOntoChestStep() {
+        val a = item("a")
+        val steps = buildCelebrationSteps(
+            outcome(rewards = listOf(UnlockedReward(a, RewardSource.ACHIEVEMENT, "Blixtläsaren")))
+        )
+        assertEquals(
+            listOf(
+                CelebrationStep.Stars,
+                CelebrationStep.Chest(a, RewardSource.ACHIEVEMENT, "Blixtläsaren"),
+                CelebrationStep.EquipPrompt(a)
+            ),
+            steps
+        )
+    }
+
+    @Test
+    fun rewardSourceLabel_achievementWithDetail_appendsTitle() {
+        assertEquals(
+            "Prestation: Blixtläsaren",
+            LixoStrings.rewardSourceLabel(RewardSource.ACHIEVEMENT, "Blixtläsaren")
+        )
+        assertEquals("Prestation", LixoStrings.rewardSourceLabel(RewardSource.ACHIEVEMENT, null))
+        assertEquals("Prestation", LixoStrings.rewardSourceLabel(RewardSource.ACHIEVEMENT, ""))
     }
 }

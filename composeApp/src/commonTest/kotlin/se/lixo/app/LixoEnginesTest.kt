@@ -24,6 +24,7 @@ import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
 import se.lixo.app.domain.engine.ReadingAlignmentSessionState
 import se.lixo.app.domain.engine.StoryWordToken
+import se.lixo.app.domain.engine.spellingDiff
 import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.model.AddFriendError
@@ -43,8 +44,10 @@ import se.lixo.app.domain.model.ItemPattern
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathProblem
 import se.lixo.app.domain.model.MathProblemType
+import se.lixo.app.data.repository.GENERATED_WARDROBE_ITEMS
 import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.ReadingMode
+import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.domain.model.WardrobeItem
@@ -52,6 +55,8 @@ import se.lixo.app.platform.EmailLinkAuthDispatcher
 import se.lixo.app.platform.PendingEmailLinkStorage
 import se.lixo.app.platform.RecognizedSpeechToken
 import se.lixo.app.ui.components.avatar3d.Avatar3DController
+import se.lixo.app.ui.components.celebration.CelebrationStep
+import se.lixo.app.ui.components.celebration.buildCelebrationSteps
 
 class LixoEnginesTest {
 
@@ -259,6 +264,118 @@ class LixoEnginesTest {
     }
 
     @Test
+    fun forcedAlignment_lookaheadSkipStoresHeardTextOnSkippedWord() {
+        var session = alignmentEngine.startSession(
+            storyText = "katten sitter på mattan",
+            mode = ReadingMode.AI_LISTENING,
+            isTimedChallengeRequested = false
+        )
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            listOf(
+                RecognizedSpeechToken("katten", "katten", 0.95f, 100L),
+                RecognizedSpeechToken("sitta", "sitta", 0.95f, 200L),
+                RecognizedSpeechToken("på", "på", 0.95f, 300L)
+            )
+        )
+        val skippedWord = session.words[1]
+        assertTrue(skippedWord.needsPractice)
+        assertEquals("sitta", skippedWord.heardText)
+        assertFalse(skippedWord.isCompleted)
+        assertTrue(session.unmatchedSinceAdvance.isEmpty())
+    }
+
+    @Test
+    fun forcedAlignment_skipWithoutUnmatchedSpeechLeavesHeardTextNull() {
+        var session = alignmentEngine.startSession(
+            storyText = "katten sitter på mattan",
+            mode = ReadingMode.AI_LISTENING,
+            isTimedChallengeRequested = false
+        )
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            listOf(
+                RecognizedSpeechToken("katten", "katten", 0.95f, 100L),
+                RecognizedSpeechToken("på", "på", 0.95f, 200L)
+            )
+        )
+        val skippedWord = session.words[1]
+        assertTrue(skippedWord.needsPractice)
+        assertNull(skippedWord.heardText)
+    }
+
+    @Test
+    fun forcedAlignment_hesitationThenWrongAttemptUpdatesHeardText() {
+        var session = alignmentEngine.startSession(
+            storyText = "katten sitter på mattan",
+            mode = ReadingMode.AI_LISTENING,
+            isTimedChallengeRequested = false
+        )
+        session = alignmentEngine.onTick(
+            state = session,
+            deltaMillis = 250L,
+            millisSinceLastWordAdvance = BalanceConfig.STUCK_WORD_PROMPT_DELAY_MS
+        )
+        assertTrue(session.words[0].needsPractice)
+        assertNull(session.words[0].heardText)
+
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            listOf(RecognizedSpeechToken("mata", "mata", 0.95f, 100L))
+        )
+        assertEquals("mata", session.words[0].heardText)
+
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            listOf(RecognizedSpeechToken("katten", "katten", 0.95f, 200L))
+        )
+        assertTrue(session.words[0].isCompleted)
+        assertEquals("mata", session.words[0].heardText)
+    }
+
+    @Test
+    fun forcedAlignment_unmatchedBufferClearedAfterMatch() {
+        var session = alignmentEngine.startSession(
+            storyText = "katten sitter på mattan",
+            mode = ReadingMode.AI_LISTENING,
+            isTimedChallengeRequested = false
+        )
+        session = alignmentEngine.onTick(
+            state = session,
+            deltaMillis = 250L,
+            millisSinceLastWordAdvance = BalanceConfig.STUCK_WORD_PROMPT_DELAY_MS
+        )
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            listOf(
+                RecognizedSpeechToken("bla", "bla", 0.95f, 100L),
+                RecognizedSpeechToken("bli", "bli", 0.95f, 200L),
+                RecognizedSpeechToken("blu", "blu", 0.95f, 300L),
+                RecognizedSpeechToken("bly", "bly", 0.95f, 400L),
+                RecognizedSpeechToken("blo", "blo", 0.95f, 500L)
+            )
+        )
+        assertEquals(listOf("bli", "blu", "bly", "blo"), session.unmatchedSinceAdvance)
+        assertEquals("bli blu bly blo", session.words[0].heardText)
+
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            listOf(RecognizedSpeechToken("katten", "katten", 0.95f, 600L))
+        )
+        assertTrue(session.unmatchedSinceAdvance.isEmpty())
+    }
+
+    @Test
+    fun spellingDiff_marksMissingLetters() {
+        assertEquals(
+            listOf(true, true, true, true, false),
+            spellingDiff("huset", "huse").map { it.matched }
+        )
+        assertTrue(spellingDiff("Hus", "").none { it.matched })
+        assertTrue(spellingDiff("Hus", "hus").all { it.matched })
+    }
+
+    @Test
     fun progressionEngine_timedChallengeRewardAndReplayLoweringBestTimeWithNoExtraStarsAtMax() {
         val level = CampaignLevel(
             id = "level_timed",
@@ -308,6 +425,7 @@ class LixoEnginesTest {
             completedTimedChallenge = score.eligibleForTimedChallengeReward,
             eligibleForRepetitionGift = true,
             rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
             allWardrobeItems = catalog,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
@@ -328,6 +446,7 @@ class LixoEnginesTest {
             completedTimedChallenge = true,
             eligibleForRepetitionGift = true,
             rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
             allWardrobeItems = catalog,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
@@ -479,6 +598,7 @@ class LixoEnginesTest {
             completedTimedChallenge = true,
             eligibleForRepetitionGift = true,
             rewardItemIdForTask = catalog.first().id,
+            clearedLevelsCountBeforeRun = 6,
             allWardrobeItems = catalog,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
@@ -500,6 +620,7 @@ class LixoEnginesTest {
             completedTimedChallenge = true,
             eligibleForRepetitionGift = true,
             rewardItemIdForTask = catalog.first().id,
+            clearedLevelsCountBeforeRun = 6,
             allWardrobeItems = catalog,
             currentlyUnlockedItemIds = catalog.map { it.id }.toSet(), // All items already unlocked -> forces duplicate
             todayActivityBeforeRun = today,
@@ -563,6 +684,7 @@ class LixoEnginesTest {
             completedTimedChallenge = false,
             eligibleForRepetitionGift = true,
             rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
             allWardrobeItems = catalog,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
@@ -592,6 +714,7 @@ class LixoEnginesTest {
             completedTimedChallenge = false,
             eligibleForRepetitionGift = true,
             rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
             allWardrobeItems = catalog,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
@@ -1081,6 +1204,7 @@ class LixoEnginesTest {
             completedTimedChallenge = false,
             eligibleForRepetitionGift = false,
             rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
             allWardrobeItems = wardrobe,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-01-01"),
@@ -1100,6 +1224,7 @@ class LixoEnginesTest {
             completedTimedChallenge = false,
             eligibleForRepetitionGift = false,
             rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
             allWardrobeItems = wardrobe,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-01-01"),
@@ -1256,7 +1381,7 @@ class LixoEnginesTest {
             override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
                 Result.success(looked)
         }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true)
         val before = repo.friendsOfActiveProfile()
 
         val result = repo.addFriendByQuery("stjarn_sokare")
@@ -1272,7 +1397,7 @@ class LixoEnginesTest {
             override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
                 Result.success(null)
         }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true)
         val before = repo.friendsOfActiveProfile()
 
         val result = repo.addFriendByQuery("nobody_here")
@@ -1293,7 +1418,7 @@ class LixoEnginesTest {
             override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
                 Result.success(looked)
         }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true)
 
         val first = repo.addFriendByQuery("dubbel_vän")
         assertTrue(first.isSuccess)
@@ -1311,7 +1436,7 @@ class LixoEnginesTest {
             override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
                 Result.failure(AddFriendException(AddFriendError.NETWORK))
         }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true)
         val before = repo.friendsOfActiveProfile()
 
         val result = repo.addFriendByQuery("offline_user")
@@ -1332,14 +1457,14 @@ class LixoEnginesTest {
             override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
                 Result.success(looked)
         }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null)
+        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true)
         assertTrue(repo.friendsOfActiveProfile().isEmpty())
 
         val firstProfileId = repo.activeProfileId.value!!
         assertTrue(repo.addFriendByQuery("egen_kompis").isSuccess)
         assertEquals(1, repo.friendsOfActiveProfile().size)
 
-        val sibling = repo.createSiblingProfile("Syskon", 7)
+        val sibling = repo.createProfile("Syskon", 7)
         repo.selectProfile(sibling.id)
         assertTrue(repo.friendsOfActiveProfile().isEmpty())
 
@@ -1350,6 +1475,58 @@ class LixoEnginesTest {
 
         repo.selectProfile(firstProfileId)
         assertEquals(listOf("friend_scoped_1"), repo.friendsOfActiveProfile().map { it.userId })
+    }
+
+    @Test
+    fun seed_releaseBuild_hasNoProfileButSeedsCurriculum() = runTest {
+        val repo = LixoRepository(FirebaseSyncService(), lexiconCache = null, isDebugBuild = false)
+
+        assertTrue(repo.profiles.value.isEmpty())
+        assertNull(repo.activeProfileId.value)
+        assertTrue(repo.unlockedItemIds.value.isEmpty())
+        assertTrue(repo.friendsOfActiveProfile().isEmpty())
+        assertTrue(repo.levels.value.isNotEmpty())
+        assertTrue(repo.tasksById.value.isNotEmpty())
+        assertTrue(repo.wardrobeCatalog.value.isNotEmpty())
+        assertTrue(repo.courses.value.isNotEmpty())
+        assertTrue(repo.achievements.value.isNotEmpty())
+    }
+
+    @Test
+    fun seed_debugBuild_seedsSagaWithTutorialDoneAndStarterHat() = runTest {
+        val repo = LixoRepository(FirebaseSyncService(), lexiconCache = null, isDebugBuild = true)
+
+        val saga = repo.profiles.value.single()
+        assertEquals("Saga", saga.displayName)
+        assertEquals("profile_child_1", saga.id)
+        assertTrue(saga.tutorialCompleted)
+        assertEquals(saga.id, repo.activeProfileId.value)
+        assertEquals(
+            BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID,
+            saga.appearance.equippedItems[EquipmentSlot.HAT]
+        )
+        assertEquals(setOf(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID), repo.unlockedItemIds.value)
+    }
+
+    @Test
+    fun createProfile_onEmptyReleaseRepo_becomesActiveWithTutorialPending() = runTest {
+        val repo = LixoRepository(FirebaseSyncService(), lexiconCache = null, isDebugBuild = false)
+
+        val created = repo.createProfile("Ella", 7)
+
+        assertEquals("Ella", created.displayName)
+        assertEquals(7, created.ageYears)
+        assertFalse(created.tutorialCompleted)
+        assertEquals(created.id, repo.activeProfileId.value)
+        assertEquals(1, repo.profiles.value.size)
+    }
+
+    @Test
+    fun createProfile_clampsAgeToSixThroughTwelve() = runTest {
+        val repo = LixoRepository(FirebaseSyncService(), lexiconCache = null, isDebugBuild = false)
+
+        assertEquals(6, repo.createProfile("A", 3).ageYears)
+        assertEquals(12, repo.createProfile("B", 20).ageYears)
     }
 
     @Test
@@ -1380,6 +1557,58 @@ class LixoEnginesTest {
 
         val score = alignmentEngine.evaluateSessionScore(result, referenceWpm = 40, timeRequirementSeconds = 60)
         assertTrue(score.struggledWordsToLog.contains("lixo"))
+    }
+
+    @Test
+    fun forcedAlignment_tutorialStorySkippedWordsAwaitThenFinish() {
+        var session = alignmentEngine.startSession(BalanceConfig.TUTORIAL_STORY_SV, ReadingMode.AI_LISTENING, false)
+        val words = session.words
+        assertEquals("lixo", words[1].normalizedText)
+        assertEquals("hatten", words[8].normalizedText)
+
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            words.filter { it.index != 1 && it.index != 8 }.mapIndexed { i, w ->
+                RecognizedSpeechToken(w.displayText, w.normalizedText, 0.95f, (i + 1) * 100L)
+            }
+        )
+
+        assertTrue(session.isAwaitingUnreadWords)
+        assertFalse(session.isCompleted)
+        assertTrue(session.words[1].needsPractice && !session.words[1].isCompleted)
+        assertTrue(session.words[8].needsPractice && !session.words[8].isCompleted)
+        assertTrue(session.words[14].isCompleted && !session.words[14].needsPractice)
+        assertEquals(session.words.size, session.currentWordIndex)
+
+        val done = alignmentEngine.finishWithUnreadWords(session)
+        assertTrue(done.isCompleted)
+        assertFalse(done.isAwaitingUnreadWords)
+    }
+
+    @Test
+    fun forcedAlignment_tutorialReadingYellowWordsAfterEndCompletes() {
+        var session = alignmentEngine.startSession(BalanceConfig.TUTORIAL_STORY_SV, ReadingMode.AI_LISTENING, false)
+        val words = session.words
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            words.filter { it.index != 1 && it.index != 8 }.mapIndexed { i, w ->
+                RecognizedSpeechToken(w.displayText, w.normalizedText, 0.95f, (i + 1) * 100L)
+            }
+        )
+        assertTrue(session.isAwaitingUnreadWords)
+
+        session = alignmentEngine.processRecognizedTokens(
+            session,
+            listOf(
+                RecognizedSpeechToken("Lixo", "lixo", 0.95f, 0L),
+                RecognizedSpeechToken("Hatten", "hatten", 0.95f, 0L)
+            )
+        )
+
+        assertTrue(session.isCompleted)
+        assertFalse(session.isAwaitingUnreadWords)
+        assertTrue(session.words[1].isCompleted && session.words[1].needsPractice)
+        assertTrue(session.words[8].isCompleted && session.words[8].needsPractice)
     }
 
     @Test
@@ -1583,5 +1812,720 @@ class LixoEnginesTest {
         // actually exercised (not just defaults) now that items carry visual variety.
         assertTrue(catalog.size > 500, "Expected the generated catalog to dominate the item count")
         assertTrue(catalog.any { it.pattern != ItemPattern.NONE }, "Expected some items to use a non-NONE pattern")
+    }
+
+    // --- Reward pacing (doc/plans/001-reward-pacing-early-chests.md) ---
+
+    @Test
+    fun rewardPacing_firstLevelFreshProfile_exactlyOneItemAndOneChest() {
+        val engine = ProgressionAndGiftEngine(random = Random(1))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val profile = ChildProfile(id = "p_fresh", displayName = "Saga", totalStars = 0)
+        val mathLevel = level(order = 2, subject = Subject.MATH)
+        val today = DailyActivityRecord(profileId = "p_fresh", calendarDateIso = "2026-11-01")
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertEquals(1, outcome.newlyUnlockedRewards.size)
+        assertEquals(RewardSource.LEVEL, outcome.newlyUnlockedRewards.single().source)
+        val steps = buildCelebrationSteps(outcome)
+        assertEquals(1, steps.count { it is CelebrationStep.Chest })
+
+        // Repeat with a valid, unowned task reward item: still exactly 1 LEVEL reward.
+        val taskRewardId = catalog.first().id
+        val outcomeWithTaskReward = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = taskRewardId,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+        assertEquals(1, outcomeWithTaskReward.newlyUnlockedRewards.size)
+        assertEquals(RewardSource.LEVEL, outcomeWithTaskReward.newlyUnlockedRewards.single().source)
+        assertEquals(taskRewardId, outcomeWithTaskReward.newlyUnlockedRewards.single().item.id)
+    }
+
+    @Test
+    fun rewardPacing_eightMathLevelsAt3Stars_oneItemPerOnboardingLevel() {
+        val engine = ProgressionAndGiftEngine(random = Random(7))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        var profile = ChildProfile(id = "p_math3", displayName = "Saga", totalStars = 0)
+        var unlockedIds = emptySet<String>()
+        val itemsPerLevel = mutableListOf<Int>()
+        val today = DailyActivityRecord(profileId = "p_math3", calendarDateIso = "2026-11-01")
+
+        for (i in 0..7) {
+            val mathLevel = level(order = 2 * (i + 1), subject = Subject.MATH)
+            val outcome = engine.recordLevelCompletion(
+                profile = profile,
+                level = mathLevel,
+                previousProgress = null,
+                earnedStarsThisRun = 3,
+                completedInAiMode = true,
+                elapsedSeconds = 20,
+                achievedWpm = 0,
+                completedTimedChallenge = false,
+                eligibleForRepetitionGift = true,
+                rewardItemIdForTask = null,
+                clearedLevelsCountBeforeRun = i,
+                allWardrobeItems = catalog,
+                currentlyUnlockedItemIds = unlockedIds,
+                todayActivityBeforeRun = today,
+                nowEpochMillis = (1000L + i)
+            )
+            itemsPerLevel += outcome.newlyUnlockedRewards.size
+            val progressionCount = outcome.newlyUnlockedRewards.count {
+                it.source == RewardSource.LEVEL || it.source == RewardSource.STARS
+            }
+            assertTrue(progressionCount <= 1, "Run $i must not award more than 1 progression item")
+            profile = outcome.updatedProfile
+            unlockedIds = unlockedIds + outcome.newlyUnlockedItems.map { it.id }
+        }
+
+        for (levelIndex in 0..5) {
+            assertTrue(itemsPerLevel[levelIndex] >= 1, "Level ${levelIndex + 1} must award >= 1 item")
+        }
+        assertTrue(itemsPerLevel.sum() >= 7, "At least 7 items total across 8 levels, got ${itemsPerLevel.sum()}")
+    }
+
+    @Test
+    fun rewardPacing_eightMathLevelsAt1Star_oneItemPerOnboardingLevel() {
+        val engine = ProgressionAndGiftEngine(random = Random(7))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        var profile = ChildProfile(id = "p_math1", displayName = "Saga", totalStars = 0)
+        var unlockedIds = emptySet<String>()
+        val rewardsPerLevel = mutableListOf<List<RewardSource>>()
+        val today = DailyActivityRecord(profileId = "p_math1", calendarDateIso = "2026-11-01")
+
+        for (i in 0..7) {
+            val mathLevel = level(order = 2 * (i + 1), subject = Subject.MATH)
+            val outcome = engine.recordLevelCompletion(
+                profile = profile,
+                level = mathLevel,
+                previousProgress = null,
+                earnedStarsThisRun = 1,
+                completedInAiMode = true,
+                elapsedSeconds = 20,
+                achievedWpm = 0,
+                completedTimedChallenge = false,
+                eligibleForRepetitionGift = true,
+                rewardItemIdForTask = null,
+                clearedLevelsCountBeforeRun = i,
+                allWardrobeItems = catalog,
+                currentlyUnlockedItemIds = unlockedIds,
+                todayActivityBeforeRun = today,
+                nowEpochMillis = (1000L + i)
+            )
+            rewardsPerLevel += outcome.newlyUnlockedRewards.map { it.source }
+            profile = outcome.updatedProfile
+            unlockedIds = unlockedIds + outcome.newlyUnlockedItems.map { it.id }
+        }
+
+        for (levelIndex in 0..5) {
+            assertTrue(
+                rewardsPerLevel[levelIndex].contains(RewardSource.LEVEL),
+                "Level ${levelIndex + 1} at 1 star must award a LEVEL reward"
+            )
+        }
+    }
+
+    @Test
+    fun rewardPacing_fortyLevelsAt2Stars_noSourceTwiceAndNoLongDroughts() {
+        val engine = ProgressionAndGiftEngine(random = Random(11))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        var profile = ChildProfile(id = "p_math2", displayName = "Saga", totalStars = 0)
+        var unlockedIds = emptySet<String>()
+        val itemsPerLevel = mutableListOf<Int>()
+        val today = DailyActivityRecord(profileId = "p_math2", calendarDateIso = "2026-11-01")
+
+        for (i in 0 until 40) {
+            val mathLevel = level(order = 2 * (i + 1), subject = Subject.MATH)
+            val outcome = engine.recordLevelCompletion(
+                profile = profile,
+                level = mathLevel,
+                previousProgress = null,
+                earnedStarsThisRun = 2,
+                completedInAiMode = true,
+                elapsedSeconds = 20,
+                achievedWpm = 0,
+                completedTimedChallenge = false,
+                eligibleForRepetitionGift = true,
+                rewardItemIdForTask = null,
+                clearedLevelsCountBeforeRun = i,
+                allWardrobeItems = catalog,
+                currentlyUnlockedItemIds = unlockedIds,
+                todayActivityBeforeRun = today,
+                nowEpochMillis = (1000L + i)
+            )
+            val sourceCounts = outcome.newlyUnlockedRewards.groupingBy { it.source }.eachCount()
+            for ((source, count) in sourceCounts) {
+                if (source == RewardSource.LEVEL || source == RewardSource.STARS) continue
+                assertTrue(count <= 1, "Run $i must not award a source more than once: $source")
+            }
+            val progressionCount = sourceCounts.filterKeys {
+                it == RewardSource.LEVEL || it == RewardSource.STARS
+            }.values.sum()
+            assertTrue(progressionCount <= 1, "Run $i must not award more than 1 progression item")
+            itemsPerLevel += outcome.newlyUnlockedRewards.size
+            profile = outcome.updatedProfile
+            unlockedIds = unlockedIds + outcome.newlyUnlockedItems.map { it.id }
+        }
+
+        fun longestDroughtWithin(upTo: Int): Int {
+            var longest = 0
+            var current = 0
+            for (i in 0 until upTo) {
+                if (itemsPerLevel[i] == 0) {
+                    current += 1
+                    longest = maxOf(longest, current)
+                } else {
+                    current = 0
+                }
+            }
+            return longest
+        }
+
+        assertTrue(longestDroughtWithin(20) <= 3, "Longest drought within levels 1-20 must be <= 3")
+        assertTrue(longestDroughtWithin(40) <= 5, "Longest drought within levels 1-40 must be <= 5")
+    }
+
+    @Test
+    fun rewardPacing_replayNeverTriggersOnboardingItem() {
+        val engine = ProgressionAndGiftEngine(random = Random(3))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val profile = ChildProfile(id = "p_replay", displayName = "Saga", totalStars = 0)
+        val mathLevel = level(order = 2, subject = Subject.MATH)
+        val today = DailyActivityRecord(profileId = "p_replay", calendarDateIso = "2026-11-01")
+        val previousProgress = LevelProgress(
+            profileId = "p_replay",
+            levelId = mathLevel.id,
+            levelOrder = mathLevel.order,
+            starsEarned = 2,
+            completedInAiMode = true,
+            bestTimeSeconds = 20,
+            bestWpm = 0
+        )
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = previousProgress,
+            earnedStarsThisRun = 2,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertTrue(outcome.newlyUnlockedRewards.none { it.source == RewardSource.LEVEL })
+    }
+
+    @Test
+    fun rewardPacing_jumpTo100Stars_onlyOneStarItemPerRun() {
+        val engine = ProgressionAndGiftEngine(random = Random(5))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val profile = ChildProfile(id = "p_100", displayName = "Saga", totalStars = 100)
+        val mathLevel = level(order = 14, subject = Subject.MATH)
+        val today = DailyActivityRecord(profileId = "p_100", calendarDateIso = "2026-11-01")
+
+        val eligibleSorted = catalog
+            .filter {
+                it.id !in emptySet<String>() &&
+                    it.unlockAchievementId == null &&
+                    !it.isWeeklyStreakSetPiece &&
+                    it.unlockStarRequirement in 1..100
+            }
+            .sortedWith(compareBy({ it.unlockStarRequirement }, { it.id }))
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 0,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        val starRewards = outcome.newlyUnlockedRewards.filter { it.source == RewardSource.STARS }
+        assertEquals(1, starRewards.size)
+        assertEquals(eligibleSorted.first().id, starRewards.single().item.id)
+
+        val nextProfile = outcome.updatedProfile
+        val nextUnlockedIds = outcome.newlyUnlockedItems.map { it.id }.toSet()
+        val nextLevel = level(order = 16, subject = Subject.MATH)
+        val nextOutcome = engine.recordLevelCompletion(
+            profile = nextProfile,
+            level = nextLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 0,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 8,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = nextUnlockedIds,
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1001L
+        )
+        val nextStarRewards = nextOutcome.newlyUnlockedRewards.filter { it.source == RewardSource.STARS }
+        assertEquals(1, nextStarRewards.size)
+        assertEquals(eligibleSorted[1].id, nextStarRewards.single().item.id)
+    }
+
+    @Test
+    fun rewardPacing_levelFlitkistaAndStreakStack_inOrder() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val profile = ChildProfile(
+            id = "p_stack",
+            displayName = "Saga",
+            totalStars = 0,
+            chestProgressHalfPoints = 18,
+            currentStreakDays = 6,
+            lastStreakDateIso = "2026-10-31"
+        )
+        val mathLevel = level(order = 2, subject = Subject.MATH)
+        val today = DailyActivityRecord(
+            profileId = "p_stack",
+            calendarDateIso = "2026-11-01",
+            readingTasksCompleted = 1
+        )
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        val sources = outcome.newlyUnlockedRewards.map { it.source }
+        assertEquals(listOf(RewardSource.LEVEL, RewardSource.FLITKISTA, RewardSource.WEEKLY_STREAK), sources)
+
+        val chestSources = buildCelebrationSteps(outcome)
+            .filterIsInstance<CelebrationStep.Chest>()
+            .map { it.source }
+        assertEquals(sources, chestSources)
+    }
+
+    @Test
+    fun rewardPacing_onboardingAndStarThresholdSameRun_starDeferred() {
+        val engine = ProgressionAndGiftEngine(random = Random(13))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val preOwned = setOf("item_hand_right_math_sword_1")
+        val first = catalog
+            .filter {
+                it.id !in preOwned && it.unlockAchievementId == null && !it.isWeeklyStreakSetPiece && it.unlockStarRequirement > 0
+            }
+            .minOf { it.unlockStarRequirement }
+        assertTrue(first >= 25, "First curve threshold must be >= 25, was $first")
+
+        val profile = ChildProfile(id = "p_defer", displayName = "Saga", totalStars = first - 1)
+        val mathLevel = level(order = 2, subject = Subject.MATH)
+        val today = DailyActivityRecord(profileId = "p_defer", calendarDateIso = "2026-11-01")
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = preOwned,
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertEquals(listOf(RewardSource.LEVEL), outcome.newlyUnlockedRewards.map { it.source })
+        assertTrue(outcome.newlyUnlockedRewards.none { it.item.unlockStarRequirement == first }, "Star item must be deferred on an onboarding run")
+
+        val nextProfile = outcome.updatedProfile
+        val nextUnlockedIds = preOwned + outcome.newlyUnlockedItems.map { it.id }
+        val nextLevel = level(order = 16, subject = Subject.MATH)
+        val nextOutcome = engine.recordLevelCompletion(
+            profile = nextProfile,
+            level = nextLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 0,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = nextUnlockedIds,
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1001L
+        )
+        val starRewards = nextOutcome.newlyUnlockedRewards.filter { it.source == RewardSource.STARS }
+        assertEquals(1, starRewards.size)
+        assertEquals(first, starRewards.single().item.unlockStarRequirement)
+    }
+
+    @Test
+    fun generatedCatalog_starThresholdsFormWideningCurve() {
+        val thresholds = GENERATED_WARDROBE_ITEMS
+            .map { it.unlockStarRequirement }
+            .filter { it > 0 }
+            .sorted()
+
+        assertEquals(thresholds.size, thresholds.distinct().size, "Star thresholds must be unique")
+        assertTrue(thresholds.first() >= 25, "First star threshold must be >= 25")
+        assertTrue(thresholds.last() <= 250, "Last star threshold must be <= 250")
+
+        for (i in 2 until thresholds.size) {
+            val gap = thresholds[i] - thresholds[i - 1]
+            val prevGap = thresholds[i - 1] - thresholds[i - 2]
+            assertTrue(gap >= prevGap - 1, "Gap at index $i ($gap) must be >= previous gap ($prevGap) - 1")
+        }
+    }
+
+    // --- Level reward item ids (doc/plans/002-level-reward-item-ids.md) ---
+
+    @Test
+    fun levelRewardIds_seedTasksResolveToUniqueChestEligibleCatalogItems() {
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val catalogById = catalog.associateBy { it.id }
+        val (levels, tasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val levelRewardPool = LixoRepository.buildLevelRewardPool(catalog)
+        val levelsById = levels.associateBy { it.id }
+
+        val ids = mutableListOf<String>()
+        for (task in tasks.values) {
+            val rewardItemId = task.rewardItemId
+            assertNotNull(rewardItemId, "${task.id} must have a rewardItemId")
+            val item = catalogById[rewardItemId]
+            assertNotNull(item, "${task.id} rewardItemId=$rewardItemId must exist in the catalog")
+            assertTrue(ProgressionAndGiftEngine.isChestEligible(item), "${task.id} rewardItemId=$rewardItemId must be chest-eligible")
+            assertTrue(rewardItemId != BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID, "${task.id} must not reward the tutorial starter hat")
+            assertTrue(ProgressionAndGiftEngine.isOnboardingPreferred(item), "${task.id} rewardItemId=$rewardItemId must be onboarding-preferred")
+            ids += rewardItemId
+
+            val order = levelsById[task.levelId]?.order
+            assertNotNull(order, "${task.id} must reference a known level")
+            assertEquals(rewardItemId, LixoRepository.levelRewardItemIdFor(order, levelRewardPool))
+        }
+        assertEquals(ids.size, ids.distinct().size, "All 160 level reward item ids must be distinct")
+    }
+
+    @Test
+    fun levelRewardIds_achievementRewardItemsExistAndAreLinked() {
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val catalogById = catalog.associateBy { it.id }
+        val achievements = LixoRepository.buildSeedAchievements()
+
+        for (achievement in achievements) {
+            val item = catalogById[achievement.rewardItemId]
+            assertNotNull(item, "Achievement ${achievement.id} rewardItemId=${achievement.rewardItemId} must exist in the catalog")
+            assertEquals(achievement.id, item.unlockAchievementId)
+        }
+    }
+
+    @Test
+    fun syncCurriculumFromCloud_ignoresRemoteRewardItemIdAndComputesForRemoteOnlyTask() = runTest {
+        val gw = object : CloudSyncGateway by FirebaseSyncService() {
+            override suspend fun fetchRemoteCourses(): List<Course> = listOf(
+                Course(
+                    id = "course_sv_1",
+                    title = "Svenska Sagor: Viskande Skogen",
+                    subject = Subject.SWEDISH,
+                    minGrade = 1,
+                    version = 2,
+                    updatedAt = 1793558400000L
+                )
+            )
+
+            override suspend fun fetchLevelsForCourse(courseId: String): List<CampaignLevel> = listOf(
+                CampaignLevel(
+                    id = "level_1",
+                    courseId = "course_sv_1",
+                    order = 1,
+                    title = "Bana 1",
+                    biomeNameSv = "Viskande Skogen",
+                    subject = Subject.SWEDISH,
+                    difficulty = 1,
+                    timeRequirementSeconds = 55,
+                    referenceWpm = 40,
+                    taskId = "task_1"
+                ),
+                CampaignLevel(
+                    id = "level_161",
+                    courseId = "course_sv_1",
+                    order = 161,
+                    title = "Bana 161",
+                    biomeNameSv = "Viskande Skogen",
+                    subject = Subject.SWEDISH,
+                    difficulty = 1,
+                    timeRequirementSeconds = 55,
+                    referenceWpm = 40,
+                    taskId = "task_161"
+                )
+            )
+
+            override suspend fun fetchTasksForCourse(courseId: String): List<HomeworkTask> = listOf(
+                HomeworkTask(
+                    id = "task_1",
+                    levelId = "level_1",
+                    type = TaskType.READING,
+                    subject = Subject.SWEDISH,
+                    textContent = "Katten Lixo smyger över den gamla träbron i skogen.",
+                    rewardItemId = "item_hat_2"
+                ),
+                HomeworkTask(
+                    id = "task_161",
+                    levelId = "level_161",
+                    type = TaskType.READING,
+                    subject = Subject.SWEDISH,
+                    textContent = "En ny saga om Lixo.",
+                    rewardItemId = "item_hat_2"
+                )
+            )
+
+            override suspend fun fetchLexiconMeta(): LexiconMeta? = null
+        }
+
+        val repo = LixoRepository(gw, lexiconCache = null)
+        val seededTask1RewardItemId = repo.tasksById.value.getValue("task_1").rewardItemId
+        assertNotNull(seededTask1RewardItemId)
+        assertTrue(seededTask1RewardItemId != "item_hat_2")
+
+        repo.syncCurriculumFromCloud()
+
+        val task1 = repo.tasksById.value.getValue("task_1")
+        assertEquals(seededTask1RewardItemId, task1.rewardItemId, "Local task_1 must keep its seeded rewardItemId")
+        assertTrue(task1.rewardItemId != "item_hat_2", "Remote rewardItemId must be ignored")
+
+        val task161 = repo.tasksById.value.getValue("task_161")
+        val levelRewardPool = LixoRepository.buildLevelRewardPool(repo.wardrobeCatalog.value)
+        val expectedRewardItemId = LixoRepository.levelRewardItemIdFor(161, levelRewardPool)
+        assertNotNull(expectedRewardItemId)
+        assertEquals(expectedRewardItemId, task161.rewardItemId)
+        assertTrue(repo.wardrobeCatalog.value.any { it.id == task161.rewardItemId })
+    }
+
+    @Test
+    fun levelReward_onboardingSlotFirstClearAwardsCuratedItem() {
+        val engine = ProgressionAndGiftEngine(random = Random(3))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val (_, tasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val curatedId = tasks.getValue("task_2").rewardItemId
+        assertNotNull(curatedId)
+        val profile = ChildProfile(id = "p_curated", displayName = "Saga", totalStars = 0)
+        val mathLevel = level(order = 2, subject = Subject.MATH)
+        val today = DailyActivityRecord(profileId = "p_curated", calendarDateIso = "2026-11-01")
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = curatedId,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertEquals(listOf(RewardSource.LEVEL), outcome.newlyUnlockedRewards.map { it.source })
+        assertEquals(curatedId, outcome.newlyUnlockedRewards.single().item.id)
+    }
+
+    @Test
+    fun levelReward_offScheduleFirstClearAwardsNoLevelItem() {
+        val engine = ProgressionAndGiftEngine(random = Random(3))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val (_, tasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val curatedId = tasks.getValue("task_2").rewardItemId
+        assertNotNull(curatedId)
+        val profile = ChildProfile(id = "p_offschedule", displayName = "Saga", totalStars = 0)
+        val mathLevel = level(order = 2, subject = Subject.MATH)
+        val today = DailyActivityRecord(profileId = "p_offschedule", calendarDateIso = "2026-11-01")
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 1,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = curatedId,
+            clearedLevelsCountBeforeRun = 6,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertTrue(outcome.newlyUnlockedRewards.none { it.source == RewardSource.LEVEL })
+        assertTrue(outcome.newlyUnlockedRewards.none { it.item.id == curatedId })
+    }
+
+    @Test
+    fun levelReward_ownedOrUnknownIdFallsBackToRoll() {
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val (_, tasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val curatedId = tasks.getValue("task_2").rewardItemId
+        assertNotNull(curatedId)
+        val today = DailyActivityRecord(profileId = "p_fallback", calendarDateIso = "2026-11-01")
+
+        val ownedEngine = ProgressionAndGiftEngine(random = Random(5))
+        val ownedOutcome = ownedEngine.recordLevelCompletion(
+            profile = ChildProfile(id = "p_fallback", displayName = "Saga", totalStars = 0),
+            level = level(order = 2, subject = Subject.MATH),
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = curatedId,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = setOf(curatedId),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+        val ownedLevelRewards = ownedOutcome.newlyUnlockedRewards.filter { it.source == RewardSource.LEVEL }
+        assertEquals(1, ownedLevelRewards.size)
+        assertTrue(ownedLevelRewards.single().item.id != curatedId)
+
+        val unknownEngine = ProgressionAndGiftEngine(random = Random(5))
+        val unknownOutcome = unknownEngine.recordLevelCompletion(
+            profile = ChildProfile(id = "p_fallback", displayName = "Saga", totalStars = 0),
+            level = level(order = 2, subject = Subject.MATH),
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = "item_hat_2",
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+        val unknownLevelRewards = unknownOutcome.newlyUnlockedRewards.filter { it.source == RewardSource.LEVEL }
+        assertEquals(1, unknownLevelRewards.size)
+        assertTrue(unknownLevelRewards.single().item.id != "item_hat_2")
+    }
+
+    @Test
+    fun levelReward_replayNeverAwardsCuratedItem() {
+        val engine = ProgressionAndGiftEngine(random = Random(9))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val (_, tasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val curatedId = tasks.getValue("task_2").rewardItemId
+        assertNotNull(curatedId)
+        val profile = ChildProfile(id = "p_replay", displayName = "Saga", totalStars = 0)
+        val mathLevel = level(order = 2, subject = Subject.MATH)
+        val today = DailyActivityRecord(profileId = "p_replay", calendarDateIso = "2026-11-01")
+        val previousProgress = LevelProgress(
+            profileId = profile.id,
+            levelId = mathLevel.id,
+            levelOrder = mathLevel.order,
+            starsEarned = 1,
+            completedInAiMode = true,
+            bestTimeSeconds = 30,
+            bestWpm = 0,
+            timesCompleted = 1,
+            updatedAtEpochMillis = 500L
+        )
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = mathLevel,
+            previousProgress = previousProgress,
+            earnedStarsThisRun = 2,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = curatedId,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertTrue(outcome.newlyUnlockedRewards.none { it.source == RewardSource.LEVEL })
+        assertTrue(outcome.newlyUnlockedRewards.none { it.item.id == curatedId })
     }
 }

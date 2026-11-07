@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <application android:requestLegacyExternalStorage="true" />
+    <application android:requestLegacyExternalStorage="true">
+        <!-- Debug-only: lets the Compose test host activity (declared by
+             androidx.compose.ui:ui-test-manifest) resume over a secure lock screen
+             so connected tests don't fail with 'No compose hierarchies found'. -->
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            tools:node="merge"
+            tools:targetApi="27" />
+    </application>
 </manifest>

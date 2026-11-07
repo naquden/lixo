@@ -17,4 +17,13 @@ val MIGRATION_3_4: Migration = object : Migration(3, 4) {
     }
 }
 
-val LIXO_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_3_4)
+val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `profiles` ADD COLUMN `achievementProgressJson` TEXT NOT NULL DEFAULT '{}'")
+        connection.execSQL("ALTER TABLE `profiles` ADD COLUMN `achievementCountedLevelIdsJson` TEXT NOT NULL DEFAULT '{}'")
+        connection.execSQL("ALTER TABLE `profiles` ADD COLUMN `unlockedAchievementIdsJson` TEXT NOT NULL DEFAULT '[]'")
+        connection.execSQL("ALTER TABLE `profiles` ADD COLUMN `pendingAchievementRewardIdsJson` TEXT NOT NULL DEFAULT '[]'")
+    }
+}
+
+val LIXO_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_3_4, MIGRATION_4_5)

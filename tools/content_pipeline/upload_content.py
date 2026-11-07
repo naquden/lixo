@@ -6,7 +6,8 @@ Upload-only: reads composeApp/src/commonMain/composeResources/files/seed_campaig
 (the source of truth for curriculum content) and tools/content_pipeline/lexicon/lexicon.json
 (the source of truth for the dictionary/lexicon) and never writes or regenerates either file.
 Uploads courses, levels and tasks documents, plus the chunked `lexicon/chunk_N` + `lexicon/meta`
-documents, with batched `documents:commit`.
+documents, with batched `documents:commit`. Tasks must not carry `rewardItemId`: wardrobe item
+ids are app-owned (see doc/plans/002-level-reward-item-ids.md).
 
 Usage:
     python3 tools/content_pipeline/upload_content.py --validate-only  # offline-only validation
@@ -88,6 +89,8 @@ def validate_bundle(bundle: Dict[str, Any]) -> List[str]:
     for t in tasks:
         if t["type"] == "READING" and not t.get("textContent"):
             errors.append(f"{t['id']} is a reading task without textContent")
+        if "rewardItemId" in t:
+            errors.append(f"{t['id']} has rewardItemId; the app owns level reward item ids (LixoRepository.buildLevelRewardPool), remove the field from the bundle")
     return errors
 
 

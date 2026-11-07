@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,20 +35,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.ReadingScoreResult
+import se.lixo.app.domain.engine.StoryWordToken
+import se.lixo.app.domain.engine.spellingDiff
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.DictionaryEntry
@@ -58,7 +61,10 @@ import se.lixo.app.platform.RecognizedSpeechToken
 import se.lixo.app.platform.SpeechRecognitionEngine
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.celebration.CelebrationSequenceHost
+import se.lixo.app.ui.components.celebration.FlitChestMeter
 import se.lixo.app.ui.components.celebration.LevelCompleteCard
+import se.lixo.app.ui.components.celebration.chestFillAnimation
+import se.lixo.app.ui.components.celebration.chestMeterStartDelayMillis
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
 import se.lixo.app.ui.theme.LixoCard
@@ -68,6 +74,7 @@ import se.lixo.app.ui.theme.LixoIcons
 import se.lixo.app.ui.theme.LixoProgressBar
 import se.lixo.app.ui.theme.LixoStrings
 import se.lixo.app.ui.theme.TtsIconButton
+import se.lixo.app.ui.theme.dashedBorder
 
 /**
  * Duolingo-styled Reading Activity Screen:
@@ -76,22 +83,7 @@ import se.lixo.app.ui.theme.TtsIconButton
  * - Word tracking with soft rounded chips (blue = current, yellow = flagged/needs practice, green = done).
  * - Tap-any-word help popup (syllables, explanation, listen) that never blocks reading.
  */
-private fun Modifier.dashedBorder(color: Color, cornerRadius: Dp, strokeWidth: Dp = 1.5.dp): Modifier =
-    this.drawWithCache {
-        val stroke = Stroke(
-            width = strokeWidth.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f)
-        )
-        val radiusPx = cornerRadius.toPx()
-        onDrawWithContent {
-            drawContent()
-            drawRoundRect(
-                color = color,
-                cornerRadius = CornerRadius(radiusPx, radiusPx),
-                style = stroke
-            )
-        }
-    }
+private const val HEARD_WORD_READ_DISMISS_DELAY_MS = 800L
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -110,6 +102,7 @@ fun ReadingActivityScreen(
     onCloseToMap: () -> Unit
 ) {
     val storyText = task.textContent ?: ""
+    val speechLanguageIso = if (level.subject == se.lixo.app.domain.model.Subject.ENGLISH) "en-US" else "sv-SE"
     var modeLocked by remember { mutableStateOf(false) }
     var chosenMode by remember { mutableStateOf(ReadingMode.AI_LISTENING) }
 
@@ -154,7 +147,7 @@ fun ReadingActivityScreen(
                 }
             }
             sttEngine.startListening(
-                languageIso = if (level.subject == se.lixo.app.domain.model.Subject.ENGLISH) "en-US" else "sv-SE",
+                languageIso = speechLanguageIso,
                 expectedWords = sessionState.words.map { it.normalizedText }
             )
         }
@@ -431,6 +424,18 @@ fun ReadingActivityScreen(
                                     fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Medium,
                                     color = fg
                                 )
+                                if ((isYellowUnread || isYellowRead) && token.heardText != null) {
+                                    Box(Modifier.matchParentSize()) {
+                                        LixoIcon(
+                                            icon = LixoIcons.Mic,
+                                            tint = LixoColors.GoldLip,
+                                            size = 12.dp,
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .offset(x = 4.dp, y = (-2).dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -513,6 +518,35 @@ fun ReadingActivityScreen(
                                     text = LixoStrings.READING_SIMULATE_VOICE_BTN.uppercase(),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = Color.White
+                                )
+                            }
+
+                            Spacer(Modifier.height(10.dp))
+
+                            LixoButton(
+                                onClick = {
+                                    val current = sessionState.currentWord ?: return@LixoButton
+                                    val wrong = current.normalizedText.take(1) + "xq"
+                                    sessionState = alignmentEngine.processRecognizedTokens(
+                                        sessionState,
+                                        listOf(
+                                            RecognizedSpeechToken(
+                                                rawWord = wrong,
+                                                normalizedWord = wrong,
+                                                confidence = 0.96f,
+                                                timestampMillis = sessionState.elapsedMillis
+                                            )
+                                        )
+                                    )
+                                },
+                                variant = LixoButtonVariant.OUTLINE,
+                                height = 46.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = LixoStrings.READING_SIMULATE_WRONG_WORD_BTN,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = LixoColors.Blue
                                 )
                             }
 
@@ -611,18 +645,28 @@ fun ReadingActivityScreen(
                         showDuplicateChestNote = completion.chestOutcome?.isDuplicate == true,
                         onContinue = onCloseToMap,
                         continueEnabled = celebrationSequenceFinished,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerContent = {
+                            FlitChestMeter(
+                                halfPoints = completion.updatedProfile.chestProgressHalfPoints,
+                                size = 44.dp,
+                                animation = chestFillAnimation(
+                                    completion.updatedProfile.chestProgressHalfPoints,
+                                    completion.chestPointsAwardedHalf,
+                                    completion.chestOutcome != null
+                                ),
+                                startDelayMillis = chestMeterStartDelayMillis(scoreResult.starsEarned)
+                            )
+                        }
                     ) {
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            text = if (completion.chestOutcome != null && completion.chestOutcome.newlyUnlockedItem != null) {
-                                LixoStrings.CHEST_OPENED
-                            } else {
-                                LixoStrings.chestProgress(completion.updatedProfile.chestProgressHalfPoints)
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LixoColors.TextSecondary
-                        )
+                        if (completion.chestOutcome?.newlyUnlockedItem != null) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                text = LixoStrings.CHEST_OPENED,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = LixoColors.TextSecondary
+                            )
+                        }
 
                         if (sessionState.mode == ReadingMode.AI_LISTENING) {
                             Spacer(Modifier.height(10.dp))
@@ -692,9 +736,19 @@ fun ReadingActivityScreen(
         }
 
         // Tap-any-word help popup: works during and after the session, never touches sttEngine.
-        val popupEntry = helpPopupWordIndex
-            ?.let { idx -> sessionState.words.getOrNull(idx) }
-            ?.let { word -> lookupDictionary(word.normalizedText) }
+        val popupWord = helpPopupWordIndex?.let { sessionState.words.getOrNull(it) }
+        val popupEntry = popupWord?.let { lookupDictionary(it.normalizedText) }
+        val showHeardCompare = popupWord != null && popupWord.needsPractice &&
+            sessionState.mode == ReadingMode.AI_LISTENING
+        val popupOpenedUnread = remember(helpPopupWordIndex) { popupWord?.isCompleted == false }
+        var showPopupReadCheck by remember(helpPopupWordIndex) { mutableStateOf(false) }
+        LaunchedEffect(helpPopupWordIndex, popupWord?.isCompleted) {
+            if (showHeardCompare && popupOpenedUnread && popupWord?.isCompleted == true) {
+                showPopupReadCheck = true
+                delay(HEARD_WORD_READ_DISMISS_DELAY_MS)
+                helpPopupWordIndex = null
+            }
+        }
         if (popupEntry != null) {
             Box(
                 modifier = Modifier
@@ -736,6 +790,17 @@ fun ReadingActivityScreen(
                                 LixoIcon(icon = LixoIcons.Close, tint = LixoColors.TextSecondary, size = 18.dp)
                             }
                         }
+                        if (showHeardCompare) {
+                            Spacer(Modifier.height(10.dp))
+                            HeardWordCompareBlock(
+                                word = popupWord!!,
+                                isSessionCompleted = sessionState.isCompleted,
+                                showTtsButtons = showSwedishTtsButtons,
+                                ttsEngine = ttsEngine,
+                                languageIso = speechLanguageIso,
+                                showReadCheck = showPopupReadCheck
+                            )
+                        }
                         Spacer(Modifier.height(10.dp))
                         Text(
                             text = popupEntry.syllables,
@@ -770,6 +835,100 @@ fun ReadingActivityScreen(
                 onFinished = { celebrationSequenceFinished = true },
                 modifier = Modifier.fillMaxSize()
             )
+        }
+    }
+}
+
+/**
+ * "Tryck och jämför": shows the story word next to what the AI heard for a yellow word, with
+ * per-letter diff highlighting and an optional "try again" hint while the word is still unread.
+ */
+@Composable
+private fun HeardWordCompareBlock(
+    word: StoryWordToken,
+    isSessionCompleted: Boolean,
+    showTtsButtons: Boolean,
+    ttsEngine: TextToSpeechEngine,
+    languageIso: String,
+    showReadCheck: Boolean
+) {
+    val target = word.displayText.trim { !it.isLetterOrDigit() }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White)
+            .padding(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = LixoStrings.READING_HEARD_WORD_LABEL,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = LixoColors.TextSecondary
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = buildAnnotatedString {
+                    spellingDiff(target, word.heardText.orEmpty()).forEach { d ->
+                        withStyle(
+                            if (d.matched) {
+                                SpanStyle(color = LixoColors.TextPrimary, fontWeight = FontWeight.Bold)
+                            } else {
+                                SpanStyle(color = LixoColors.GoldLip, fontWeight = FontWeight.ExtraBold)
+                            }
+                        ) {
+                            append(d.char)
+                        }
+                    }
+                },
+                style = MaterialTheme.typography.titleLarge,
+                letterSpacing = 2.sp,
+                modifier = Modifier.weight(1f)
+            )
+            if (showTtsButtons) {
+                TtsIconButton(textToSpeak = target, ttsEngine = ttsEngine, languageIso = languageIso)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (word.isCompleted) {
+                    LixoStrings.READING_HEARD_AI_FIRST_LABEL
+                } else {
+                    LixoStrings.READING_HEARD_AI_LABEL
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = LixoColors.TextSecondary
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = word.heardText ?: LixoStrings.READING_HEARD_NOTHING,
+                style = MaterialTheme.typography.titleMedium,
+                fontStyle = FontStyle.Italic,
+                color = LixoColors.TextSecondary,
+                modifier = Modifier.weight(1f)
+            )
+            if (showTtsButtons && word.heardText != null) {
+                TtsIconButton(textToSpeak = word.heardText, ttsEngine = ttsEngine, languageIso = languageIso)
+            }
+        }
+        if (showReadCheck) {
+            Spacer(Modifier.height(10.dp))
+            LixoIcon(icon = LixoIcons.Check, tint = LixoColors.Green, size = 28.dp)
+        } else if (!word.isCompleted && !isSessionCompleted) {
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LixoIcon(icon = LixoIcons.Mic, tint = LixoColors.Blue, size = 18.dp)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = LixoStrings.READING_HEARD_TRY_AGAIN_HINT,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = LixoColors.Blue
+                )
+            }
         }
     }
 }

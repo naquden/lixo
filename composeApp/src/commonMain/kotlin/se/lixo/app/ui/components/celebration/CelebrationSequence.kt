@@ -21,6 +21,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.model.AvatarType
+import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.ui.feedback.LixoHaptics
@@ -29,21 +30,22 @@ import se.lixo.app.ui.feedback.rememberLixoHaptics
 
 sealed interface CelebrationStep {
     data object Stars : CelebrationStep
-    data class Chest(val item: WardrobeItem) : CelebrationStep
+    data class Chest(val item: WardrobeItem, val source: RewardSource, val labelDetailSv: String? = null) : CelebrationStep
     data class EquipPrompt(val item: WardrobeItem) : CelebrationStep
     data class AvatarPrompt(val avatarType: AvatarType) : CelebrationStep
 }
 
 /**
  * Pure step builder for a [LevelCompletionOutcome]: stars, then a chest + equip prompt per newly
- * unlocked item (in order), then an unlock prompt per newly unlocked avatar (sorted by
+ * unlocked reward (in [LevelCompletionOutcome.newlyUnlockedRewards] order, i.e. reward-source
+ * order), then an unlock prompt per newly unlocked avatar (sorted by
  * [AvatarType.unlockStarsRequired] so the order is deterministic).
  */
 fun buildCelebrationSteps(outcome: LevelCompletionOutcome): List<CelebrationStep> {
     val steps = mutableListOf<CelebrationStep>(CelebrationStep.Stars)
-    outcome.newlyUnlockedItems.forEach { item ->
-        steps += CelebrationStep.Chest(item)
-        steps += CelebrationStep.EquipPrompt(item)
+    outcome.newlyUnlockedRewards.forEach { reward ->
+        steps += CelebrationStep.Chest(reward.item, reward.source, reward.labelDetailSv)
+        steps += CelebrationStep.EquipPrompt(reward.item)
     }
     outcome.newlyUnlockedAvatars.sortedBy { it.unlockStarsRequired }.forEach { avatar ->
         steps += CelebrationStep.AvatarPrompt(avatar)
@@ -112,6 +114,8 @@ fun CelebrationSequenceHost(
                     val i = index
                     ChestRevealStage(
                         item = step.item,
+                        source = step.source,
+                        labelDetailSv = step.labelDetailSv,
                         onOpened = {
                             confetti.burst(
                                 Offset(hostSize.width / 2f, hostSize.height / 2f),
