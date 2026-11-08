@@ -213,7 +213,10 @@ class ProfileStoreTest {
             achievementProgress = mapOf("ach_1" to 2, "ach_2" to 5),
             achievementCountedLevelIds = mapOf("ach_1" to setOf("level_1", "level_2")),
             unlockedAchievementIds = setOf("ach_1"),
-            pendingAchievementRewardIds = setOf("ach_2")
+            pendingAchievementRewardIds = setOf("ach_2"),
+            chestsSinceRarePlus = 2,
+            chestsSinceEpicPlus = 7,
+            chestsSinceLegendary = 13
         )
 
         assertEquals(p, p.toEntity().toDomain())

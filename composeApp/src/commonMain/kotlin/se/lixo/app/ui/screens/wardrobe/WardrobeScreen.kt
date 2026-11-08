@@ -7,6 +7,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
@@ -33,12 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
+import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
@@ -59,6 +63,63 @@ import se.lixo.app.ui.theme.TtsIconButton
  * - Equipment slot category pills.
  * - Fortnite rarity-accented item cards with clear equip/unequip states.
  */
+
+/** Owned/total collection count for one [rarity], against the whole catalog passed in. */
+data class RarityCollectionCount(val rarity: Rarity, val owned: Int, val total: Int)
+
+/**
+ * Per-rarity owned/total counts across [allItems] (the whole catalog, not just chest-eligible
+ * items), always in [Rarity.entries] order, even when a rarity's total is 0. [owned] only counts
+ * catalog items whose id is in [unlockedItemIds], so stale/unknown unlocked ids (e.g. from an
+ * older install) can never push a rarity's owned count above its total.
+ */
+fun rarityCollectionCounts(
+    allItems: List<WardrobeItem>,
+    unlockedItemIds: Set<String>
+): List<RarityCollectionCount> = Rarity.entries.map { r ->
+    val ofRarity = allItems.filter { it.rarity == r }
+    RarityCollectionCount(
+        rarity = r,
+        owned = ofRarity.count { it.id in unlockedItemIds },
+        total = ofRarity.size
+    )
+}
+
+const val WARDROBE_RARITY_COUNT_TAG_PREFIX = "wardrobe_rarity_count_"
+
+fun wardrobeRarityCountTag(rarity: Rarity): String = WARDROBE_RARITY_COUNT_TAG_PREFIX + rarity.id
+
+/** Row of per-rarity collection count chips, shown at the top of the wardrobe. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RarityCollectionRow(counts: List<RarityCollectionCount>) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        counts.forEach { c ->
+            val rarityColor = LixoColors.rarityColor(c.rarity)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(rarityColor.copy(alpha = 0.18f))
+                    .border(1.dp, rarityColor, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = LixoStrings.wardrobeRarityCount(c.rarity, c.owned, c.total),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = rarityColor,
+                    maxLines = 1,
+                    modifier = Modifier.testTag(wardrobeRarityCountTag(c.rarity))
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun WardrobeScreen(
     profile: ChildProfile,
@@ -73,6 +134,9 @@ fun WardrobeScreen(
 ) {
     var selectedSlot by remember { mutableStateOf(EquipmentSlot.HAT) }
     val catalogById = remember(allWardrobeItems) { allWardrobeItems.associateBy { it.id } }
+    val rarityCounts = remember(allWardrobeItems, unlockedItemIds) {
+        rarityCollectionCounts(allWardrobeItems, unlockedItemIds)
+    }
 
     val unlockedItemsForSlot = remember(allWardrobeItems, unlockedItemIds, selectedSlot) {
         allWardrobeItems
@@ -125,6 +189,9 @@ fun WardrobeScreen(
                 )
             }
         }
+
+        Spacer(Modifier.height(12.dp))
+        RarityCollectionRow(rarityCounts)
 
         Spacer(Modifier.height(16.dp))
 

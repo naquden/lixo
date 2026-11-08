@@ -27,7 +27,10 @@ data class ProfileEntity(
     @ColumnInfo(defaultValue = "'{}'") val achievementProgressJson: String = "{}",
     @ColumnInfo(defaultValue = "'{}'") val achievementCountedLevelIdsJson: String = "{}",
     @ColumnInfo(defaultValue = "'[]'") val unlockedAchievementIdsJson: String = "[]",
-    @ColumnInfo(defaultValue = "'[]'") val pendingAchievementRewardIdsJson: String = "[]"
+    @ColumnInfo(defaultValue = "'[]'") val pendingAchievementRewardIdsJson: String = "[]",
+    @ColumnInfo(defaultValue = "0") val chestsSinceRarePlus: Int = 0,
+    @ColumnInfo(defaultValue = "0") val chestsSinceEpicPlus: Int = 0,
+    @ColumnInfo(defaultValue = "0") val chestsSinceLegendary: Int = 0
 )
 
 @Entity(tableName = "courses")

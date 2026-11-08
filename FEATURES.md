@@ -4,8 +4,12 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
+- [ ] 012 — Rarity follow-ups from 011 review: pity floor stuck when tier exhausted, idle teaser animations, 'LEGENDARISK' label wrap, misplaced WardrobeScreen KDoc (bug, after 011) → [plan](doc/plans/012-rarity-followups.md)
+
 ## Done
 
+- [x] 011 — Rarity: rarity-first drop odds 40/28/18/10/4, chest pity, visual ladder, chest teaser, collection counts (feature) → [plan](doc/plans/011-rarity-odds-and-feel.md)  
+  _Verified 2026-11-08: `verify/RarityRevealTest` 2/2, `WardrobeRarityCountTest` 1/1, `ItemCatalogScreenshotTest` 1/1, `ProfilePersistenceTest` 3/3 on emulator-5554 (DB 5→6 migration OK); unit + pytest 28/28 (ids/names/rarities identical to fixture). Screenshots in temp/verify011/. Known LOW: pity floor never resets once every eligible item of that tier is owned; teaser infinite transitions run for all rarities; 'LEGENDARISK' label wraps in wardrobe card; misplaced WardrobeScreen KDoc._
 - [x] 010 — Persist level progress (regression from 008: map relocks, stars and chests are handed out again after restart) (bug, after 008) → [plan](doc/plans/010-persist-level-progress.md)  
   _Verified 2026-11-07: `verify/ProfilePersistenceTest` 3/3 (incl. `coldStart_keepsLevelProgress`) + `ItemCatalogScreenshotTest` 1/1 on emulator-5554, `ProfileStoreTest` 10/10; screenshots in temp/verify010/. Known LOW: a level clear is saved in several non-atomic writes; 008-era installs have no level_progress rows._
 - [x] 007 — Tutorial: skipped words block completion; allow "Gå vidare" once last word is read (bug) → [plan](doc/plans/007-tutorial-stuck-unread-words.md)  

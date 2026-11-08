@@ -194,11 +194,13 @@ fun Avatar3DViewport(
  */
 @Composable
 fun WardrobeItemPreview(item: WardrobeItem, modifier: Modifier = Modifier) {
-    // Only items with a time-driven ornament (SPARKLE twinkle, GLOW halo) need the infinite
-    // animation clock; starting it for every card (most of which have ornament == NONE/TRIM/GEM)
-    // forced every card to recompose every frame. The remaining cards get a constant phase.
-    val isAnimatedOrnament = item.ornament == ItemOrnament.SPARKLE || item.ornament == ItemOrnament.GLOW
-    val auraPhaseState: State<Float> = if (isAnimatedOrnament) {
+    // Only items with a time-driven effect (SPARKLE twinkle, plus every LEGENDARY which always
+    // sparkles too) need the infinite animation clock; GLOW alone is a static halo that ignores
+    // auraPhase, so it doesn't need the clock. Starting the clock for every card (most of which
+    // have ornament == NONE/TRIM/GEM/GLOW) forced every card to recompose every frame. The
+    // remaining cards get a constant phase.
+    val needsAuraClock = item.ornament == ItemOrnament.SPARKLE || item.rarity == Rarity.LEGENDARY
+    val auraPhaseState: State<Float> = if (needsAuraClock) {
         val infiniteTransition = rememberInfiniteTransition(label = "item_preview_sparkle")
         val animTimeSecondsState = infiniteTransition.animateFloat(
             initialValue = 0f,
@@ -441,7 +443,35 @@ private fun DrawScope.drawOrnamentOverlay(
     }
 }
 
-/** Applies [ItemOrnament.GLOW] first (so it sits behind the shape), runs [block], then applies
+/** Plan 011 section 3: every LEGENDARY gets the GLOW halo behind it AND the SPARKLE twinkle on
+ * top, whatever its own ornament. */
+private val WardrobeItem.drawsGlowHalo: Boolean get() = ornament == ItemOrnament.GLOW || rarity == Rarity.LEGENDARY
+private val WardrobeItem.drawsSparkle: Boolean get() = ornament == ItemOrnament.SPARKLE || rarity == Rarity.LEGENDARY
+
+/** Behind-the-shape pass. Call BEFORE drawing the item's shape. */
+private fun DrawScope.drawItemHalo(item: WardrobeItem, bounds: Rect, secondary: Color) {
+    if (item.drawsGlowHalo) drawGlowHalo(bounds.center, bounds.maxDimension * 0.7f, secondary)
+}
+
+/** On-top pass: TRIM/GEM from item.ornament, plus SPARKLE for SPARKLE items and every LEGENDARY.
+ * Never draws the halo. */
+private fun DrawScope.drawItemOrnaments(
+    path: Path,
+    bounds: Rect,
+    item: WardrobeItem,
+    secondary: Color,
+    scale: Float,
+    auraPhase: Float
+) {
+    if (item.ornament == ItemOrnament.TRIM || item.ornament == ItemOrnament.GEM) {
+        drawOrnamentOverlay(path, bounds, item.ornament, secondary, scale, auraPhase)
+    }
+    if (item.drawsSparkle) {
+        drawOrnamentOverlay(path, bounds, ItemOrnament.SPARKLE, secondary, scale, auraPhase)
+    }
+}
+
+/** Applies the glow halo first (so it sits behind the shape), runs [block], then applies
  * the remaining ornaments/pattern on top, all scaled by [item]'s `scaleMultiplier` around [pivot]. */
 private fun DrawScope.withItemDecoration(
     item: WardrobeItem,
@@ -457,16 +487,10 @@ private fun DrawScope.withItemDecoration(
     }) {
         val path = shapeBuilder()
         val bounds = path.getBounds()
-        if (item.ornament == ItemOrnament.GLOW) {
-            drawGlowHalo(bounds.center, bounds.maxDimension * 0.7f, secondary)
-        }
+        drawItemHalo(item, bounds, secondary)
         block(path, bounds)
         drawPatternFill(path, bounds, item.pattern, secondary)
-        if (item.ornament != ItemOrnament.GLOW) {
-            drawOrnamentOverlay(path, bounds, item.ornament, secondary, scale, auraPhase)
-        } else {
-            // sparkle-like re-pass skipped; GLOW already drawn behind.
-        }
+        drawItemOrnaments(path, bounds, item, secondary, scale, auraPhase)
     }
 }
 
@@ -751,13 +775,20 @@ private fun DrawScope.drawPants(
                 5 -> drawRect(secondary.copy(alpha = 0.5f), topLeft = Offset(topLeft.x + legWidth * 0.2f, topLeft.y + shortHeight * 0.3f), size = Size(legWidth * 0.3f, legWidth * 0.3f)) // cargo pocket
                 6 -> drawPatternFill(rect(topLeft, Size(legWidth, shortHeight)), bounds, ItemPattern.CHECKER, secondary) // kilt
             }
-            drawOrnamentOverlay(rect(topLeft, Size(legWidth, shortHeight)), bounds, item.ornament, secondary, scale, auraPhase)
+            drawItemOrnaments(rect(topLeft, Size(legWidth, shortHeight)), bounds, item, secondary, scale, auraPhase)
         }
     }
 
     withTransform({
         if (item != null) scale(item.scaleMultiplier, item.scaleMultiplier, pivot = Offset((leftLegTopLeft.x + rightLegTopLeft.x + legWidth) / 2f, leftLegTopLeft.y))
     }) {
+        if (item != null) {
+            drawItemHalo(
+                item,
+                Rect(leftLegTopLeft.x, leftLegTopLeft.y, rightLegTopLeft.x + legWidth, rightLegTopLeft.y + shortHeight),
+                secondary
+            )
+        }
         drawLeg(leftLegTopLeft)
         drawLeg(rightLegTopLeft)
         if (style == 3) { // skirt covers both legs
@@ -811,13 +842,20 @@ private fun DrawScope.drawShoes(
         }
         if (item != null) {
             drawPatternFill(rect(topLeft, shoeSize), bounds, item.pattern, secondary)
-            drawOrnamentOverlay(rect(topLeft, shoeSize), bounds, item.ornament, secondary, scale, auraPhase)
+            drawItemOrnaments(rect(topLeft, shoeSize), bounds, item, secondary, scale, auraPhase)
         }
     }
 
     withTransform({
         if (item != null) scale(item.scaleMultiplier, item.scaleMultiplier, pivot = Offset((leftTopLeft.x + rightTopLeft.x + shoeSize.width) / 2f, leftTopLeft.y))
     }) {
+        if (item != null) {
+            drawItemHalo(
+                item,
+                Rect(leftTopLeft.x, leftTopLeft.y, rightTopLeft.x + shoeSize.width, rightTopLeft.y + shoeSize.height),
+                secondary
+            )
+        }
         drawShoe(leftTopLeft)
         drawShoe(rightTopLeft)
     }
@@ -845,6 +883,7 @@ private fun DrawScope.drawArmorShirt(
     val size = Size(torsoWidth, torsoHeight)
     val bounds = Rect(topLeft, size)
 
+    if (item != null) drawItemHalo(item, bounds, secondary)
     drawBlock(primary, topLeft, size, blockCorner, yawParallax, scale)
     when (style) {
         1 -> { // plate armor rivets
@@ -885,7 +924,7 @@ private fun DrawScope.drawArmorShirt(
     )
     if (item != null) {
         drawPatternFill(rect(topLeft, size), bounds, item.pattern, secondary)
-        drawOrnamentOverlay(rect(topLeft, size), bounds, item.ornament, secondary, scale, auraPhase)
+        drawItemOrnaments(rect(topLeft, size), bounds, item, secondary, scale, auraPhase)
     }
 }
 
@@ -901,8 +940,9 @@ private fun DrawScope.drawGlovesBlock(
     auraPhase: Float
 ) {
     val style = item?.styleIndex?.mod(8) ?: -1
-    drawBlock(color, topLeft, handSize, blockCorner, yawParallax, scale)
     val bounds = Rect(topLeft, handSize)
+    if (item != null) drawItemHalo(item, bounds, secondary)
+    drawBlock(color, topLeft, handSize, blockCorner, yawParallax, scale)
     when (style) {
         1 -> drawRect(darken(color, 0.6f), topLeft = Offset(topLeft.x - 2f * scale, topLeft.y), size = Size(handSize.width + 4f * scale, handSize.height * 0.35f)) // gauntlet wide cuff
         2 -> for (i in 0 until 2) drawLine(secondary, Offset(topLeft.x, topLeft.y + handSize.height * (0.3f + i * 0.3f)), Offset(topLeft.x + handSize.width, topLeft.y + handSize.height * (0.3f + i * 0.3f)), strokeWidth = 1.5f * scale) // bracelets bands
@@ -923,7 +963,7 @@ private fun DrawScope.drawGlovesBlock(
     }
     if (item != null) {
         drawPatternFill(rect(topLeft, handSize), bounds, item.pattern, secondary)
-        drawOrnamentOverlay(rect(topLeft, handSize), bounds, item.ornament, secondary, scale, auraPhase)
+        drawItemOrnaments(rect(topLeft, handSize), bounds, item, secondary, scale, auraPhase)
     }
 }
 

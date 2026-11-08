@@ -102,7 +102,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_huva_rosenrosa",
@@ -178,7 +178,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_huva_nattsvart",
@@ -214,9 +214,9 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF6AB04C,
             styleIndex = 3,
-            secondaryColorHex = 0xFFBADC58,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hat_trollhatt_nattsvart",
@@ -271,9 +271,9 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF9B59B6,
             styleIndex = 5,
-            secondaryColorHex = 0xFFD2B4DE,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hat_hoghatt_kosmisk",
@@ -330,7 +330,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_huva_skogsgron",
@@ -349,7 +349,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_trollhatt_silverglans",
@@ -387,7 +387,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFF39C12,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_krona_myllergron",
@@ -423,9 +423,9 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFF1C40F,
             styleIndex = 7,
-            secondaryColorHex = 0xFFF39C12,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hat_keps_silverglans",
@@ -444,7 +444,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFF7F8C8D,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_riddarhjalm_kosmisk",
@@ -501,7 +501,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFF4A235A,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_hornhjalm_korallrod",
@@ -520,7 +520,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_trollhatt_rosenrosa",
@@ -575,9 +575,9 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF935116,
             styleIndex = 1,
-            secondaryColorHex = 0xFFBA6E2A,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hat_huva_glodande",
@@ -672,7 +672,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_hornhjalm_gyllene",
@@ -710,7 +710,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_krona_korallrod",
@@ -748,7 +748,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_pompomsmossa_korpsvart",
@@ -765,9 +765,9 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF17202A,
             styleIndex = 3,
-            secondaryColorHex = 0xFF4A235A,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hat_krona_barnstensgul",
@@ -881,7 +881,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFF39C12,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_keps_rostbrun",
@@ -898,9 +898,9 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF935116,
             styleIndex = 5,
-            secondaryColorHex = 0xFFBA6E2A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hat_riddarhjalm_skogsgron",
@@ -976,7 +976,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_hoghatt_vintervit",
@@ -993,9 +993,9 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFDFEFE,
             styleIndex = 4,
-            secondaryColorHex = 0xFFAED6F1,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hat_riddarhjalm_solgyllene",
@@ -1012,9 +1012,9 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFF1C40F,
             styleIndex = 2,
-            secondaryColorHex = 0xFFF39C12,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hat_trollhatt_korallrod",
@@ -1071,7 +1071,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_trollhatt_myllergron",
@@ -1090,7 +1090,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_krona_vintervit",
@@ -1109,7 +1109,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFAED6F1,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hat_pompomsmossa_skogsgron",
@@ -1128,7 +1128,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_hornhjalm_korpsvart",
@@ -1147,7 +1147,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFF4A235A,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_huva_vintervit",
@@ -1204,7 +1204,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hat_riddarhjalm_rostbrun",
@@ -1223,7 +1223,7 @@ private fun hatItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         )
 )
 
@@ -1340,7 +1340,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFF616161,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoulders_back_ryggsack_solgyllene",
@@ -1395,9 +1395,9 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF2E4A9E,
             styleIndex = 3,
-            secondaryColorHex = 0xFFC0C0C0,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoulders_back_vingar_kungabla",
@@ -1416,7 +1416,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoulders_back_pilkoger_lavendellila",
@@ -1435,7 +1435,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_fjadermantel_barnstensgul",
@@ -1511,7 +1511,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFAED6F1,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoulders_back_cape_regnbags",
@@ -1530,7 +1530,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFF00FFD0,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_shoulders_back_vingar_barnstensgul",
@@ -1549,7 +1549,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoulders_back_halsduk_nattsvart",
@@ -1566,9 +1566,9 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF212121,
             styleIndex = 3,
-            secondaryColorHex = 0xFF616161,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoulders_back_snackskal_korallrod",
@@ -1587,7 +1587,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_pilkoger_rostbrun",
@@ -1606,7 +1606,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoulders_back_ryggsack_rosenrosa",
@@ -1625,7 +1625,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_cape_kungabla",
@@ -1644,7 +1644,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_fjadermantel_glodande",
@@ -1720,7 +1720,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFF39C12,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_fjadermantel_myllergron",
@@ -1737,9 +1737,9 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF6AB04C,
             styleIndex = 4,
-            secondaryColorHex = 0xFFBADC58,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoulders_back_ryggsack_myllergron",
@@ -1756,9 +1756,9 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF6AB04C,
             styleIndex = 2,
-            secondaryColorHex = 0xFFBADC58,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoulders_back_cape_isbla",
@@ -1777,7 +1777,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_snackskal_kungabla",
@@ -1796,7 +1796,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoulders_back_pilkoger_glodande",
@@ -1815,7 +1815,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_ballong_rostbrun",
@@ -1870,9 +1870,9 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF27AE60,
             styleIndex = 7,
-            secondaryColorHex = 0xFF1E8449,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoulders_back_pilkoger_korpsvart",
@@ -2022,9 +2022,9 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFE74C3C,
             styleIndex = 0,
-            secondaryColorHex = 0xFFFFC300,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoulders_back_ryggsack_skogsgron",
@@ -2043,7 +2043,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_fjadermantel_solgyllene",
@@ -2060,9 +2060,9 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFF1C40F,
             styleIndex = 4,
-            secondaryColorHex = 0xFFF39C12,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoulders_back_vingar_galax",
@@ -2136,9 +2136,9 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF9B59B6,
             styleIndex = 5,
-            secondaryColorHex = 0xFFD2B4DE,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoulders_back_fjadermantel_korallrod",
@@ -2252,7 +2252,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFF39C12,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_snackskal_rosenrosa",
@@ -2328,7 +2328,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_snackskal_nattsvart",
@@ -2404,7 +2404,7 @@ private fun shouldersBackItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoulders_back_fjadermantel_nattsvart",
@@ -2483,7 +2483,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_handledslindor_regnbags",
@@ -2502,7 +2502,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFF00FFD0,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_arms_gloves_klor_rosenrosa",
@@ -2540,7 +2540,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_ringar_rostbrun",
@@ -2595,9 +2595,9 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFF6F61,
             styleIndex = 2,
-            secondaryColorHex = 0xFFFFD1CC,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_arms_gloves_handledslindor_myllergron",
@@ -2711,7 +2711,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFFFF8DC,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_arms_gloves_vantar_skogsgron",
@@ -2766,9 +2766,9 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF935116,
             styleIndex = 4,
-            secondaryColorHex = 0xFFBA6E2A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_arms_gloves_pansarhandskar_gyllene",
@@ -2804,9 +2804,9 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF2E4A9E,
             styleIndex = 0,
-            secondaryColorHex = 0xFFC0C0C0,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_arms_gloves_handledslindor_glodande",
@@ -2863,7 +2863,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_arms_gloves_taggarmskydd_rosenrosa",
@@ -2882,7 +2882,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_armband_solgyllene",
@@ -2901,7 +2901,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFF39C12,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_arms_gloves_ringar_solgyllene",
@@ -2920,7 +2920,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFF39C12,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_armband_barnstensgul",
@@ -2937,9 +2937,9 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFE67E22,
             styleIndex = 2,
-            secondaryColorHex = 0xFFF5CBA7,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_arms_gloves_vantar_vintervit",
@@ -2975,9 +2975,9 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFBDC3C7,
             styleIndex = 1,
-            secondaryColorHex = 0xFF7F8C8D,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_arms_gloves_handledslindor_nattsvart",
@@ -3015,7 +3015,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_taggarmskydd_rostbrun",
@@ -3034,7 +3034,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_handskar_silverglans",
@@ -3148,7 +3148,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFF7F8C8D,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_handledslindor_isbla",
@@ -3165,9 +3165,9 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF5DADE2,
             styleIndex = 5,
-            secondaryColorHex = 0xFFEAF2F8,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_arms_gloves_pansarhandskar_djuphavsbla",
@@ -3203,9 +3203,9 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF6AB04C,
             styleIndex = 0,
-            secondaryColorHex = 0xFFBADC58,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_arms_gloves_ringar_korpsvart",
@@ -3224,7 +3224,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFF4A235A,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_arms_gloves_armband_skogsgron",
@@ -3395,7 +3395,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_handledslindor_silverglans",
@@ -3414,7 +3414,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFF7F8C8D,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_arms_gloves_vantar_nattsvart",
@@ -3433,7 +3433,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFF616161,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_handskar_nattsvart",
@@ -3469,9 +3469,9 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF5DADE2,
             styleIndex = 1,
-            secondaryColorHex = 0xFFEAF2F8,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_arms_gloves_ringar_lavendellila",
@@ -3509,7 +3509,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFF39C12,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_armband_korpsvart",
@@ -3547,7 +3547,7 @@ private fun armsGlovesItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFF4A235A,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_arms_gloves_ringar_rosenrosa",
@@ -3683,7 +3683,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_plattrustning_glodande",
@@ -3740,7 +3740,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_armor_shirt_klanningsoverdel_glodande",
@@ -3816,7 +3816,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_armor_shirt_plattrustning_kosmisk",
@@ -3835,7 +3835,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFF00E0FF,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_armor_shirt_troja_vintervit",
@@ -3854,7 +3854,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFAED6F1,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_armor_shirt_tunikamedbalte_lavendellila",
@@ -3890,9 +3890,9 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF27AE60,
             styleIndex = 7,
-            secondaryColorHex = 0xFF1E8449,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_armor_shirt_vast_myllergron",
@@ -3930,7 +3930,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_armor_shirt_kapa_nattsvart",
@@ -3949,7 +3949,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFF616161,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_klanningsoverdel_korpsvart",
@@ -3987,7 +3987,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_armor_shirt_klanningsoverdel_myllergron",
@@ -4006,7 +4006,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_kapa_rosenrosa",
@@ -4023,9 +4023,9 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFF78FB3,
             styleIndex = 2,
-            secondaryColorHex = 0xFFFC427B,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_armor_shirt_troja_barnstensgul",
@@ -4139,7 +4139,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFF7F8C8D,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_kapa_kosmisk",
@@ -4158,7 +4158,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFF00E0FF,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_armor_shirt_plattrustning_rostbrun",
@@ -4213,9 +4213,9 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFDFEFE,
             styleIndex = 4,
-            secondaryColorHex = 0xFFAED6F1,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_armor_shirt_klanningsoverdel_rosenrosa",
@@ -4234,7 +4234,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_tunikamedbalte_barnstensgul",
@@ -4270,9 +4270,9 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFF6F61,
             styleIndex = 0,
-            secondaryColorHex = 0xFFFFD1CC,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_armor_shirt_klanningsoverdel_vintervit",
@@ -4329,7 +4329,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFF7F8C8D,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_plattrustning_djuphavsbla",
@@ -4348,7 +4348,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_tunikamedbalte_rostbrun",
@@ -4403,9 +4403,9 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF9B59B6,
             styleIndex = 4,
-            secondaryColorHex = 0xFFD2B4DE,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_armor_shirt_luvtroja_vintervit",
@@ -4462,7 +4462,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_plattrustning_lavendellila",
@@ -4519,7 +4519,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_luvtroja_korallrod",
@@ -4536,9 +4536,9 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFF6F61,
             styleIndex = 5,
-            secondaryColorHex = 0xFFFFD1CC,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_armor_shirt_tunikamedbalte_rosenrosa",
@@ -4633,7 +4633,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_vast_solgyllene",
@@ -4671,7 +4671,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_armor_shirt_luvtroja_korpsvart",
@@ -4690,7 +4690,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFF4A235A,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_armor_shirt_troja_djuphavsbla",
@@ -4747,7 +4747,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_armor_shirt_tunikamedbalte_silverglans",
@@ -4764,9 +4764,9 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFBDC3C7,
             styleIndex = 3,
-            secondaryColorHex = 0xFF7F8C8D,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_armor_shirt_troja_myllergron",
@@ -4783,9 +4783,9 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF6AB04C,
             styleIndex = 0,
-            secondaryColorHex = 0xFFBADC58,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_armor_shirt_klanningsoverdel_solgyllene",
@@ -4861,7 +4861,7 @@ private fun armorShirtItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_armor_shirt_luvtroja_lavendellila",
@@ -4921,7 +4921,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_pants_kilt_silverglans",
@@ -4957,9 +4957,9 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFF6F61,
             styleIndex = 7,
-            secondaryColorHex = 0xFFFFD1CC,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_pants_cargobyxor_lavendellila",
@@ -5035,7 +5035,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_cargobyxor_korallrod",
@@ -5092,7 +5092,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFF4A235A,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_pants_byxor_silverglans",
@@ -5111,7 +5111,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFF7F8C8D,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_benskenor_silverglans",
@@ -5149,7 +5149,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_posigabyxor_barnstensgul",
@@ -5168,7 +5168,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_kilt_korpsvart",
@@ -5185,9 +5185,9 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF17202A,
             styleIndex = 6,
-            secondaryColorHex = 0xFF4A235A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_pants_kjol_korallrod",
@@ -5282,7 +5282,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_randigaleggings_nattsvart",
@@ -5320,7 +5320,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_pants_kilt_regnbags",
@@ -5339,7 +5339,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFF00FFD0,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_pants_randigaleggings_djuphavsbla",
@@ -5434,7 +5434,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_posigabyxor_silverglans",
@@ -5491,7 +5491,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFAED6F1,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_randigaleggings_barnstensgul",
@@ -5527,9 +5527,9 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF935116,
             styleIndex = 5,
-            secondaryColorHex = 0xFFBA6E2A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_pants_kjol_korpsvart",
@@ -5546,9 +5546,9 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF17202A,
             styleIndex = 3,
-            secondaryColorHex = 0xFF4A235A,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_pants_posigabyxor_lavendellila",
@@ -5565,9 +5565,9 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF9B59B6,
             styleIndex = 7,
-            secondaryColorHex = 0xFFD2B4DE,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_pants_shorts_lavendellila",
@@ -5586,7 +5586,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_benskenor_lavendellila",
@@ -5660,9 +5660,9 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFF1C40F,
             styleIndex = 3,
-            secondaryColorHex = 0xFFF39C12,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_pants_randigaleggings_kungabla",
@@ -5738,7 +5738,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_pants_byxor_rosenrosa",
@@ -5776,7 +5776,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_cargobyxor_kungabla",
@@ -5812,9 +5812,9 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFE74C3C,
             styleIndex = 6,
-            secondaryColorHex = 0xFFFFC300,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_pants_shorts_kosmisk",
@@ -5852,7 +5852,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_pants_posigabyxor_nattsvart",
@@ -5871,7 +5871,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFF616161,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_kjol_rosenrosa",
@@ -5909,7 +5909,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_pants_cargobyxor_silverglans",
@@ -5947,7 +5947,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_pants_posigabyxor_vintervit",
@@ -5966,7 +5966,7 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFAED6F1,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_pants_shorts_korpsvart",
@@ -5983,9 +5983,9 @@ private fun pantsItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF17202A,
             styleIndex = 1,
-            secondaryColorHex = 0xFF4A235A,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_pants_randigaleggings_lavendellila",
@@ -6121,7 +6121,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_taspetsskor_vintervit",
@@ -6235,7 +6235,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFF8E44AD,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_shoes_raketskor_isbla",
@@ -6252,9 +6252,9 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF5DADE2,
             styleIndex = 5,
-            secondaryColorHex = 0xFFEAF2F8,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoes_tofflor_myllergron",
@@ -6271,9 +6271,9 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF6AB04C,
             styleIndex = 2,
-            secondaryColorHex = 0xFFBADC58,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoes_sandaler_korpsvart",
@@ -6292,7 +6292,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFF4A235A,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoes_hogastovlar_glodande",
@@ -6311,7 +6311,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoes_stovlar_gyllene",
@@ -6368,7 +6368,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_sneakers_myllergron",
@@ -6425,7 +6425,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFAED6F1,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_hogastovlar_djuphavsbla",
@@ -6444,7 +6444,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_taspetsskor_rostbrun",
@@ -6461,9 +6461,9 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF935116,
             styleIndex = 7,
-            secondaryColorHex = 0xFFBA6E2A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoes_sandaler_korallrod",
@@ -6482,7 +6482,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoes_sneakers_djuphavsbla",
@@ -6539,7 +6539,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoes_raketskor_vintervit",
@@ -6558,7 +6558,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFAED6F1,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoes_hogastovlar_solgyllene",
@@ -6594,9 +6594,9 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFE67E22,
             styleIndex = 6,
-            secondaryColorHex = 0xFFF5CBA7,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoes_tofflor_lavendellila",
@@ -6653,7 +6653,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_sneakers_korallrod",
@@ -6691,7 +6691,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_stovlar_korallrod",
@@ -6708,9 +6708,9 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFF6F61,
             styleIndex = 0,
-            secondaryColorHex = 0xFFFFD1CC,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoes_stovlar_rosenrosa",
@@ -6729,7 +6729,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_sandaler_kosmisk",
@@ -6767,7 +6767,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_tofflor_kungabla",
@@ -6786,7 +6786,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoes_raketskor_barnstensgul",
@@ -6862,7 +6862,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_traskor_korpsvart",
@@ -6879,9 +6879,9 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF17202A,
             styleIndex = 6,
-            secondaryColorHex = 0xFF4A235A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoes_raketskor_solgyllene",
@@ -6974,9 +6974,9 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF17202A,
             styleIndex = 0,
-            secondaryColorHex = 0xFF4A235A,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoes_hogastovlar_rosenrosa",
@@ -7052,7 +7052,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_sneakers_rosenrosa",
@@ -7071,7 +7071,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_shoes_sandaler_isbla",
@@ -7145,9 +7145,9 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF935116,
             styleIndex = 5,
-            secondaryColorHex = 0xFFBA6E2A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_shoes_tofflor_silverglans",
@@ -7204,7 +7204,7 @@ private fun shoesItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_shoes_sneakers_rostbrun",
@@ -7359,7 +7359,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_hammare_silverglans",
@@ -7452,9 +7452,9 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFF6F61,
             styleIndex = 3,
-            secondaryColorHex = 0xFFFFD1CC,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_right_spjut_djuphavsbla",
@@ -7473,7 +7473,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_right_spjut_barnstensgul",
@@ -7511,7 +7511,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFF7F8C8D,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_right_pilbage_vintervit",
@@ -7547,9 +7547,9 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF935116,
             styleIndex = 1,
-            secondaryColorHex = 0xFFBA6E2A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_right_magisksfar_skogsgron",
@@ -7623,9 +7623,9 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF2E4A9E,
             styleIndex = 2,
-            secondaryColorHex = 0xFFC0C0C0,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_right_pilbage_myllergron",
@@ -7644,7 +7644,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_right_magisksfar_silverglans",
@@ -7661,9 +7661,9 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFBDC3C7,
             styleIndex = 7,
-            secondaryColorHex = 0xFF7F8C8D,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_right_spjut_nattsvart",
@@ -7720,7 +7720,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_trollstav_lavendellila",
@@ -7739,7 +7739,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_svard_galax",
@@ -7794,9 +7794,9 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF17202A,
             styleIndex = 6,
-            secondaryColorHex = 0xFF4A235A,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_right_stav_djuphavsbla",
@@ -7853,7 +7853,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_hammare_skogsgron",
@@ -7948,7 +7948,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_pilbage_isbla",
@@ -7967,7 +7967,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_svard_glodande",
@@ -8005,7 +8005,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_spjut_rostbrun",
@@ -8062,7 +8062,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFF39C12,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_magisksfar_rosenrosa",
@@ -8193,9 +8193,9 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF935116,
             styleIndex = 6,
-            secondaryColorHex = 0xFFBA6E2A,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_right_svard_lavendellila",
@@ -8233,7 +8233,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFF00E0FF,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_hand_right_spjut_skogsgron",
@@ -8309,7 +8309,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFF00FFD0,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_hand_right_hammare_isbla",
@@ -8366,7 +8366,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_svard_myllergron",
@@ -8421,9 +8421,9 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF5DADE2,
             styleIndex = 1,
-            secondaryColorHex = 0xFFEAF2F8,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_right_stav_korallrod",
@@ -8480,7 +8480,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_right_magisksfar_djuphavsbla",
@@ -8497,9 +8497,9 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF154360,
             styleIndex = 7,
-            secondaryColorHex = 0xFF1B4F72,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_right_svard_solgyllene",
@@ -8537,7 +8537,7 @@ private fun handRightItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         )
 )
 
@@ -8578,7 +8578,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_left_bok_glodande",
@@ -8597,7 +8597,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_left_fackla_myllergron",
@@ -8614,9 +8614,9 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF6AB04C,
             styleIndex = 6,
-            secondaryColorHex = 0xFFBADC58,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_left_kompass_barnstensgul",
@@ -8635,7 +8635,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_timglas_skogsgron",
@@ -8804,9 +8804,9 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF154360,
             styleIndex = 1,
-            secondaryColorHex = 0xFF1B4F72,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_left_rundskold_kungabla",
@@ -8882,7 +8882,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFFFF8DC,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_hand_left_timglas_rostbrun",
@@ -8918,9 +8918,9 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF5DADE2,
             styleIndex = 4,
-            secondaryColorHex = 0xFFEAF2F8,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_left_rundskold_lavendellila",
@@ -8939,7 +8939,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_left_kiteskold_glodande",
@@ -8977,7 +8977,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_bok_kungabla",
@@ -8994,9 +8994,9 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF2E4A9E,
             styleIndex = 2,
-            secondaryColorHex = 0xFFC0C0C0,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_left_lykta_regnbags",
@@ -9015,7 +9015,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFF00FFD0,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_hand_left_kompass_myllergron",
@@ -9129,7 +9129,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_bok_vintervit",
@@ -9165,9 +9165,9 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF154360,
             styleIndex = 2,
-            secondaryColorHex = 0xFF1B4F72,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_left_lykta_silverglans",
@@ -9260,9 +9260,9 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF9B59B6,
             styleIndex = 6,
-            secondaryColorHex = 0xFFD2B4DE,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_left_rundskold_nattsvart",
@@ -9281,7 +9281,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFF616161,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_trolldryck_kungabla",
@@ -9357,7 +9357,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_kompass_djuphavsbla",
@@ -9395,7 +9395,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_lykta_glodande",
@@ -9414,7 +9414,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_left_timglas_myllergron",
@@ -9452,7 +9452,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_fackla_korallrod",
@@ -9471,7 +9471,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFFFD1CC,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_kiteskold_silverglans",
@@ -9488,9 +9488,9 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFBDC3C7,
             styleIndex = 1,
-            secondaryColorHex = 0xFF7F8C8D,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_left_timglas_rosenrosa",
@@ -9585,7 +9585,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFF00E0FF,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_hand_left_lykta_myllergron",
@@ -9604,7 +9604,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_left_bok_myllergron",
@@ -9623,7 +9623,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_rundskold_barnstensgul",
@@ -9642,7 +9642,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_hand_left_timglas_isbla",
@@ -9680,7 +9680,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_hand_left_kompass_rostbrun",
@@ -9735,9 +9735,9 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF17202A,
             styleIndex = 6,
-            secondaryColorHex = 0xFF4A235A,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_hand_left_trolldryck_isbla",
@@ -9756,7 +9756,7 @@ private fun handLeftItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         )
 )
 
@@ -9797,7 +9797,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFF616161,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_kattsvans_vintervit",
@@ -9814,9 +9814,9 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFDFEFE,
             styleIndex = 0,
-            secondaryColorHex = 0xFFAED6F1,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.DOTS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_tail_sjojungfrufena_glodande",
@@ -9930,7 +9930,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFF1E8449,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_kometsvans_rosenrosa",
@@ -9949,7 +9949,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_tail_kattsvans_lavendellila",
@@ -9966,9 +9966,9 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF9B59B6,
             styleIndex = 0,
-            secondaryColorHex = 0xFFD2B4DE,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_tail_hundsvans_skogsgron",
@@ -10004,9 +10004,9 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFFDFEFE,
             styleIndex = 7,
-            secondaryColorHex = 0xFFAED6F1,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_tail_odlesvans_glodande",
@@ -10025,7 +10025,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_regnbagssvans_rostbrun",
@@ -10044,7 +10044,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_drakssvans_myllergron",
@@ -10063,7 +10063,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFBADC58,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_sjojungfrufena_barnstensgul",
@@ -10101,7 +10101,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFF00FFD0,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_tail_ravsvans_silverglans",
@@ -10118,9 +10118,9 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFBDC3C7,
             styleIndex = 2,
-            secondaryColorHex = 0xFF7F8C8D,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_tail_kattsvans_djuphavsbla",
@@ -10139,7 +10139,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_kometsvans_djuphavsbla",
@@ -10232,9 +10232,9 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF5DADE2,
             styleIndex = 4,
-            secondaryColorHex = 0xFFEAF2F8,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STRIPES,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_tail_regnbagssvans_myllergron",
@@ -10291,7 +10291,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_tail_ravsvans_kungabla",
@@ -10310,7 +10310,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFC0C0C0,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_tail_hundsvans_galax",
@@ -10329,7 +10329,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 1,
             secondaryColorHex = 0xFF8E44AD,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_tail_sjojungfrufena_silverglans",
@@ -10346,9 +10346,9 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFFBDC3C7,
             styleIndex = 7,
-            secondaryColorHex = 0xFF7F8C8D,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_tail_kometsvans_korpsvart",
@@ -10405,7 +10405,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_kattsvans_rostbrun",
@@ -10462,7 +10462,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFEAF2F8,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_hundsvans_kungabla",
@@ -10538,7 +10538,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 6,
             secondaryColorHex = 0xFF8E44AD,
             pattern = ItemPattern.STARS,
-            ornament = ItemOrnament.GLOW
+            ornament = ItemOrnament.SPARKLE
         ),
         WardrobeItem(
             id = "item_tail_drakssvans_korpsvart",
@@ -10614,7 +10614,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFFD2B4DE,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_tail_kattsvans_isbla",
@@ -10690,7 +10690,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 7,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_tail_kometsvans_solgyllene",
@@ -10728,7 +10728,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFF5CBA7,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_tail_hundsvans_regnbags",
@@ -10785,7 +10785,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 2,
             secondaryColorHex = 0xFF1B4F72,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_drakssvans_lavendellila",
@@ -10802,9 +10802,9 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF9B59B6,
             styleIndex = 3,
-            secondaryColorHex = 0xFFD2B4DE,
+            secondaryColorHex = 0xFFD5DBDB,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_tail_odlesvans_nattsvart",
@@ -10823,7 +10823,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 4,
             secondaryColorHex = 0xFF616161,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_tail_kattsvans_rosenrosa",
@@ -10842,7 +10842,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 0,
             secondaryColorHex = 0xFFFC427B,
             pattern = ItemPattern.NONE,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.NONE
         ),
         WardrobeItem(
             id = "item_tail_regnbagssvans_glodande",
@@ -10861,7 +10861,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 5,
             secondaryColorHex = 0xFFFFC300,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         ),
         WardrobeItem(
             id = "item_tail_kometsvans_kungabla",
@@ -10878,9 +10878,9 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             isWeeklyStreakSetPiece = false,
             primaryColorHex = 0xFF2E4A9E,
             styleIndex = 6,
-            secondaryColorHex = 0xFFC0C0C0,
+            secondaryColorHex = 0xFFF4D03F,
             pattern = ItemPattern.ZIGZAG,
-            ornament = ItemOrnament.GEM
+            ornament = ItemOrnament.GLOW
         ),
         WardrobeItem(
             id = "item_tail_hundsvans_korallrod",
@@ -10975,7 +10975,7 @@ private fun tailItems(): List<WardrobeItem> = listOf(
             styleIndex = 3,
             secondaryColorHex = 0xFFBA6E2A,
             pattern = ItemPattern.CHECKER,
-            ornament = ItemOrnament.TRIM
+            ornament = ItemOrnament.GEM
         )
 )
 

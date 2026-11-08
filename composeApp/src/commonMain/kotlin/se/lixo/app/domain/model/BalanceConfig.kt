@@ -125,6 +125,17 @@ object BalanceConfig {
     /** Half-points awarded for replaying an already-passed level with no new stars (0.5 point). */
     const val CHEST_POINTS_REPLAY_RUN_HALF = 1
 
+    /**
+     * Pity floors for Flitkista chests: the Nth chest since the last chest at or above that
+     * tier is guaranteed to be at least that tier. A playthrough only yields a few dozen chests,
+     * so with 18/10/4 % odds a child could otherwise go 30+ chests without an epic or 60+
+     * without a legendary. These floors cap the drought at 4/10/20 chests. Only Flitkistan
+     * counts; onboarding, the star curve, gifts and achievements do not.
+     */
+    const val PITY_RARE_PLUS_CHESTS = 4
+    const val PITY_EPIC_PLUS_CHESTS = 10
+    const val PITY_LEGENDARY_CHESTS = 20
+
     // --- Reward pacing (§2 "Belöningskurva") ---
     /**
      * Reward pacing has three layers that each cover a different part of a profile's lifetime:

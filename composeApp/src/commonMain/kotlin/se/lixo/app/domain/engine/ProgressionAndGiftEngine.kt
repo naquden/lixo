@@ -51,14 +51,21 @@ data class LevelCompletionOutcome(
  *   other subjects.
  * - Anti-Star-Farming: replaying an already 3-starred level awards 0 additional stars;
  *   replaying a 1- or 2-starred level only awards the positive delta (`max(0, newStars - previousBest)`).
- * - Non-Lootbox Gifts: extra repetition awards a gift with an item. If the rolled item is a duplicate,
- *   nothing happens (`isDuplicate = true`, `newlyUnlockedItem = null`). Unlimited gifts per day.
+ * - Non-Lootbox Gifts: extra repetition awards a gift with an item, rolled rarity-first
+ *   (Rarity.giftDropWeight 40/28/18/10/4 %), then uniformly within the rarity. If the rolled item
+ *   is a duplicate, nothing happens (`isDuplicate = true`, `newlyUnlockedItem = null`). Unlimited
+ *   gifts per day.
  * - Effort Chest "Flitkistan" (`project.md` §2 "Presenter / gåvor"): every run that earns new stars or
  *   clears a new level pays 1 point; a replay with no new stars pays 0.5 point (0 in manual mode / when
  *   not eligible for gifts). Points are stored as integer half-points. At 10 points (20 half-points) a
  *   chest is awarded with a random item from the catalog, excluding weekly-streak set pieces and
- *   achievement-linked items, and the counter keeps the overflow. Duplicates follow the same rule as
- *   gifts: nothing unlocks. The pool has no subject bias.
+ *   achievement-linked items, and the counter keeps the overflow. The chest prefers unowned items
+ *   (nearest rarity with an unowned item, lower first); only when every eligible item is owned does
+ *   it roll a duplicate, which unlocks nothing. The pool has no subject bias. Pity floors
+ *   ([BalanceConfig.PITY_RARE_PLUS_CHESTS]/[BalanceConfig.PITY_EPIC_PLUS_CHESTS]/
+ *   [BalanceConfig.PITY_LEGENDARY_CHESTS] = 4/10/20) guarantee at least RARE/EPIC/LEGENDARY every
+ *   4th/10th/20th Flitkista chest since the last one at or above that tier; only Flitkistan counts
+ *   toward these counters.
  * - Calendar-Day Streak (00:00–24:00 local time): a streak day is earned when at least 1 reading task
  *   AND 1 math task are completed on that calendar date.
  * - Reward pacing (`doc/plans/001-reward-pacing-early-chests.md`, `project.md` §2 "Belöningskurva"):
@@ -106,6 +113,51 @@ class ProgressionAndGiftEngine(
             isChestEligible(item) &&
                 (item.rarity == Rarity.COMMON || item.rarity == Rarity.UNCOMMON) &&
                 item.unlockStarRequirement == 0
+
+        /**
+         * The fallback order used when `preferUnowned` finds the rolled rarity fully owned
+         * (see [rollWeighted]): [rolled] first, then nearest distance first, and the lower
+         * rarity before the higher one at equal distance. E.g. RARE gives
+         * `[RARE, UNCOMMON, EPIC, COMMON, LEGENDARY]`; COMMON gives
+         * `[COMMON, UNCOMMON, RARE, EPIC, LEGENDARY]`.
+         */
+        fun rarityFallbackOrder(rolled: Rarity): List<Rarity> {
+            val entries = Rarity.entries
+            val order = mutableListOf(rolled)
+            for (d in 1 until entries.size) {
+                entries.getOrNull(rolled.ordinal - d)?.let { order += it }
+                entries.getOrNull(rolled.ordinal + d)?.let { order += it }
+            }
+            return order
+        }
+
+        /**
+         * The pity floor for the next Flitkista chest (see [rollChest]): LEGENDARY if the next
+         * chest would be the [BalanceConfig.PITY_LEGENDARY_CHESTS]th since the last legendary,
+         * else EPIC if it would be the [BalanceConfig.PITY_EPIC_PLUS_CHESTS]th since the last
+         * EPIC+, else RARE if it would be the [BalanceConfig.PITY_RARE_PLUS_CHESTS]th since the
+         * last RARE+, else COMMON (no floor).
+         */
+        fun chestMinRarity(
+            chestsSinceRarePlus: Int,
+            chestsSinceEpicPlus: Int,
+            chestsSinceLegendary: Int
+        ): Rarity = when {
+            chestsSinceLegendary + 1 >= BalanceConfig.PITY_LEGENDARY_CHESTS -> Rarity.LEGENDARY
+            chestsSinceEpicPlus + 1 >= BalanceConfig.PITY_EPIC_PLUS_CHESTS -> Rarity.EPIC
+            chestsSinceRarePlus + 1 >= BalanceConfig.PITY_RARE_PLUS_CHESTS -> Rarity.RARE
+            else -> Rarity.COMMON
+        }
+
+        /**
+         * Advances [profile]'s Flitkista pity counters after rolling [rolled]: resets the counter
+         * for [rolled]'s tier and every lower tier to 0, and increments the rest.
+         */
+        fun advanceChestPity(profile: ChildProfile, rolled: Rarity): ChildProfile = profile.copy(
+            chestsSinceRarePlus = if (rolled >= Rarity.RARE) 0 else profile.chestsSinceRarePlus + 1,
+            chestsSinceEpicPlus = if (rolled >= Rarity.EPIC) 0 else profile.chestsSinceEpicPlus + 1,
+            chestsSinceLegendary = if (rolled == Rarity.LEGENDARY) 0 else profile.chestsSinceLegendary + 1
+        )
     }
 
     /**
@@ -266,12 +318,24 @@ class ProgressionAndGiftEngine(
         var chestProgress = profile.chestProgressHalfPoints + chestPointsAwardedHalf
         val chestOutcome = if (chestProgress >= BalanceConfig.CHEST_POINTS_THRESHOLD_HALF) {
             chestProgress -= BalanceConfig.CHEST_POINTS_THRESHOLD_HALF
-            rollChest(allWardrobeItems, workingUnlockedIds)?.also { o ->
+            rollChest(
+                allWardrobeItems,
+                workingUnlockedIds,
+                profile.chestsSinceRarePlus,
+                profile.chestsSinceEpicPlus,
+                profile.chestsSinceLegendary
+            )?.also { o ->
                 o.newlyUnlockedItem?.let { award(it, RewardSource.FLITKISTA) }
+                println(
+                    "LixoRewards: Flitkista floor=${
+                        chestMinRarity(profile.chestsSinceRarePlus, profile.chestsSinceEpicPlus, profile.chestsSinceLegendary)
+                    } rolled=${o.rolledItem.rarity} id=${o.rolledItem.id} dup=${o.isDuplicate}"
+                )
             }
         } else {
             null
         }
+        val pityProfile = chestOutcome?.let { advanceChestPity(profile, it.rolledItem.rarity) } ?: profile
 
         // 4. Extra repetition gift roll (`project.md` §2 "Extra repetition ger en present med ett föremål. Dubblett -> ingenting händer.")
         val giftOutcome = if (isReplay && eligibleForRepetitionGift && allWardrobeItems.isNotEmpty()) {
@@ -359,7 +423,10 @@ class ProgressionAndGiftEngine(
             achievementProgress = evaluation.state.progress,
             achievementCountedLevelIds = evaluation.state.countedLevelIds,
             unlockedAchievementIds = evaluation.state.unlockedIds,
-            pendingAchievementRewardIds = stillPending
+            pendingAchievementRewardIds = stillPending,
+            chestsSinceRarePlus = pityProfile.chestsSinceRarePlus,
+            chestsSinceEpicPlus = pityProfile.chestsSinceEpicPlus,
+            chestsSinceLegendary = pityProfile.chestsSinceLegendary
         )
 
         return LevelCompletionOutcome(
@@ -378,7 +445,8 @@ class ProgressionAndGiftEngine(
 
     /**
      * Rolls a non-lootbox present (`project.md` §2 "Presenter / gåvor (inte lootbox):
-     * Extra repetition ger en present med ett föremål. Dubblett -> ingenting händer.").
+     * Extra repetition ger en present med ett föremål. Dubblett -> ingenting händer."). Presents
+     * never prefer unowned items, so a duplicate roll keeps "Dubblett -> ingenting händer".
      */
     fun rollPresentGift(
         subject: Subject,
@@ -387,21 +455,30 @@ class ProgressionAndGiftEngine(
     ): GiftRollOutcome {
         val eligible = allItems.filter { isChestEligible(it) }.ifEmpty { allItems }
         val pool = eligible.filter { it.subjectTheme == subject }.ifEmpty { eligible }
-        return rollWeighted(pool, unlockedItemIds)
+        return rollWeighted(pool, unlockedItemIds, preferUnowned = false)
     }
 
     /**
      * Rolls a chest item for the effort chest "Flitkistan" (`project.md` §2 "Presenter / gåvor"):
      * the pool is every catalog item except weekly-streak set pieces and achievement-linked items,
-     * with no subject bias. Returns null if the pool is empty.
+     * with no subject bias. The chest prefers unowned items (nearest rarity with an unowned item,
+     * lower before higher); only when every eligible item is already owned does it roll a
+     * duplicate, which unlocks nothing. [chestsSinceRarePlus]/[chestsSinceEpicPlus]/
+     * [chestsSinceLegendary] (default 0, see [ChildProfile]) set a pity floor via
+     * [chestMinRarity]; when none applies (all 0) the roll is identical to today's. Returns null
+     * if the pool is empty.
      */
     fun rollChest(
         allItems: List<WardrobeItem>,
-        unlockedItemIds: Set<String>
+        unlockedItemIds: Set<String>,
+        chestsSinceRarePlus: Int = 0,
+        chestsSinceEpicPlus: Int = 0,
+        chestsSinceLegendary: Int = 0
     ): GiftRollOutcome? {
         val candidatePool = allItems.filter { isChestEligible(it) }
         if (candidatePool.isEmpty()) return null
-        return rollWeighted(candidatePool, unlockedItemIds)
+        val floor = chestMinRarity(chestsSinceRarePlus, chestsSinceEpicPlus, chestsSinceLegendary)
+        return rollWeighted(candidatePool, unlockedItemIds, preferUnowned = true, minRarity = floor)
     }
 
     /**
@@ -411,31 +488,51 @@ class ProgressionAndGiftEngine(
      * already owned. The pool excludes already-owned items up front, so an onboarding slot can
      * never land a duplicate. Prefers COMMON/UNCOMMON items that aren't also part of the star curve
      * (`unlockStarRequirement == 0`), so onboarding never eats into the star curve's items; falls
-     * back to the whole pool if that's empty. Returns null if there's nothing left to award.
+     * back to the whole pool if that's empty. Since the preferred pool is already unowned,
+     * `preferUnowned = true` doesn't change the result, but gives it the same 40:28 COMMON:UNCOMMON
+     * target odds within that pool. Returns null if there's nothing left to award.
      */
     fun rollOnboardingItem(allItems: List<WardrobeItem>, unlockedItemIds: Set<String>): WardrobeItem? {
         val pool = allItems.filter { isChestEligible(it) && it.id !in unlockedItemIds }
         if (pool.isEmpty()) return null
         val preferred = pool.filter { isOnboardingPreferred(it) }
-        return rollWeighted(preferred.ifEmpty { pool }, unlockedItemIds).newlyUnlockedItem
+        return rollWeighted(preferred.ifEmpty { pool }, unlockedItemIds, preferUnowned = true).newlyUnlockedItem
     }
 
     /**
-     * Weighted-by-[se.lixo.app.domain.model.Rarity.giftDropWeight] roll over [pool], with the same
-     * duplicate rule shared by present gifts and chests: a duplicate roll unlocks nothing.
+     * Two-step roll over [pool]: first picks a rarity present in the pool weighted by
+     * [se.lixo.app.domain.model.Rarity.giftDropWeight] ([pickRarity]), then picks an item uniformly
+     * within that rarity. [minRarity] (default [Rarity.COMMON], a no-op) is a pity floor (see
+     * [rollChest]/[chestMinRarity]): step 1 only considers rarities at or above the floor, falling
+     * back to the whole pool if none qualify. When [preferUnowned] is true, step 2 first tries
+     * unowned items at or above the floor (nearest to the rolled rarity first, via
+     * [rarityFallbackOrder]), then unowned items below the floor, before falling back to a
+     * duplicate. If every rarity is fully owned (or [preferUnowned] is false), it falls back to a
+     * uniform pick within the rolled rarity, and the usual duplicate rule applies: a duplicate roll
+     * unlocks nothing.
      */
-    private fun rollWeighted(pool: List<WardrobeItem>, unlockedItemIds: Set<String>): GiftRollOutcome {
-        val totalWeight = pool.sumOf { it.rarity.giftDropWeight }.coerceAtLeast(1)
-        var pick = random.nextInt(totalWeight)
-        var chosen = pool.first()
+    private fun rollWeighted(
+        pool: List<WardrobeItem>,
+        unlockedItemIds: Set<String>,
+        preferUnowned: Boolean,
+        minRarity: Rarity = Rarity.COMMON
+    ): GiftRollOutcome {
+        val byRarity = pool.groupBy { it.rarity }
+        val present = Rarity.entries.filter { !byRarity[it].isNullOrEmpty() }
+        val rolled = pickRarity(present.filter { it >= minRarity }.ifEmpty { present })
 
-        for (item in pool) {
-            pick -= item.rarity.giftDropWeight
-            if (pick < 0) {
-                chosen = item
-                break
+        val chosen = (
+            if (preferUnowned) {
+                val order = rarityFallbackOrder(rolled).let { o ->
+                    o.filter { it >= minRarity } + o.filter { it < minRarity }
+                }
+                order.firstNotNullOfOrNull { r ->
+                    byRarity[r].orEmpty().filter { it.id !in unlockedItemIds }.ifEmpty { null }
+                }?.let { it[random.nextInt(it.size)] }
+            } else {
+                null
             }
-        }
+        ) ?: byRarity.getValue(rolled).let { it[random.nextInt(it.size)] }
 
         val isDuplicate = unlockedItemIds.contains(chosen.id)
         return GiftRollOutcome(
@@ -443,6 +540,22 @@ class ProgressionAndGiftEngine(
             isDuplicate = isDuplicate,
             newlyUnlockedItem = if (isDuplicate) null else chosen
         )
+    }
+
+    /**
+     * Step 1 of [rollWeighted]: picks a rarity from [present] (the rarities that have at least one
+     * item in the pool) weighted by [se.lixo.app.domain.model.Rarity.giftDropWeight]. Weights are
+     * summed only over [present], so a rarity's share is implicitly spread proportionally over the
+     * others when it's missing from the pool.
+     */
+    private fun pickRarity(present: List<Rarity>): Rarity {
+        val total = present.sumOf { it.giftDropWeight }.coerceAtLeast(1)
+        var pick = random.nextInt(total)
+        for (r in present) {
+            pick -= r.giftDropWeight
+            if (pick < 0) return r
+        }
+        return present.first()
     }
 
     /**

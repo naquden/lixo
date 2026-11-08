@@ -7,7 +7,15 @@ feature. Builds `--per-slot` items for each of the 9 EquipmentSlot values, with:
     switches on `styleIndex % 8`).
   - ~16 named regular colorways + a handful of special legendary-only colorways.
   - Rarity split per slot of roughly 40/25/17/12/6% (COMMON..LEGENDARY), at least 1 of each.
-  - Pattern/ornament escalating with rarity.
+  - Visual ladder by rarity: COMMON is plain (no pattern/ornament); UNCOMMON gets a TRIM outline
+    plus a 50% chance of a stripes/dots pattern; RARE gets a pattern plus a GEM; EPIC gets a
+    pattern, a GLOW halo and a gold/silver secondary accent colour (chosen to contrast with the
+    item's own primary colour); LEGENDARY uses a legendary-only colorway, a pattern, a SPARKLE
+    twinkle and a 1.15 scale multiplier (the renderer additionally always draws the GLOW halo
+    behind every LEGENDARY item, see Avatar3DController). The gold/silver EPIC accent and any
+    other purely-visual choice are drawn from a separate per-item RNG seeded
+    `f"{seed}-visual-{item_id}"`, never from the main per-slot `rng`, so they can never shift the
+    ids/names/rarities produced by the main rng stream (see `_rarity_visuals`).
   - No duplicate (styleIndex, colorway) within a slot.
   - A small subset of COMMON/UNCOMMON items per slot (STAR_UNLOCKABLE_COMMON_CAP/
     STAR_UNLOCKABLE_UNCOMMON_CAP) is star-unlockable, assigned one global, unique, widening-gap
@@ -67,6 +75,21 @@ RARITY_SPLIT: Dict[str, float] = {
 PATTERNS: List[str] = ["NONE", "STRIPES", "DOTS", "STARS", "ZIGZAG", "CHECKER"]
 NON_NONE_PATTERNS: List[str] = [p for p in PATTERNS if p != "NONE"]
 ORNAMENTS: List[str] = ["NONE", "TRIM", "GEM", "GLOW", "SPARKLE"]
+
+# Plan 011 section 3: the rarity -> ornament ladder, and the EPIC metal-accent colours.
+RARITY_ORNAMENT: Dict[str, str] = {
+    "COMMON": "NONE",
+    "UNCOMMON": "TRIM",
+    "RARE": "GEM",
+    "EPIC": "GLOW",
+    "LEGENDARY": "SPARKLE",
+}
+EPIC_ACCENT_GOLD = 0xFFF4D03F
+EPIC_ACCENT_SILVER = 0xFFD5DBDB
+# Colorways whose own primary colour is already gold/silver-ish; pick the opposite metal so the
+# EPIC accent always contrasts with the item's primary colour.
+_EPIC_SILVER_ACCENT_COLORWAYS = {"Solgyllene", "Bärnstensgul"}
+_EPIC_GOLD_ACCENT_COLORWAYS = {"Silverglans", "Vintervit"}
 
 
 @dataclass(frozen=True)
@@ -227,6 +250,7 @@ def _split_counts(total: int) -> Dict[str, int]:
 
 
 def _rarity_pattern_ornament(rarity: str, rng: random.Random) -> Tuple[str, str]:
+    """legacy; only called to keep the main rng stream stable, its ornament is discarded"""
     if rarity == "COMMON":
         return "NONE", rng.choice(["NONE", "NONE", "NONE", "TRIM"])
     if rarity == "UNCOMMON":
@@ -240,6 +264,32 @@ def _rarity_pattern_ornament(rarity: str, rng: random.Random) -> Tuple[str, str]
     pattern = rng.choice(NON_NONE_PATTERNS)
     ornament = rng.choice(["GLOW", "SPARKLE"])
     return pattern, ornament
+
+
+def _rarity_visuals(
+    rarity: str, legacy_pattern: str, colorway_name: str, visual_rng: random.Random
+) -> Tuple[str, str, Optional[int]]:
+    """Plan 011 section 3 visual ladder. Reuses `legacy_pattern` (from `_rarity_pattern_ornament`,
+    which already follows the ladder exactly) instead of re-rolling patterns, so this never
+    touches the main per-slot rng and never changes the (styleIndex, primaryColorHex, pattern)
+    uniqueness the catalog relies on. Only the EPIC gold/silver secondary accent is a new random
+    choice, and it is drawn from `visual_rng` (a per-item rng), never from the main rng.
+
+    Returns (pattern, ornament, secondary_color_override). secondary_color_override is only set
+    for EPIC (gold/silver accent); every other rarity returns None and keeps its colorway's own
+    secondary colour.
+    """
+    ornament = RARITY_ORNAMENT[rarity]
+    pattern = "NONE" if rarity == "COMMON" else legacy_pattern
+    if rarity != "EPIC":
+        return pattern, ornament, None
+    if colorway_name in _EPIC_SILVER_ACCENT_COLORWAYS:
+        secondary = EPIC_ACCENT_SILVER
+    elif colorway_name in _EPIC_GOLD_ACCENT_COLORWAYS:
+        secondary = EPIC_ACCENT_GOLD
+    else:
+        secondary = visual_rng.choice([EPIC_ACCENT_GOLD, EPIC_ACCENT_SILVER])
+    return pattern, ornament, secondary
 
 
 # How many COMMON/UNCOMMON items per slot are star-unlockable at all (the rest -- all
@@ -289,7 +339,7 @@ def _global_star_unlock_thresholds(count: int) -> List[int]:
 
 
 def generate_items_for_slot(
-    slot: SlotDef, per_slot: int, rng: random.Random
+    slot: SlotDef, per_slot: int, rng: random.Random, seed: int = 42
 ) -> List[GeneratedItem]:
     rarity_counts = _split_counts(per_slot)
     rarity_sequence: List[str] = []
@@ -322,7 +372,8 @@ def generate_items_for_slot(
     for n in range(per_slot):
         rarity = rarity_sequence[n]
         style_index = style_sequence[n]
-        pattern, ornament = _rarity_pattern_ornament(rarity, rng)
+        # keep: consumes main rng so ids/names/rarities stay stable (plan 011 section 3)
+        legacy_pattern, _legacy_ornament = _rarity_pattern_ornament(rarity, rng)
 
         colorway_pool = ALL_LEGENDARY_COLORWAY_NAMES if rarity == "LEGENDARY" else ALL_COLORWAY_NAMES
         colorway_table = LEGENDARY_COLORWAYS if rarity == "LEGENDARY" else COLORWAYS
@@ -365,6 +416,14 @@ def generate_items_for_slot(
         name_sv = f"{colorway_name} {style_name}"
         description_sv = f"En {style_name.lower()} i {colorway_name.lower()} nyans, upplåsbar för alla avatarer i Lixo."
         mesh_node_name = f"{slot.socket_name}_{style_key}_{colorway_key}"
+
+        # Per-item rng for purely-visual choices (e.g. the EPIC gold/silver accent) -- seeded from
+        # a string so it is deterministic across runs regardless of PYTHONHASHSEED, and never
+        # shares draws with the main per-slot `rng` so ids/names/rarities never shift.
+        visual_rng = random.Random(f"{seed}-visual-{item_id}")
+        pattern, ornament, epic_accent = _rarity_visuals(rarity, legacy_pattern, colorway_name, visual_rng)
+        if epic_accent is not None:
+            secondary_hex = epic_accent
 
         items.append(
             GeneratedItem(
@@ -475,7 +534,7 @@ def generate_catalog(per_slot: int = 64, seed: int = 42) -> Dict[str, List[Gener
         # Give each slot its own sub-seed derived deterministically from the base seed so that
         # changing --per-slot doesn't ripple unrelated changes into other slots' RNG streams.
         slot_rng = random.Random(f"{seed}:{slot.slot_id}")
-        catalog[slot.slot_id] = generate_items_for_slot(slot, per_slot, slot_rng)
+        catalog[slot.slot_id] = generate_items_for_slot(slot, per_slot, slot_rng, seed=seed)
     _assign_global_star_thresholds(catalog)
     _assign_star_achievement_items(catalog)
     return catalog

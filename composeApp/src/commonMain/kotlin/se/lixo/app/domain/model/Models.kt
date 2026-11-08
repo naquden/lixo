@@ -51,13 +51,19 @@ enum class Rarity(
     val swedishNameKey: String,
     val hexColorPrimary: Long,
     val hexColorAccent: Long,
+    /**
+     * Target percent chance per roll that this rarity is drawn, rarity-first
+     * (see [se.lixo.app.domain.engine.ProgressionAndGiftEngine.rollWeighted]).
+     * If a rarity has no items in the pool, its share is spread proportionally
+     * over the others. This is no longer a per-item weight.
+     */
     val giftDropWeight: Int
 ) {
-    COMMON("common", "rarity_common", 0xFF9E9E9E, 0xFF757575, 50),
-    UNCOMMON("uncommon", "rarity_uncommon", 0xFF2ECC71, 0xFF27AE60, 30),
-    RARE("rare", "rarity_rare", 0xFF3498DB, 0xFF2980B9, 15),
-    EPIC("epic", "rarity_epic", 0xFF9B59B6, 0xFF8E44AD, 4),
-    LEGENDARY("legendary", "rarity_legendary", 0xFFF39C12, 0xFFE67E22, 1)
+    COMMON("common", "rarity_common", 0xFF9E9E9E, 0xFF757575, 40),
+    UNCOMMON("uncommon", "rarity_uncommon", 0xFF2ECC71, 0xFF27AE60, 28),
+    RARE("rare", "rarity_rare", 0xFF3498DB, 0xFF2980B9, 18),
+    EPIC("epic", "rarity_epic", 0xFF9B59B6, 0xFF8E44AD, 10),
+    LEGENDARY("legendary", "rarity_legendary", 0xFFF39C12, 0xFFE67E22, 4)
 }
 
 /**
@@ -161,7 +167,15 @@ data class ChildProfile(
     val achievementProgress: Map<String, Int> = emptyMap(),
     val achievementCountedLevelIds: Map<String, Set<String>> = emptyMap(),
     val unlockedAchievementIds: Set<String> = emptySet(),
-    val pendingAchievementRewardIds: Set<String> = emptySet()
+    val pendingAchievementRewardIds: Set<String> = emptySet(),
+    /**
+     * Flitkista chests opened since the last chest at or above RARE / EPIC / LEGENDARY
+     * respectively, used for the pity floor in
+     * [se.lixo.app.domain.engine.ProgressionAndGiftEngine.rollChest].
+     */
+    val chestsSinceRarePlus: Int = 0,
+    val chestsSinceEpicPlus: Int = 0,
+    val chestsSinceLegendary: Int = 0
 )
 
 /**
@@ -172,7 +186,9 @@ data class ChildProfile(
 enum class ItemPattern { NONE, STRIPES, DOTS, STARS, ZIGZAG, CHECKER }
 
 /**
- * Trim/decoration applied to an item, escalating with rarity.
+ * Trim/decoration applied to an item, escalating with rarity: COMMON NONE, UNCOMMON TRIM,
+ * RARE GEM, EPIC GLOW, LEGENDARY SPARKLE. LEGENDARY additionally always renders the GLOW halo
+ * behind the item too, whatever its own ornament value (see Avatar3DController.drawsGlowHalo).
  */
 @Serializable
 enum class ItemOrnament { NONE, TRIM, GEM, GLOW, SPARKLE }

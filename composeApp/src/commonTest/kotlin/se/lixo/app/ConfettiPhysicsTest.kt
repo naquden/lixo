@@ -8,6 +8,7 @@ import kotlin.test.assertTrue
 import se.lixo.app.domain.model.Rarity
 import se.lixo.app.ui.components.celebration.ConfettiParticle
 import se.lixo.app.ui.components.celebration.ConfettiShape
+import se.lixo.app.ui.components.celebration.chestTeaserSpecFor
 import se.lixo.app.ui.components.celebration.confettiCountFor
 import se.lixo.app.ui.components.celebration.lightBurstSpecFor
 import se.lixo.app.ui.components.celebration.spawnConfettiBurst
@@ -103,6 +104,66 @@ class ConfettiPhysicsTest {
         for (r in Rarity.entries) {
             if (r != Rarity.LEGENDARY) {
                 assertTrue(!lightBurstSpecFor(r).goldGlow)
+            }
+        }
+    }
+
+    @Test
+    fun chestTeaserSpec_escalatesWithRarity() {
+        val specs = Rarity.entries.map { chestTeaserSpecFor(it) }
+
+        for (i in 1 until specs.size) {
+            assertTrue(
+                specs[i].glowAlpha > specs[i - 1].glowAlpha,
+                "expected strictly increasing glowAlpha, got ${specs.map { it.glowAlpha }}"
+            )
+            assertTrue(
+                specs[i].ringAlpha > specs[i - 1].ringAlpha,
+                "expected strictly increasing ringAlpha, got ${specs.map { it.ringAlpha }}"
+            )
+            assertTrue(
+                specs[i].pulseAmplitude >= specs[i - 1].pulseAmplitude,
+                "pulseAmplitude should never decrease, got ${specs.map { it.pulseAmplitude }}"
+            )
+            assertTrue(
+                specs[i].ringWidthDp >= specs[i - 1].ringWidthDp,
+                "ringWidthDp should never decrease, got ${specs.map { it.ringWidthDp }}"
+            )
+            assertTrue(
+                specs[i].sparkleCount >= specs[i - 1].sparkleCount,
+                "sparkleCount should never decrease, got ${specs.map { it.sparkleCount }}"
+            )
+            assertTrue(
+                specs[i].pulsePeriodMs <= specs[i - 1].pulsePeriodMs,
+                "pulsePeriodMs should never increase, got ${specs.map { it.pulsePeriodMs }}"
+            )
+        }
+
+        val common = chestTeaserSpecFor(Rarity.COMMON)
+        assertEquals(0f, common.glowAlpha)
+        assertEquals(0f, common.ringAlpha)
+        assertEquals(0, common.sparkleCount)
+
+        val rare = chestTeaserSpecFor(Rarity.RARE)
+        val epic = chestTeaserSpecFor(Rarity.EPIC)
+        val legendary = chestTeaserSpecFor(Rarity.LEGENDARY)
+        assertEquals(0, rare.sparkleCount)
+        assertTrue(epic.sparkleCount > 0)
+        assertTrue(legendary.sparkleCount > epic.sparkleCount)
+
+        for (r in Rarity.entries) {
+            val spec = chestTeaserSpecFor(r)
+            if (r == Rarity.LEGENDARY) {
+                assertTrue(spec.goldGlow)
+                assertTrue(spec.shakeAmplitudeDp > 0f)
+                assertTrue(
+                    spec.openDurationScale in 1.25f..1.35f,
+                    "expected LEGENDARY openDurationScale in 1.25..1.35, got ${spec.openDurationScale}"
+                )
+            } else {
+                assertTrue(!spec.goldGlow)
+                assertEquals(0f, spec.shakeAmplitudeDp)
+                assertEquals(1f, spec.openDurationScale)
             }
         }
     }

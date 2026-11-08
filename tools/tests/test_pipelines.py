@@ -11,6 +11,9 @@ from tools.asset_pipeline.blender_avatar_pipeline import (
 )
 from tools.content_pipeline.upload_content import validate_bundle
 from tools.item_pipeline.generate_wardrobe_items import (
+    EPIC_ACCENT_GOLD,
+    EPIC_ACCENT_SILVER,
+    LEGENDARY_COLORWAYS,
     RARITIES,
     SLOTS,
     STAR_ACHIEVEMENT_REWARDS,
@@ -423,6 +426,58 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
     def test_rejects_per_slot_smaller_than_rarity_count(self) -> None:
         with self.assertRaises(ValueError):
             generate_catalog(per_slot=3, seed=42)
+
+    def test_ids_names_rarities_unchanged(self) -> None:
+        # Plan 011 section 3: the visual ladder (pattern/ornament/secondary accent) must never
+        # shift ids, names, rarities, star thresholds or achievement ids -- all new visual
+        # randomness goes through a separate per-item rng, not the main per-slot rng.
+        fixture_path = Path(__file__).resolve().parent / "fixtures" / "catalog_ids_v1.json"
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+        catalog = generate_catalog(per_slot=64, seed=42)
+        generated = sorted(
+            (
+                {
+                    "id": i.item_id,
+                    "nameSv": i.name_sv,
+                    "rarity": i.rarity,
+                    "unlockStarRequirement": i.unlock_star_requirement,
+                    "unlockAchievementId": i.unlock_achievement_id,
+                }
+                for slot in SLOTS
+                for i in catalog[slot.slot_id]
+            ),
+            key=lambda d: d["id"],
+        )
+        self.assertEqual(generated, fixture)
+
+    def test_visual_ladder(self) -> None:
+        catalog = generate_catalog(per_slot=64, seed=42)
+        all_items = [i for slot in SLOTS for i in catalog[slot.slot_id]]
+        epic_accents = set()
+
+        for item in all_items:
+            if item.rarity == "COMMON":
+                self.assertEqual(item.pattern, "NONE")
+                self.assertEqual(item.ornament, "NONE")
+            elif item.rarity == "UNCOMMON":
+                self.assertEqual(item.ornament, "TRIM")
+                self.assertIn(item.pattern, {"NONE", "STRIPES", "DOTS"})
+            elif item.rarity == "RARE":
+                self.assertEqual(item.ornament, "GEM")
+                self.assertNotEqual(item.pattern, "NONE")
+            elif item.rarity == "EPIC":
+                self.assertEqual(item.ornament, "GLOW")
+                self.assertNotEqual(item.pattern, "NONE")
+                self.assertIn(item.secondary_color_hex, {EPIC_ACCENT_GOLD, EPIC_ACCENT_SILVER})
+                epic_accents.add(item.secondary_color_hex)
+            else:  # LEGENDARY
+                self.assertEqual(item.ornament, "SPARKLE")
+                self.assertNotEqual(item.pattern, "NONE")
+                self.assertIn(item.colorway_name, LEGENDARY_COLORWAYS)
+                self.assertEqual(item.scale_multiplier, 1.15)
+
+        self.assertEqual(epic_accents, {EPIC_ACCENT_GOLD, EPIC_ACCENT_SILVER})
 
     def test_rendered_kotlin_has_expected_structure(self) -> None:
         catalog = generate_catalog(per_slot=16, seed=42)

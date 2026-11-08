@@ -1,6 +1,7 @@
 package se.lixo.app.ui.components.celebration
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -41,10 +42,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.ui.feedback.SfxCue
@@ -57,27 +64,126 @@ enum class ChestState { WAITING, OPENING, OPENED }
 internal val CelebrationScrim = Color(0xB3000000)
 
 /**
- * Chest body/lid/lock drawn entirely on [Canvas]. [WAITING] breathes, wiggles and glows;
- * [OPENING] squashes and sends the lid flying; [OPENED] is static (the item reveal happens above
- * it, see [ChestRevealStage]).
+ * Test tag on the closed/opening/opened reward chest canvas itself, so instrumented tests can
+ * tap through to it (the surrounding text in [ChestRevealStage] is not clickable).
+ */
+const val REWARD_CHEST_TAG = "reward_chest"
+
+/** Plan 011 section 4: how loudly the CLOSED chest hints at its rarity. Escalates COMMON -> LEGENDARY. */
+data class ChestTeaserSpec(
+    val glowAlpha: Float,          // peak alpha of the radial glow behind the chest; 0 = no glow
+    val pulseAmplitude: Float,     // 0..1, the share of glowAlpha/ringAlpha that pulses
+    val pulsePeriodMs: Int,        // one pulse half-cycle (tween duration, Reverse)
+    val ringAlpha: Float,          // peak alpha of the rarity-colored frame around the chest; 0 = none
+    val ringWidthDp: Float,
+    val sparkleCount: Int,         // twinkling sparkles orbiting the closed chest
+    val goldGlow: Boolean,         // LEGENDARY uses LixoColors.Gold instead of rarityColor
+    val shakeAmplitudeDp: Float,   // continuous horizontal shake while WAITING; 0 = none
+    val openDurationScale: Float   // multiplier on every OPENING tween duration
+)
+
+fun chestTeaserSpecFor(rarity: Rarity): ChestTeaserSpec = when (rarity) {
+    Rarity.COMMON -> ChestTeaserSpec(
+        glowAlpha = 0f,
+        pulseAmplitude = 0f,
+        pulsePeriodMs = 1200,
+        ringAlpha = 0f,
+        ringWidthDp = 0f,
+        sparkleCount = 0,
+        goldGlow = false,
+        shakeAmplitudeDp = 0f,
+        openDurationScale = 1f
+    )
+    Rarity.UNCOMMON -> ChestTeaserSpec(
+        glowAlpha = 0.25f,
+        pulseAmplitude = 0.10f,
+        pulsePeriodMs = 1200,
+        ringAlpha = 0.35f,
+        ringWidthDp = 3f,
+        sparkleCount = 0,
+        goldGlow = false,
+        shakeAmplitudeDp = 0f,
+        openDurationScale = 1f
+    )
+    Rarity.RARE -> ChestTeaserSpec(
+        glowAlpha = 0.40f,
+        pulseAmplitude = 0.30f,
+        pulsePeriodMs = 1000,
+        ringAlpha = 0.55f,
+        ringWidthDp = 4f,
+        sparkleCount = 0,
+        goldGlow = false,
+        shakeAmplitudeDp = 0f,
+        openDurationScale = 1f
+    )
+    Rarity.EPIC -> ChestTeaserSpec(
+        glowAlpha = 0.55f,
+        pulseAmplitude = 0.45f,
+        pulsePeriodMs = 800,
+        ringAlpha = 0.75f,
+        ringWidthDp = 5f,
+        sparkleCount = 4,
+        goldGlow = false,
+        shakeAmplitudeDp = 0f,
+        openDurationScale = 1f
+    )
+    Rarity.LEGENDARY -> ChestTeaserSpec(
+        glowAlpha = 0.75f,
+        pulseAmplitude = 0.50f,
+        pulsePeriodMs = 600,
+        ringAlpha = 0.90f,
+        ringWidthDp = 6f,
+        sparkleCount = 8,
+        goldGlow = true,
+        shakeAmplitudeDp = 2.5f,
+        openDurationScale = 1.3f
+    )
+}
+
+/**
+ * Chest body/lid/lock drawn entirely on [Canvas]. [WAITING] breathes, wiggles and shows the
+ * [rarity] teaser from [chestTeaserSpecFor] (glow, pulsing frame, sparkles, and for LEGENDARY a
+ * shake); [OPENING] squashes and sends the lid flying, taking [ChestTeaserSpec.openDurationScale]
+ * times as long; [OPENED] is static (the item reveal happens above it, see [ChestRevealStage]).
  */
 @Composable
 fun RewardChest(
     state: ChestState,
+    rarity: Rarity,
     onOpenAnimationFinished: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptics = rememberLixoHaptics()
     val density = LocalDensity.current
+    val spec = remember(rarity) { chestTeaserSpecFor(rarity) }
+    val glowColor = if (spec.goldGlow) LixoColors.Gold else LixoColors.rarityColor(rarity)
 
-    val glow = rememberInfiniteTransition(label = "chestGlow").animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.7f,
+    val pulse = rememberInfiniteTransition(label = "chestTeaserPulse").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900),
+            animation = tween(durationMillis = spec.pulsePeriodMs),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "chestGlow"
+        label = "chestTeaserPulse"
+    )
+    val sparklePhase = rememberInfiniteTransition(label = "chestTeaserSparkle").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "chestTeaserSparkle"
+    )
+    val shake = rememberInfiniteTransition(label = "chestTeaserShake").animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 70, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "chestTeaserShake"
     )
     val breathe = rememberInfiniteTransition(label = "chestBreathe").animateFloat(
         initialValue = 1.0f,
@@ -117,20 +223,21 @@ fun RewardChest(
 
     LaunchedEffect(state) {
         if (state == ChestState.OPENING) {
+            fun ms(base: Int) = (base * spec.openDurationScale).roundToInt()
             haptics.heavy(SfxCue.CHEST_OPEN)
             val squashJob = launch {
-                squashX.animateTo(1.15f, tween(90))
-                squashY.animateTo(0.85f, tween(90))
-                squashX.animateTo(0.92f, tween(120))
-                squashY.animateTo(1.12f, tween(120))
+                squashX.animateTo(1.15f, tween(ms(90)))
+                squashY.animateTo(0.85f, tween(ms(90)))
+                squashX.animateTo(0.92f, tween(ms(120)))
+                squashY.animateTo(1.12f, tween(ms(120)))
                 launch { squashX.animateTo(1f, spring()) }
                 squashY.animateTo(1f, spring())
             }
             val lidJob = launch {
                 val lidTargetDy = with(density) { -260.dp.toPx() }
-                launch { lidDy.animateTo(lidTargetDy, tween(450)) }
-                launch { lidRot.animateTo(-35f, tween(450)) }
-                lidAlpha.animateTo(0f, tween(450))
+                launch { lidDy.animateTo(lidTargetDy, tween(ms(450))) }
+                launch { lidRot.animateTo(-35f, tween(ms(450))) }
+                lidAlpha.animateTo(0f, tween(ms(450)))
             }
             squashJob.join()
             lidJob.join()
@@ -139,29 +246,38 @@ fun RewardChest(
     }
 
     Canvas(
-        modifier = modifier.graphicsLayer {
-            rotationZ = wiggle.value
-            scaleX = breathe.value * squashX.value
-            scaleY = breathe.value * squashY.value
-            transformOrigin = TransformOrigin(0.5f, 1f)
-        }
+        modifier = modifier
+            .graphicsLayer {
+                rotationZ = wiggle.value
+                scaleX = breathe.value * squashX.value
+                scaleY = breathe.value * squashY.value
+                transformOrigin = TransformOrigin(0.5f, 1f)
+                translationX = if (state == ChestState.WAITING) {
+                    shake.value * spec.shakeAmplitudeDp.dp.toPx()
+                } else {
+                    0f
+                }
+            }
     ) {
         val w = size.width
         val h = size.height
         val bodyTop = chestBodyRect(size).top
         val lidBottom = bodyTop
         val lidTop = h * CHEST_LID_TOP_FRACTION
+        val pulseFactor = 1f - spec.pulseAmplitude + spec.pulseAmplitude * pulse.value
 
-        // Pulsing gold glow behind the chest.
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(LixoColors.Gold.copy(alpha = glow.value), Color.Transparent),
-                center = Offset(w / 2f, h * 0.6f),
-                radius = w * 0.8f
-            ),
-            radius = w * 0.8f,
-            center = Offset(w / 2f, h * 0.6f)
-        )
+        // Rarity teaser glow behind the chest; COMMON has none.
+        if (spec.glowAlpha > 0f) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(glowColor.copy(alpha = spec.glowAlpha * pulseFactor), Color.Transparent),
+                    center = Offset(w / 2f, h * 0.6f),
+                    radius = w * 0.8f
+                ),
+                radius = w * 0.8f,
+                center = Offset(w / 2f, h * 0.6f)
+            )
+        }
 
         val woodColor = Color(0xFF8B5A2B)
         val plankColor = Color(0xFF6B4220)
@@ -233,6 +349,29 @@ fun RewardChest(
                 )
             }
         }
+
+        // Rarity teaser ring + sparkles around the closed chest; the lid flies away during
+        // OPENING, so a detached silhouette ring would look wrong once it starts moving.
+        if (state == ChestState.WAITING) {
+            if (spec.ringAlpha > 0f) {
+                drawPath(
+                    path = chestSilhouettePath(size, 14f),
+                    color = glowColor.copy(alpha = spec.ringAlpha * pulseFactor),
+                    style = Stroke(width = spec.ringWidthDp.dp.toPx())
+                )
+            }
+            for (i in 0 until spec.sparkleCount) {
+                val angle = sparklePhase.value * 2f * PI.toFloat() + i * 2f * PI.toFloat() / spec.sparkleCount
+                val center = Offset(
+                    w / 2f + cos(angle) * w * 0.62f,
+                    h * 0.55f + sin(angle) * h * 0.55f
+                )
+                val twinkle = sin(sparklePhase.value * 2f * PI.toFloat() * 3f + i) * 0.5f + 0.5f
+                val r = (2.5f + 2f * twinkle).dp.toPx()
+                drawCircle(color = glowColor.copy(alpha = 0.5f * twinkle), radius = r * 2f, center = center)
+                drawCircle(color = Color.White.copy(alpha = 0.4f + 0.6f * twinkle), radius = r, center = center)
+            }
+        }
     }
 }
 
@@ -244,7 +383,7 @@ fun RewardChest(
  * [LixoStrings.ITEM_UNLOCKED_TITLE].
  */
 @Composable
-internal fun ChestRevealStage(
+fun ChestRevealStage(
     item: WardrobeItem,
     source: RewardSource,
     labelDetailSv: String? = null,
@@ -317,12 +456,14 @@ internal fun ChestRevealStage(
                     }
                     RewardChest(
                         state = chestState,
+                        rarity = item.rarity,
                         onOpenAnimationFinished = {
                             chestState = ChestState.OPENED
                             onOpened()
                         },
                         modifier = Modifier
                             .size(180.dp)
+                            .testTag(REWARD_CHEST_TAG)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,

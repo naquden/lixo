@@ -212,6 +212,18 @@ object LixoStrings {
         Rarity.LEGENDARY -> "Legendarisk"
     }
 
+    fun rarityNamePlural(rarity: Rarity): String = when (rarity) {
+        Rarity.COMMON -> "Vanliga"
+        Rarity.UNCOMMON -> "Ovanliga"
+        Rarity.RARE -> "Sällsynta"
+        Rarity.EPIC -> "Episka"
+        Rarity.LEGENDARY -> "Legendariska"
+    }
+
+    /** Collection-count chip label for the wardrobe's rarity row, e.g. "Legendariska 2/38". */
+    fun wardrobeRarityCount(rarity: Rarity, owned: Int, total: Int): String =
+        "${rarityNamePlural(rarity)} $owned/$total"
+
     /**
      * Base label for [source] (e.g. "Prestation"), plus [detail] appended as "$base: $detail"
      * when present and non-blank (e.g. "Prestation: Blixtläsaren" for an achievement chest).

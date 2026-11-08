@@ -1,5 +1,6 @@
 package se.lixo.app
 
+import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -760,6 +761,372 @@ class LixoEnginesTest {
         assertNotNull(outcome)
         assertTrue(outcome.isDuplicate)
         assertNull(outcome.newlyUnlockedItem)
+    }
+
+    @Test
+    fun rarityRoll_matchesTargetOdds() {
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val rolls = 20_000
+        val counts = mutableMapOf<Rarity, Int>()
+        repeat(rolls) {
+            val outcome = engine.rollChest(catalog, emptySet())!!
+            counts[outcome.rolledItem.rarity] = (counts[outcome.rolledItem.rarity] ?: 0) + 1
+        }
+
+        val targets = mapOf(
+            Rarity.COMMON to 0.40,
+            Rarity.UNCOMMON to 0.28,
+            Rarity.RARE to 0.18,
+            Rarity.EPIC to 0.10,
+            Rarity.LEGENDARY to 0.04
+        )
+        for ((rarity, target) in targets) {
+            val share = (counts[rarity] ?: 0) / rolls.toDouble()
+            assertTrue(abs(share - target) <= 0.015, "$rarity share $share")
+        }
+    }
+
+    @Test
+    fun rollChest_prefersUnowned() {
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val unlocked = catalog
+            .filter { ProgressionAndGiftEngine.isChestEligible(it) && it.rarity == Rarity.COMMON }
+            .map { it.id }
+            .toSet()
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        repeat(2000) {
+            val outcome = engine.rollChest(catalog, unlocked)!!
+            assertFalse(outcome.isDuplicate)
+            assertNotNull(outcome.newlyUnlockedItem)
+            assertTrue(outcome.rolledItem.rarity != Rarity.COMMON)
+        }
+
+        // Nearest fallback: all COMMON owned, UNCOMMON unowned beats LEGENDARY.
+        val zeroEngine = ProgressionAndGiftEngine(random = ZeroRandom())
+        val c1 = chestFixtureItem("c1", rarity = Rarity.COMMON)
+        val c2 = chestFixtureItem("c2", rarity = Rarity.COMMON)
+        val u1 = chestFixtureItem("u1", rarity = Rarity.UNCOMMON)
+        val l1 = chestFixtureItem("l1", rarity = Rarity.LEGENDARY)
+        val nearestOutcome = zeroEngine.rollChest(listOf(c1, c2, u1, l1), setOf(c1.id, c2.id))
+        assertEquals("u1", nearestOutcome?.rolledItem?.id)
+        assertFalse(nearestOutcome!!.isDuplicate)
+
+        // Lower before higher at equal distance: RARE owned, UNCOMMON and EPIC unowned -> UNCOMMON wins.
+        val r1 = chestFixtureItem("r1", rarity = Rarity.RARE)
+        val u2 = chestFixtureItem("u1", rarity = Rarity.UNCOMMON)
+        val e1 = chestFixtureItem("e1", rarity = Rarity.EPIC)
+        val lowerOutcome = zeroEngine.rollChest(listOf(r1, u2, e1), setOf(r1.id))
+        assertEquals("u1", lowerOutcome?.rolledItem?.id)
+    }
+
+    @Test
+    fun rollPresentGift_keepsDuplicateRule() {
+        val zeroEngine = ProgressionAndGiftEngine(random = ZeroRandom())
+        val c1 = chestFixtureItem("c1", rarity = Rarity.COMMON)
+        val c2 = chestFixtureItem("c2", rarity = Rarity.COMMON)
+        val items = listOf(c1, c2)
+        val unlocked = setOf(c1.id)
+
+        val giftOutcome = zeroEngine.rollPresentGift(Subject.SWEDISH, items, unlocked)
+        assertEquals("c1", giftOutcome.rolledItem.id)
+        assertTrue(giftOutcome.isDuplicate)
+        assertNull(giftOutcome.newlyUnlockedItem)
+
+        val chestOutcome = zeroEngine.rollChest(items, unlocked)
+        assertEquals("c2", chestOutcome?.newlyUnlockedItem?.id)
+
+        val allOwnedCatalog = listOf(chestFixtureItem("owned_a"), chestFixtureItem("owned_b"))
+        val allOwnedIds = allOwnedCatalog.map { it.id }.toSet()
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        repeat(100) {
+            val outcome = engine.rollPresentGift(Subject.SWEDISH, allOwnedCatalog, allOwnedIds)
+            assertTrue(outcome.isDuplicate)
+            assertNull(outcome.newlyUnlockedItem)
+        }
+    }
+
+    @Test
+    fun rarityFallbackOrder_nearestLowerFirst() {
+        assertEquals(
+            listOf(Rarity.RARE, Rarity.UNCOMMON, Rarity.EPIC, Rarity.COMMON, Rarity.LEGENDARY),
+            ProgressionAndGiftEngine.rarityFallbackOrder(Rarity.RARE)
+        )
+        assertEquals(
+            listOf(Rarity.COMMON, Rarity.UNCOMMON, Rarity.RARE, Rarity.EPIC, Rarity.LEGENDARY),
+            ProgressionAndGiftEngine.rarityFallbackOrder(Rarity.COMMON)
+        )
+    }
+
+    @Test
+    fun chestPity_minRarityFloor() {
+        assertEquals(Rarity.COMMON, ProgressionAndGiftEngine.chestMinRarity(0, 0, 0))
+        assertEquals(Rarity.COMMON, ProgressionAndGiftEngine.chestMinRarity(2, 8, 18))
+        assertEquals(Rarity.RARE, ProgressionAndGiftEngine.chestMinRarity(3, 0, 0))
+        assertEquals(Rarity.EPIC, ProgressionAndGiftEngine.chestMinRarity(3, 9, 0))
+        assertEquals(Rarity.EPIC, ProgressionAndGiftEngine.chestMinRarity(0, 9, 0))
+        assertEquals(Rarity.LEGENDARY, ProgressionAndGiftEngine.chestMinRarity(0, 0, 19))
+        assertEquals(Rarity.LEGENDARY, ProgressionAndGiftEngine.chestMinRarity(3, 9, 19))
+    }
+
+    @Test
+    fun chestPity_guaranteesRareWithin4() {
+        val engine = ProgressionAndGiftEngine(random = ZeroRandom())
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        var profile = ChildProfile(id = "p", displayName = "S")
+        val unlocked = mutableSetOf<String>()
+
+        val rolledRarities = mutableListOf<Rarity>()
+        repeat(4) {
+            val outcome = engine.rollChest(
+                catalog,
+                unlocked,
+                profile.chestsSinceRarePlus,
+                profile.chestsSinceEpicPlus,
+                profile.chestsSinceLegendary
+            )!!
+            rolledRarities += outcome.rolledItem.rarity
+            outcome.newlyUnlockedItem?.let { unlocked += it.id }
+            profile = ProgressionAndGiftEngine.advanceChestPity(profile, outcome.rolledItem.rarity)
+        }
+
+        assertEquals(Rarity.COMMON, rolledRarities[0])
+        assertEquals(Rarity.COMMON, rolledRarities[1])
+        assertEquals(Rarity.COMMON, rolledRarities[2])
+        assertTrue(rolledRarities[3] >= Rarity.RARE, "4th chest must be at least RARE")
+    }
+
+    @Test
+    fun chestPity_guaranteesLegendaryWithin20() {
+        // (a) ZeroRandom always picks the lowest present rarity, so only the pity floor forces it up.
+        val engine = ProgressionAndGiftEngine(random = ZeroRandom())
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        var profile = ChildProfile(id = "p", displayName = "S")
+        val unlocked = mutableSetOf<String>()
+        val rolled = mutableListOf<Rarity>()
+        repeat(20) {
+            val outcome = engine.rollChest(
+                catalog,
+                unlocked,
+                profile.chestsSinceRarePlus,
+                profile.chestsSinceEpicPlus,
+                profile.chestsSinceLegendary
+            )!!
+            rolled += outcome.rolledItem.rarity
+            outcome.newlyUnlockedItem?.let { unlocked += it.id }
+            profile = ProgressionAndGiftEngine.advanceChestPity(profile, outcome.rolledItem.rarity)
+        }
+        assertTrue(rolled.any { it == Rarity.LEGENDARY }, "Some chest in the first 20 must be legendary")
+        assertEquals(Rarity.LEGENDARY, rolled[19], "The 20th chest must be the guaranteed legendary")
+
+        // (b) Random(42) over many chests: gaps between pity hits must never exceed the floor.
+        val seededEngine = ProgressionAndGiftEngine(random = Random(42))
+        var seededProfile = ChildProfile(id = "p2", displayName = "S2")
+        var sinceLegendary = 0
+        var sinceEpicPlus = 0
+        var sinceRarePlus = 0
+        repeat(500) {
+            val outcome = seededEngine.rollChest(
+                catalog,
+                emptySet(),
+                seededProfile.chestsSinceRarePlus,
+                seededProfile.chestsSinceEpicPlus,
+                seededProfile.chestsSinceLegendary
+            )!!
+            val r = outcome.rolledItem.rarity
+            assertTrue(sinceLegendary < BalanceConfig.PITY_LEGENDARY_CHESTS, "Legendary gap must stay below ${BalanceConfig.PITY_LEGENDARY_CHESTS}")
+            assertTrue(sinceEpicPlus < BalanceConfig.PITY_EPIC_PLUS_CHESTS, "Epic+ gap must stay below ${BalanceConfig.PITY_EPIC_PLUS_CHESTS}")
+            assertTrue(sinceRarePlus < BalanceConfig.PITY_RARE_PLUS_CHESTS, "Rare+ gap must stay below ${BalanceConfig.PITY_RARE_PLUS_CHESTS}")
+            sinceLegendary = if (r == Rarity.LEGENDARY) 0 else sinceLegendary + 1
+            sinceEpicPlus = if (r >= Rarity.EPIC) 0 else sinceEpicPlus + 1
+            sinceRarePlus = if (r >= Rarity.RARE) 0 else sinceRarePlus + 1
+            seededProfile = ProgressionAndGiftEngine.advanceChestPity(seededProfile, r)
+        }
+    }
+
+    @Test
+    fun chestPity_countersResetCorrectly() {
+        val base = ChildProfile(
+            id = "p",
+            displayName = "S",
+            chestsSinceRarePlus = 2,
+            chestsSinceEpicPlus = 5,
+            chestsSinceLegendary = 7
+        )
+        val afterEpic = ProgressionAndGiftEngine.advanceChestPity(base, Rarity.EPIC)
+        assertEquals(0, afterEpic.chestsSinceRarePlus)
+        assertEquals(0, afterEpic.chestsSinceEpicPlus)
+        assertEquals(8, afterEpic.chestsSinceLegendary)
+
+        val afterCommon = ProgressionAndGiftEngine.advanceChestPity(base, Rarity.COMMON)
+        assertEquals(3, afterCommon.chestsSinceRarePlus)
+        assertEquals(6, afterCommon.chestsSinceEpicPlus)
+        assertEquals(8, afterCommon.chestsSinceLegendary)
+
+        val afterRare = ProgressionAndGiftEngine.advanceChestPity(base, Rarity.RARE)
+        assertEquals(0, afterRare.chestsSinceRarePlus)
+        assertEquals(6, afterRare.chestsSinceEpicPlus)
+        assertEquals(8, afterRare.chestsSinceLegendary)
+
+        val afterLegendary = ProgressionAndGiftEngine.advanceChestPity(base, Rarity.LEGENDARY)
+        assertEquals(0, afterLegendary.chestsSinceRarePlus)
+        assertEquals(0, afterLegendary.chestsSinceEpicPlus)
+        assertEquals(0, afterLegendary.chestsSinceLegendary)
+
+        // Through recordLevelCompletion: a Flitkista chest advances the stored counters.
+        val engine = ProgressionAndGiftEngine(random = ZeroRandom())
+        val catalog = listOf(
+            chestFixtureItem("e1", rarity = Rarity.EPIC),
+            chestFixtureItem("e2", rarity = Rarity.EPIC)
+        )
+        val profile = ChildProfile(
+            id = "p1",
+            displayName = "Saga",
+            chestProgressHalfPoints = 19,
+            chestsSinceRarePlus = 2,
+            chestsSinceEpicPlus = 5,
+            chestsSinceLegendary = 7
+        )
+        val level1 = level(order = 1, subject = Subject.SWEDISH)
+        val today = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-11-01")
+
+        val run = engine.recordLevelCompletion(
+            profile = profile,
+            level = level1,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 60,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 6,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+
+        assertNotNull(run.chestOutcome)
+        assertEquals(Rarity.EPIC, run.chestOutcome.rolledItem.rarity)
+        assertEquals(0, run.updatedProfile.chestsSinceRarePlus)
+        assertEquals(0, run.updatedProfile.chestsSinceEpicPlus)
+        assertEquals(8, run.updatedProfile.chestsSinceLegendary)
+    }
+
+    @Test
+    fun chestPity_onlyFlitkistaCounts() {
+        val profile = ChildProfile(
+            id = "p1",
+            displayName = "Saga",
+            chestProgressHalfPoints = 0,
+            chestsSinceRarePlus = 2,
+            chestsSinceEpicPlus = 5,
+            chestsSinceLegendary = 7
+        )
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val level1 = level(order = 1, subject = Subject.SWEDISH)
+        val today = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-11-01")
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+
+        // (a) A LEVEL reward (first clear) does not touch the pity counters.
+        val firstClear = engine.recordLevelCompletion(
+            profile = profile,
+            level = level1,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 60,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+        assertTrue(firstClear.newlyUnlockedRewards.any { it.source == RewardSource.LEVEL })
+        assertNull(firstClear.chestOutcome)
+        assertEquals(2, firstClear.updatedProfile.chestsSinceRarePlus)
+        assertEquals(5, firstClear.updatedProfile.chestsSinceEpicPlus)
+        assertEquals(7, firstClear.updatedProfile.chestsSinceLegendary)
+
+        // (b) A replay gift does not touch the pity counters either.
+        val replayOutcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = level1,
+            previousProgress = LevelProgress(
+                profileId = "p1",
+                levelId = level1.id,
+                levelOrder = level1.order,
+                starsEarned = 3,
+                completedInAiMode = true,
+                bestTimeSeconds = 20,
+                bestWpm = 60
+            ),
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 20,
+            achievedWpm = 60,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = true,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 10,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1000L
+        )
+        assertNotNull(replayOutcome.giftOutcome)
+        assertNull(replayOutcome.chestOutcome)
+        assertEquals(2, replayOutcome.updatedProfile.chestsSinceRarePlus)
+        assertEquals(5, replayOutcome.updatedProfile.chestsSinceEpicPlus)
+        assertEquals(7, replayOutcome.updatedProfile.chestsSinceLegendary)
+    }
+
+    @Test
+    fun chestPity_floorPrefersUnownedAtOrAboveFloor_thenBelow() {
+        val zeroEngine = ProgressionAndGiftEngine(random = ZeroRandom())
+        val c1 = chestFixtureItem("c1", rarity = Rarity.COMMON)
+        val u1 = chestFixtureItem("u1", rarity = Rarity.UNCOMMON)
+        val r1 = chestFixtureItem("r1", rarity = Rarity.RARE)
+        val e1 = chestFixtureItem("e1", rarity = Rarity.EPIC)
+
+        // Floor is RARE (3+1>=4). r1 is owned. e1 (unowned, >= floor) beats u1 (unowned, < floor).
+        val above = zeroEngine.rollChest(
+            listOf(c1, u1, r1, e1),
+            setOf(r1.id),
+            chestsSinceRarePlus = 3,
+            chestsSinceEpicPlus = 0,
+            chestsSinceLegendary = 0
+        )
+        assertEquals("e1", above?.rolledItem?.id)
+
+        // Without e1 in the pool, the unowned u1 (below the floor) wins over a duplicate.
+        val below = zeroEngine.rollChest(
+            listOf(c1, u1, r1),
+            setOf(r1.id),
+            chestsSinceRarePlus = 3,
+            chestsSinceEpicPlus = 0,
+            chestsSinceLegendary = 0
+        )
+        assertEquals("u1", below?.rolledItem?.id)
+        assertFalse(below!!.isDuplicate)
+
+        // All-COMMON pool with a floor nothing in the pool reaches: must not crash, falls back to COMMON.
+        val c2 = chestFixtureItem("c2", rarity = Rarity.COMMON)
+        val allCommon = zeroEngine.rollChest(
+            listOf(c1, c2),
+            emptySet(),
+            chestsSinceRarePlus = 3,
+            chestsSinceEpicPlus = 9,
+            chestsSinceLegendary = 19
+        )
+        assertNotNull(allCommon)
+        assertEquals(Rarity.COMMON, allCommon.rolledItem.rarity)
     }
 
     @Test
@@ -2528,4 +2895,8 @@ class LixoEnginesTest {
         assertTrue(outcome.newlyUnlockedRewards.none { it.source == RewardSource.LEVEL })
         assertTrue(outcome.newlyUnlockedRewards.none { it.item.id == curatedId })
     }
+}
+
+private class ZeroRandom : Random() {
+    override fun nextBits(bitCount: Int): Int = 0
 }

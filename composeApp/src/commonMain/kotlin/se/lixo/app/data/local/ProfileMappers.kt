@@ -47,7 +47,10 @@ internal fun ChildProfile.toEntity(): ProfileEntity = ProfileEntity(
     achievementProgressJson = profileJson.encodeToString(achievementProgress),
     achievementCountedLevelIdsJson = profileJson.encodeToString(achievementCountedLevelIds),
     unlockedAchievementIdsJson = profileJson.encodeToString(unlockedAchievementIds),
-    pendingAchievementRewardIdsJson = profileJson.encodeToString(pendingAchievementRewardIds)
+    pendingAchievementRewardIdsJson = profileJson.encodeToString(pendingAchievementRewardIds),
+    chestsSinceRarePlus = chestsSinceRarePlus,
+    chestsSinceEpicPlus = chestsSinceEpicPlus,
+    chestsSinceLegendary = chestsSinceLegendary
 )
 
 internal fun ProfileEntity.toDomain(): ChildProfile = ChildProfile(
@@ -91,7 +94,10 @@ internal fun ProfileEntity.toDomain(): ChildProfile = ChildProfile(
     },
     pendingAchievementRewardIds = decodeOr("pendingAchievementRewardIds", emptySet()) {
         profileJson.decodeFromString<Set<String>>(pendingAchievementRewardIdsJson)
-    }
+    },
+    chestsSinceRarePlus = chestsSinceRarePlus,
+    chestsSinceEpicPlus = chestsSinceEpicPlus,
+    chestsSinceLegendary = chestsSinceLegendary
 )
 
 internal fun LevelProgress.toEntity(): LevelProgressEntity = LevelProgressEntity(

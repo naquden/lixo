@@ -1,0 +1,4034 @@
+[
+  {
+    "id": "item_armor_shirt_kapa_isbla",
+    "nameSv": "Isblå Kåpa",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 80,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_kapa_kosmisk",
+    "nameSv": "Kosmisk Kåpa",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_kapa_kungabla",
+    "nameSv": "Kungablå Kåpa",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_kapa_nattsvart",
+    "nameSv": "Nattsvart Kåpa",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_kapa_rosenrosa",
+    "nameSv": "Rosenrosa Kåpa",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_kapa_rostbrun",
+    "nameSv": "Rostbrun Kåpa",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_kapa_silverglans",
+    "nameSv": "Silverglans Kåpa",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_kapa_skogsgron",
+    "nameSv": "Skogsgrön Kåpa",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_klanningsoverdel_glodande",
+    "nameSv": "Glödande Klänningsöverdel",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 195,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_klanningsoverdel_korallrod",
+    "nameSv": "Korallröd Klänningsöverdel",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_klanningsoverdel_korpsvart",
+    "nameSv": "Korpsvart Klänningsöverdel",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_klanningsoverdel_myllergron",
+    "nameSv": "Myllergrön Klänningsöverdel",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_klanningsoverdel_rosenrosa",
+    "nameSv": "Rosenrosa Klänningsöverdel",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_klanningsoverdel_rostbrun",
+    "nameSv": "Rostbrun Klänningsöverdel",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_klanningsoverdel_solgyllene",
+    "nameSv": "Solgyllene Klänningsöverdel",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_klanningsoverdel_vintervit",
+    "nameSv": "Vintervit Klänningsöverdel",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_luvtroja_barnstensgul",
+    "nameSv": "Bärnstensgul Luvtröja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 132,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_luvtroja_korallrod",
+    "nameSv": "Korallröd Luvtröja",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_luvtroja_korpsvart",
+    "nameSv": "Korpsvart Luvtröja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_luvtroja_lavendellila",
+    "nameSv": "Lavendellila Luvtröja",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_luvtroja_nattsvart",
+    "nameSv": "Nattsvart Luvtröja",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_luvtroja_rosenrosa",
+    "nameSv": "Rosenrosa Luvtröja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_luvtroja_silverglans",
+    "nameSv": "Silverglans Luvtröja",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_luvtroja_vintervit",
+    "nameSv": "Vintervit Luvtröja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_plattrustning_barnstensgul",
+    "nameSv": "Bärnstensgul Plattrustning",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_plattrustning_djuphavsbla",
+    "nameSv": "Djuphavsblå Plattrustning",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_plattrustning_glodande",
+    "nameSv": "Glödande Plattrustning",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 37,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_plattrustning_korpsvart",
+    "nameSv": "Korpsvart Plattrustning",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_plattrustning_kosmisk",
+    "nameSv": "Kosmisk Plattrustning",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_plattrustning_lavendellila",
+    "nameSv": "Lavendellila Plattrustning",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_plattrustning_myllergron",
+    "nameSv": "Myllergrön Plattrustning",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_plattrustning_rostbrun",
+    "nameSv": "Rostbrun Plattrustning",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_ringbrynja_glodande",
+    "nameSv": "Glödande Ringbrynja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_ringbrynja_isbla",
+    "nameSv": "Isblå Ringbrynja",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_ringbrynja_korallrod",
+    "nameSv": "Korallröd Ringbrynja",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_ringbrynja_kosmisk",
+    "nameSv": "Kosmisk Ringbrynja",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_ringbrynja_kungabla",
+    "nameSv": "Kungablå Ringbrynja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 105,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_ringbrynja_lavendellila",
+    "nameSv": "Lavendellila Ringbrynja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_ringbrynja_regnbags",
+    "nameSv": "Regnbågs Ringbrynja",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_ringbrynja_skogsgron",
+    "nameSv": "Skogsgrön Ringbrynja",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": "ach_stars_120"
+  },
+  {
+    "id": "item_armor_shirt_troja_barnstensgul",
+    "nameSv": "Bärnstensgul Tröja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_troja_djuphavsbla",
+    "nameSv": "Djuphavsblå Tröja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_troja_glodande",
+    "nameSv": "Glödande Tröja",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_troja_isbla",
+    "nameSv": "Isblå Tröja",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_troja_korallrod",
+    "nameSv": "Korallröd Tröja",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_troja_myllergron",
+    "nameSv": "Myllergrön Tröja",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_troja_silverglans",
+    "nameSv": "Silverglans Tröja",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_troja_vintervit",
+    "nameSv": "Vintervit Tröja",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 162,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_tunikamedbalte_barnstensgul",
+    "nameSv": "Bärnstensgul Tunika med Bälte",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_tunikamedbalte_korpsvart",
+    "nameSv": "Korpsvart Tunika med Bälte",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_tunikamedbalte_lavendellila",
+    "nameSv": "Lavendellila Tunika med Bälte",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_tunikamedbalte_myllergron",
+    "nameSv": "Myllergrön Tunika med Bälte",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_tunikamedbalte_rosenrosa",
+    "nameSv": "Rosenrosa Tunika med Bälte",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_tunikamedbalte_rostbrun",
+    "nameSv": "Rostbrun Tunika med Bälte",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_tunikamedbalte_silverglans",
+    "nameSv": "Silverglans Tunika med Bälte",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_tunikamedbalte_solgyllene",
+    "nameSv": "Solgyllene Tunika med Bälte",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 57,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_vast_barnstensgul",
+    "nameSv": "Bärnstensgul Väst",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_vast_djuphavsbla",
+    "nameSv": "Djuphavsblå Väst",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_vast_isbla",
+    "nameSv": "Isblå Väst",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_vast_lavendellila",
+    "nameSv": "Lavendellila Väst",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_vast_myllergron",
+    "nameSv": "Myllergrön Väst",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_vast_silverglans",
+    "nameSv": "Silverglans Väst",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 230,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_vast_solgyllene",
+    "nameSv": "Solgyllene Väst",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_armor_shirt_vast_vintervit",
+    "nameSv": "Vintervit Väst",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_armband_barnstensgul",
+    "nameSv": "Bärnstensgul Armband",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_armband_isbla",
+    "nameSv": "Isblå Armband",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_armband_korallrod",
+    "nameSv": "Korallröd Armband",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_armband_korpsvart",
+    "nameSv": "Korpsvart Armband",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_armband_nattsvart",
+    "nameSv": "Nattsvart Armband",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_armband_silverglans",
+    "nameSv": "Silverglans Armband",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_armband_skogsgron",
+    "nameSv": "Skogsgrön Armband",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_armband_solgyllene",
+    "nameSv": "Solgyllene Armband",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handledslindor_glodande",
+    "nameSv": "Glödande Handledslindor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 129,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handledslindor_isbla",
+    "nameSv": "Isblå Handledslindor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handledslindor_myllergron",
+    "nameSv": "Myllergrön Handledslindor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 226,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handledslindor_nattsvart",
+    "nameSv": "Nattsvart Handledslindor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handledslindor_regnbags",
+    "nameSv": "Regnbågs Handledslindor",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handledslindor_silverglans",
+    "nameSv": "Silverglans Handledslindor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handledslindor_skogsgron",
+    "nameSv": "Skogsgrön Handledslindor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handledslindor_vintervit",
+    "nameSv": "Vintervit Handledslindor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handskar_djuphavsbla",
+    "nameSv": "Djuphavsblå Handskar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handskar_isbla",
+    "nameSv": "Isblå Handskar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": "ach_stars_75"
+  },
+  {
+    "id": "item_arms_gloves_handskar_korallrod",
+    "nameSv": "Korallröd Handskar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handskar_kungabla",
+    "nameSv": "Kungablå Handskar",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handskar_myllergron",
+    "nameSv": "Myllergrön Handskar",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handskar_nattsvart",
+    "nameSv": "Nattsvart Handskar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handskar_silverglans",
+    "nameSv": "Silverglans Handskar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_handskar_skogsgron",
+    "nameSv": "Skogsgrön Handskar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_klor_gyllene",
+    "nameSv": "Gyllene Klor",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_klor_isbla",
+    "nameSv": "Isblå Klor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_klor_korpsvart",
+    "nameSv": "Korpsvart Klor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_klor_kungabla",
+    "nameSv": "Kungablå Klor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_klor_lavendellila",
+    "nameSv": "Lavendellila Klor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_klor_nattsvart",
+    "nameSv": "Nattsvart Klor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_klor_rosenrosa",
+    "nameSv": "Rosenrosa Klor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 191,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_klor_rostbrun",
+    "nameSv": "Rostbrun Klor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_pansarhandskar_barnstensgul",
+    "nameSv": "Bärnstensgul Pansarhandskar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 102,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_pansarhandskar_djuphavsbla",
+    "nameSv": "Djuphavsblå Pansarhandskar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_pansarhandskar_gyllene",
+    "nameSv": "Gyllene Pansarhandskar",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_pansarhandskar_isbla",
+    "nameSv": "Isblå Pansarhandskar",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_pansarhandskar_korallrod",
+    "nameSv": "Korallröd Pansarhandskar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_pansarhandskar_myllergron",
+    "nameSv": "Myllergrön Pansarhandskar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 77,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_pansarhandskar_silverglans",
+    "nameSv": "Silverglans Pansarhandskar",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_pansarhandskar_solgyllene",
+    "nameSv": "Solgyllene Pansarhandskar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_ringar_galax",
+    "nameSv": "Galax Ringar",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_ringar_korallrod",
+    "nameSv": "Korallröd Ringar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_ringar_korpsvart",
+    "nameSv": "Korpsvart Ringar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_ringar_lavendellila",
+    "nameSv": "Lavendellila Ringar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_ringar_nattsvart",
+    "nameSv": "Nattsvart Ringar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_ringar_rosenrosa",
+    "nameSv": "Rosenrosa Ringar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_ringar_rostbrun",
+    "nameSv": "Rostbrun Ringar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 55,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_ringar_solgyllene",
+    "nameSv": "Solgyllene Ringar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_taggarmskydd_djuphavsbla",
+    "nameSv": "Djuphavsblå Taggarmskydd",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 35,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_taggarmskydd_glodande",
+    "nameSv": "Glödande Taggarmskydd",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_taggarmskydd_nattsvart",
+    "nameSv": "Nattsvart Taggarmskydd",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_taggarmskydd_rosenrosa",
+    "nameSv": "Rosenrosa Taggarmskydd",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_taggarmskydd_rostbrun",
+    "nameSv": "Rostbrun Taggarmskydd",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_taggarmskydd_silverglans",
+    "nameSv": "Silverglans Taggarmskydd",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_taggarmskydd_skogsgron",
+    "nameSv": "Skogsgrön Taggarmskydd",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_taggarmskydd_solgyllene",
+    "nameSv": "Solgyllene Taggarmskydd",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_vantar_barnstensgul",
+    "nameSv": "Bärnstensgul Vantar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_vantar_djuphavsbla",
+    "nameSv": "Djuphavsblå Vantar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_vantar_isbla",
+    "nameSv": "Isblå Vantar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_vantar_korallrod",
+    "nameSv": "Korallröd Vantar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 159,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_vantar_kungabla",
+    "nameSv": "Kungablå Vantar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_vantar_nattsvart",
+    "nameSv": "Nattsvart Vantar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_vantar_skogsgron",
+    "nameSv": "Skogsgrön Vantar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_arms_gloves_vantar_vintervit",
+    "nameSv": "Vintervit Vantar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_bok_barnstensgul",
+    "nameSv": "Bärnstensgul Bok",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_bok_djuphavsbla",
+    "nameSv": "Djuphavsblå Bok",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_bok_glodande",
+    "nameSv": "Glödande Bok",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 91,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_bok_korallrod",
+    "nameSv": "Korallröd Bok",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_bok_kungabla",
+    "nameSv": "Kungablå Bok",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_bok_myllergron",
+    "nameSv": "Myllergrön Bok",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_bok_solgyllene",
+    "nameSv": "Solgyllene Bok",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_bok_vintervit",
+    "nameSv": "Vintervit Bok",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_fackla_djuphavsbla",
+    "nameSv": "Djuphavsblå Fackla",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_fackla_glodande",
+    "nameSv": "Glödande Fackla",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_fackla_korallrod",
+    "nameSv": "Korallröd Fackla",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_fackla_korpsvart",
+    "nameSv": "Korpsvart Fackla",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_fackla_lavendellila",
+    "nameSv": "Lavendellila Fackla",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_fackla_myllergron",
+    "nameSv": "Myllergrön Fackla",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_fackla_rosenrosa",
+    "nameSv": "Rosenrosa Fackla",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_fackla_vintervit",
+    "nameSv": "Vintervit Fackla",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kiteskold_djuphavsbla",
+    "nameSv": "Djuphavsblå Kitesköld",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kiteskold_glodande",
+    "nameSv": "Glödande Kitesköld",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kiteskold_korallrod",
+    "nameSv": "Korallröd Kitesköld",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kiteskold_kungabla",
+    "nameSv": "Kungablå Kitesköld",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kiteskold_myllergron",
+    "nameSv": "Myllergrön Kitesköld",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 67,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kiteskold_silverglans",
+    "nameSv": "Silverglans Kitesköld",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kiteskold_skogsgron",
+    "nameSv": "Skogsgrön Kitesköld",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kiteskold_vintervit",
+    "nameSv": "Vintervit Kitesköld",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kompass_barnstensgul",
+    "nameSv": "Bärnstensgul Kompass",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kompass_djuphavsbla",
+    "nameSv": "Djuphavsblå Kompass",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kompass_isbla",
+    "nameSv": "Isblå Kompass",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kompass_korpsvart",
+    "nameSv": "Korpsvart Kompass",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 145,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kompass_kosmisk",
+    "nameSv": "Kosmisk Kompass",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kompass_myllergron",
+    "nameSv": "Myllergrön Kompass",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kompass_rostbrun",
+    "nameSv": "Rostbrun Kompass",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_kompass_silverglans",
+    "nameSv": "Silverglans Kompass",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_lykta_glodande",
+    "nameSv": "Glödande Lykta",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_lykta_korallrod",
+    "nameSv": "Korallröd Lykta",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_lykta_lavendellila",
+    "nameSv": "Lavendellila Lykta",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_lykta_myllergron",
+    "nameSv": "Myllergrön Lykta",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_lykta_regnbags",
+    "nameSv": "Regnbågs Lykta",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": "ach_stars_480"
+  },
+  {
+    "id": "item_hand_left_lykta_rostbrun",
+    "nameSv": "Rostbrun Lykta",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_lykta_silverglans",
+    "nameSv": "Silverglans Lykta",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_lykta_vintervit",
+    "nameSv": "Vintervit Lykta",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 46,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_rundskold_barnstensgul",
+    "nameSv": "Bärnstensgul Rund Sköld",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_rundskold_glodande",
+    "nameSv": "Glödande Rund Sköld",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_rundskold_gyllene",
+    "nameSv": "Gyllene Rund Sköld",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_rundskold_isbla",
+    "nameSv": "Isblå Rund Sköld",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 117,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_rundskold_kungabla",
+    "nameSv": "Kungablå Rund Sköld",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_rundskold_lavendellila",
+    "nameSv": "Lavendellila Rund Sköld",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_rundskold_nattsvart",
+    "nameSv": "Nattsvart Rund Sköld",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_rundskold_solgyllene",
+    "nameSv": "Solgyllene Rund Sköld",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_timglas_djuphavsbla",
+    "nameSv": "Djuphavsblå Timglas",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_timglas_isbla",
+    "nameSv": "Isblå Timglas",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_timglas_kungabla",
+    "nameSv": "Kungablå Timglas",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 176,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_timglas_lavendellila",
+    "nameSv": "Lavendellila Timglas",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_timglas_myllergron",
+    "nameSv": "Myllergrön Timglas",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_timglas_rosenrosa",
+    "nameSv": "Rosenrosa Timglas",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_timglas_rostbrun",
+    "nameSv": "Rostbrun Timglas",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_timglas_skogsgron",
+    "nameSv": "Skogsgrön Timglas",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 210,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_trolldryck_barnstensgul",
+    "nameSv": "Bärnstensgul Trolldryck",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_trolldryck_djuphavsbla",
+    "nameSv": "Djuphavsblå Trolldryck",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 246,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_trolldryck_glodande",
+    "nameSv": "Glödande Trolldryck",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_trolldryck_gyllene",
+    "nameSv": "Gyllene Trolldryck",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_trolldryck_isbla",
+    "nameSv": "Isblå Trolldryck",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_trolldryck_kungabla",
+    "nameSv": "Kungablå Trolldryck",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_trolldryck_rosenrosa",
+    "nameSv": "Rosenrosa Trolldryck",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_left_trolldryck_vintervit",
+    "nameSv": "Vintervit Trolldryck",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_hammare_barnstensgul",
+    "nameSv": "Bärnstensgul Hammare",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_hammare_djuphavsbla",
+    "nameSv": "Djuphavsblå Hammare",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_hammare_isbla",
+    "nameSv": "Isblå Hammare",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_hammare_korallrod",
+    "nameSv": "Korallröd Hammare",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_hammare_rosenrosa",
+    "nameSv": "Rosenrosa Hammare",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_hammare_silverglans",
+    "nameSv": "Silverglans Hammare",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 44,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_hammare_skogsgron",
+    "nameSv": "Skogsgrön Hammare",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_hammare_vintervit",
+    "nameSv": "Vintervit Hammare",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_magisksfar_djuphavsbla",
+    "nameSv": "Djuphavsblå Magisk Sfär",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_magisksfar_kosmisk",
+    "nameSv": "Kosmisk Magisk Sfär",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_magisksfar_myllergron",
+    "nameSv": "Myllergrön Magisk Sfär",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_magisksfar_nattsvart",
+    "nameSv": "Nattsvart Magisk Sfär",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 88,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_magisksfar_rosenrosa",
+    "nameSv": "Rosenrosa Magisk Sfär",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_magisksfar_rostbrun",
+    "nameSv": "Rostbrun Magisk Sfär",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_magisksfar_silverglans",
+    "nameSv": "Silverglans Magisk Sfär",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_magisksfar_skogsgron",
+    "nameSv": "Skogsgrön Magisk Sfär",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 173,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_pilbage_glodande",
+    "nameSv": "Glödande Pilbåge",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_pilbage_isbla",
+    "nameSv": "Isblå Pilbåge",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_pilbage_korpsvart",
+    "nameSv": "Korpsvart Pilbåge",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_pilbage_myllergron",
+    "nameSv": "Myllergrön Pilbåge",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_pilbage_rosenrosa",
+    "nameSv": "Rosenrosa Pilbåge",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_pilbage_rostbrun",
+    "nameSv": "Rostbrun Pilbåge",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_pilbage_silverglans",
+    "nameSv": "Silverglans Pilbåge",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 64,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_pilbage_vintervit",
+    "nameSv": "Vintervit Pilbåge",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_spjut_barnstensgul",
+    "nameSv": "Bärnstensgul Spjut",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_spjut_djuphavsbla",
+    "nameSv": "Djuphavsblå Spjut",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 114,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_spjut_isbla",
+    "nameSv": "Isblå Spjut",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_spjut_korallrod",
+    "nameSv": "Korallröd Spjut",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_spjut_nattsvart",
+    "nameSv": "Nattsvart Spjut",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_spjut_rostbrun",
+    "nameSv": "Rostbrun Spjut",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_spjut_skogsgron",
+    "nameSv": "Skogsgrön Spjut",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_spjut_vintervit",
+    "nameSv": "Vintervit Spjut",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_stav_barnstensgul",
+    "nameSv": "Bärnstensgul Stav",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_stav_djuphavsbla",
+    "nameSv": "Djuphavsblå Stav",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_stav_korallrod",
+    "nameSv": "Korallröd Stav",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_stav_korpsvart",
+    "nameSv": "Korpsvart Stav",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 242,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_stav_kungabla",
+    "nameSv": "Kungablå Stav",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_stav_rosenrosa",
+    "nameSv": "Rosenrosa Stav",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_stav_silverglans",
+    "nameSv": "Silverglans Stav",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_stav_solgyllene",
+    "nameSv": "Solgyllene Stav",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_svard_djuphavsbla",
+    "nameSv": "Djuphavsblå Svärd",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_svard_galax",
+    "nameSv": "Galax Svärd",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_svard_glodande",
+    "nameSv": "Glödande Svärd",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_svard_lavendellila",
+    "nameSv": "Lavendellila Svärd",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_svard_myllergron",
+    "nameSv": "Myllergrön Svärd",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_svard_silverglans",
+    "nameSv": "Silverglans Svärd",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 142,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_svard_solgyllene",
+    "nameSv": "Solgyllene Svärd",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_svard_vintervit",
+    "nameSv": "Vintervit Svärd",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 206,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_trollstav_isbla",
+    "nameSv": "Isblå Trollstav",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_trollstav_korallrod",
+    "nameSv": "Korallröd Trollstav",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_trollstav_korpsvart",
+    "nameSv": "Korpsvart Trollstav",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_trollstav_kungabla",
+    "nameSv": "Kungablå Trollstav",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_trollstav_lavendellila",
+    "nameSv": "Lavendellila Trollstav",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_trollstav_regnbags",
+    "nameSv": "Regnbågs Trollstav",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_trollstav_rostbrun",
+    "nameSv": "Rostbrun Trollstav",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_trollstav_solgyllene",
+    "nameSv": "Solgyllene Trollstav",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_yxa_barnstensgul",
+    "nameSv": "Bärnstensgul Yxa",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_yxa_djuphavsbla",
+    "nameSv": "Djuphavsblå Yxa",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_yxa_glodande",
+    "nameSv": "Glödande Yxa",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_yxa_korallrod",
+    "nameSv": "Korallröd Yxa",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_yxa_regnbags",
+    "nameSv": "Regnbågs Yxa",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": "ach_stars_350"
+  },
+  {
+    "id": "item_hand_right_yxa_rostbrun",
+    "nameSv": "Rostbrun Yxa",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_yxa_skogsgron",
+    "nameSv": "Skogsgrön Yxa",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hand_right_yxa_solgyllene",
+    "nameSv": "Solgyllene Yxa",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hoghatt_gyllene",
+    "nameSv": "Gyllene Hög Hatt",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hoghatt_isbla",
+    "nameSv": "Isblå Hög Hatt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hoghatt_korallrod",
+    "nameSv": "Korallröd Hög Hatt",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hoghatt_korpsvart",
+    "nameSv": "Korpsvart Hög Hatt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hoghatt_kosmisk",
+    "nameSv": "Kosmisk Hög Hatt",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hoghatt_myllergron",
+    "nameSv": "Myllergrön Hög Hatt",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hoghatt_solgyllene",
+    "nameSv": "Solgyllene Hög Hatt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hoghatt_vintervit",
+    "nameSv": "Vintervit Hög Hatt",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hornhjalm_barnstensgul",
+    "nameSv": "Bärnstensgul Hornhjälm",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": "ach_stars_20"
+  },
+  {
+    "id": "item_hat_hornhjalm_djuphavsbla",
+    "nameSv": "Djuphavsblå Hornhjälm",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hornhjalm_gyllene",
+    "nameSv": "Gyllene Hornhjälm",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hornhjalm_isbla",
+    "nameSv": "Isblå Hornhjälm",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hornhjalm_korallrod",
+    "nameSv": "Korallröd Hornhjälm",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hornhjalm_korpsvart",
+    "nameSv": "Korpsvart Hornhjälm",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hornhjalm_lavendellila",
+    "nameSv": "Lavendellila Hornhjälm",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 72,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_hornhjalm_solgyllene",
+    "nameSv": "Solgyllene Hornhjälm",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_huva_barnstensgul",
+    "nameSv": "Bärnstensgul Huva",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_huva_glodande",
+    "nameSv": "Glödande Huva",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_huva_lavendellila",
+    "nameSv": "Lavendellila Huva",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_huva_nattsvart",
+    "nameSv": "Nattsvart Huva",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 96,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_huva_rosenrosa",
+    "nameSv": "Rosenrosa Huva",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_huva_rostbrun",
+    "nameSv": "Rostbrun Huva",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_huva_skogsgron",
+    "nameSv": "Skogsgrön Huva",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_huva_vintervit",
+    "nameSv": "Vintervit Huva",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_keps_djuphavsbla",
+    "nameSv": "Djuphavsblå Keps",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 184,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_keps_lavendellila",
+    "nameSv": "Lavendellila Keps",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_keps_myllergron",
+    "nameSv": "Myllergrön Keps",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_keps_nattsvart",
+    "nameSv": "Nattsvart Keps",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_keps_rosenrosa",
+    "nameSv": "Rosenrosa Keps",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_keps_rostbrun",
+    "nameSv": "Rostbrun Keps",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_keps_silverglans",
+    "nameSv": "Silverglans Keps",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_keps_skogsgron",
+    "nameSv": "Skogsgrön Keps",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_krona_barnstensgul",
+    "nameSv": "Bärnstensgul Krona",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_krona_djuphavsbla",
+    "nameSv": "Djuphavsblå Krona",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 50,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_krona_korallrod",
+    "nameSv": "Korallröd Krona",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_krona_myllergron",
+    "nameSv": "Myllergrön Krona",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_krona_rosenrosa",
+    "nameSv": "Rosenrosa Krona",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_krona_rostbrun",
+    "nameSv": "Rostbrun Krona",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_krona_solgyllene",
+    "nameSv": "Solgyllene Krona",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_krona_vintervit",
+    "nameSv": "Vintervit Krona",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_pompomsmossa_isbla",
+    "nameSv": "Isblå Pompomsmössa",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_pompomsmossa_korallrod",
+    "nameSv": "Korallröd Pompomsmössa",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 218,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_pompomsmossa_korpsvart",
+    "nameSv": "Korpsvart Pompomsmössa",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_pompomsmossa_myllergron",
+    "nameSv": "Myllergrön Pompomsmössa",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_pompomsmossa_nattsvart",
+    "nameSv": "Nattsvart Pompomsmössa",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_pompomsmossa_skogsgron",
+    "nameSv": "Skogsgrön Pompomsmössa",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_pompomsmossa_solgyllene",
+    "nameSv": "Solgyllene Pompomsmössa",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_pompomsmossa_vintervit",
+    "nameSv": "Vintervit Pompomsmössa",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_riddarhjalm_djuphavsbla",
+    "nameSv": "Djuphavsblå Riddarhjälm",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_riddarhjalm_korpsvart",
+    "nameSv": "Korpsvart Riddarhjälm",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 31,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_riddarhjalm_kosmisk",
+    "nameSv": "Kosmisk Riddarhjälm",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_riddarhjalm_nattsvart",
+    "nameSv": "Nattsvart Riddarhjälm",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_riddarhjalm_rostbrun",
+    "nameSv": "Rostbrun Riddarhjälm",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_riddarhjalm_silverglans",
+    "nameSv": "Silverglans Riddarhjälm",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 152,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_riddarhjalm_skogsgron",
+    "nameSv": "Skogsgrön Riddarhjälm",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_riddarhjalm_solgyllene",
+    "nameSv": "Solgyllene Riddarhjälm",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_trollhatt_glodande",
+    "nameSv": "Glödande Trollhatt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_trollhatt_korallrod",
+    "nameSv": "Korallröd Trollhatt",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_trollhatt_korpsvart",
+    "nameSv": "Korpsvart Trollhatt",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_trollhatt_myllergron",
+    "nameSv": "Myllergrön Trollhatt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_trollhatt_nattsvart",
+    "nameSv": "Nattsvart Trollhatt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 123,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_trollhatt_rosenrosa",
+    "nameSv": "Rosenrosa Trollhatt",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_trollhatt_rostbrun",
+    "nameSv": "Rostbrun Trollhatt",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_hat_trollhatt_silverglans",
+    "nameSv": "Silverglans Trollhatt",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_benskenor_barnstensgul",
+    "nameSv": "Bärnstensgul Benskenor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_benskenor_korpsvart",
+    "nameSv": "Korpsvart Benskenor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_benskenor_kosmisk",
+    "nameSv": "Kosmisk Benskenor",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_benskenor_kungabla",
+    "nameSv": "Kungablå Benskenor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_benskenor_lavendellila",
+    "nameSv": "Lavendellila Benskenor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_benskenor_rostbrun",
+    "nameSv": "Rostbrun Benskenor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 39,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_benskenor_silverglans",
+    "nameSv": "Silverglans Benskenor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_benskenor_skogsgron",
+    "nameSv": "Skogsgrön Benskenor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_byxor_barnstensgul",
+    "nameSv": "Bärnstensgul Byxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 60,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_byxor_isbla",
+    "nameSv": "Isblå Byxor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_byxor_korallrod",
+    "nameSv": "Korallröd Byxor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_byxor_korpsvart",
+    "nameSv": "Korpsvart Byxor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_byxor_lavendellila",
+    "nameSv": "Lavendellila Byxor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_byxor_myllergron",
+    "nameSv": "Myllergrön Byxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_byxor_rosenrosa",
+    "nameSv": "Rosenrosa Byxor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_byxor_silverglans",
+    "nameSv": "Silverglans Byxor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_cargobyxor_barnstensgul",
+    "nameSv": "Bärnstensgul Cargobyxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_cargobyxor_djuphavsbla",
+    "nameSv": "Djuphavsblå Cargobyxor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_cargobyxor_korallrod",
+    "nameSv": "Korallröd Cargobyxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 135,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_cargobyxor_kungabla",
+    "nameSv": "Kungablå Cargobyxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_cargobyxor_lavendellila",
+    "nameSv": "Lavendellila Cargobyxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 82,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_cargobyxor_rostbrun",
+    "nameSv": "Rostbrun Cargobyxor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_cargobyxor_silverglans",
+    "nameSv": "Silverglans Cargobyxor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_cargobyxor_skogsgron",
+    "nameSv": "Skogsgrön Cargobyxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kilt_djuphavsbla",
+    "nameSv": "Djuphavsblå Kilt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kilt_glodande",
+    "nameSv": "Glödande Kilt",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kilt_korallrod",
+    "nameSv": "Korallröd Kilt",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kilt_korpsvart",
+    "nameSv": "Korpsvart Kilt",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kilt_regnbags",
+    "nameSv": "Regnbågs Kilt",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kilt_rosenrosa",
+    "nameSv": "Rosenrosa Kilt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kilt_silverglans",
+    "nameSv": "Silverglans Kilt",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 198,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kilt_skogsgron",
+    "nameSv": "Skogsgrön Kilt",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kjol_barnstensgul",
+    "nameSv": "Bärnstensgul Kjol",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kjol_glodande",
+    "nameSv": "Glödande Kjol",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kjol_korallrod",
+    "nameSv": "Korallröd Kjol",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kjol_korpsvart",
+    "nameSv": "Korpsvart Kjol",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kjol_rosenrosa",
+    "nameSv": "Rosenrosa Kjol",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kjol_skogsgron",
+    "nameSv": "Skogsgrön Kjol",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kjol_solgyllene",
+    "nameSv": "Solgyllene Kjol",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_kjol_vintervit",
+    "nameSv": "Vintervit Kjol",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_posigabyxor_barnstensgul",
+    "nameSv": "Bärnstensgul Pösiga Byxor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_posigabyxor_korallrod",
+    "nameSv": "Korallröd Pösiga Byxor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": "ach_stars_175"
+  },
+  {
+    "id": "item_pants_posigabyxor_lavendellila",
+    "nameSv": "Lavendellila Pösiga Byxor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_posigabyxor_nattsvart",
+    "nameSv": "Nattsvart Pösiga Byxor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_posigabyxor_rostbrun",
+    "nameSv": "Rostbrun Pösiga Byxor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_posigabyxor_silverglans",
+    "nameSv": "Silverglans Pösiga Byxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_posigabyxor_skogsgron",
+    "nameSv": "Skogsgrön Pösiga Byxor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_posigabyxor_vintervit",
+    "nameSv": "Vintervit Pösiga Byxor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_randigaleggings_barnstensgul",
+    "nameSv": "Bärnstensgul Randiga Leggings",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_randigaleggings_djuphavsbla",
+    "nameSv": "Djuphavsblå Randiga Leggings",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_randigaleggings_isbla",
+    "nameSv": "Isblå Randiga Leggings",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 234,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_randigaleggings_korallrod",
+    "nameSv": "Korallröd Randiga Leggings",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_randigaleggings_korpsvart",
+    "nameSv": "Korpsvart Randiga Leggings",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_randigaleggings_kungabla",
+    "nameSv": "Kungablå Randiga Leggings",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_randigaleggings_lavendellila",
+    "nameSv": "Lavendellila Randiga Leggings",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_randigaleggings_nattsvart",
+    "nameSv": "Nattsvart Randiga Leggings",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_shorts_gyllene",
+    "nameSv": "Gyllene Shorts",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_shorts_korpsvart",
+    "nameSv": "Korpsvart Shorts",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_shorts_kosmisk",
+    "nameSv": "Kosmisk Shorts",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_shorts_kungabla",
+    "nameSv": "Kungablå Shorts",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_shorts_lavendellila",
+    "nameSv": "Lavendellila Shorts",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_shorts_rosenrosa",
+    "nameSv": "Rosenrosa Shorts",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_shorts_rostbrun",
+    "nameSv": "Rostbrun Shorts",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 166,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_pants_shorts_silverglans",
+    "nameSv": "Silverglans Shorts",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 108,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_hogastovlar_djuphavsbla",
+    "nameSv": "Djuphavsblå Höga Stövlar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_hogastovlar_galax",
+    "nameSv": "Galax Höga Stövlar",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_hogastovlar_glodande",
+    "nameSv": "Glödande Höga Stövlar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 111,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_hogastovlar_rosenrosa",
+    "nameSv": "Rosenrosa Höga Stövlar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_hogastovlar_rostbrun",
+    "nameSv": "Rostbrun Höga Stövlar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_hogastovlar_silverglans",
+    "nameSv": "Silverglans Höga Stövlar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_hogastovlar_solgyllene",
+    "nameSv": "Solgyllene Höga Stövlar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_hogastovlar_vintervit",
+    "nameSv": "Vintervit Höga Stövlar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_raketskor_barnstensgul",
+    "nameSv": "Bärnstensgul Raketskor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_raketskor_isbla",
+    "nameSv": "Isblå Raketskor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": "ach_stars_250"
+  },
+  {
+    "id": "item_shoes_raketskor_myllergron",
+    "nameSv": "Myllergrön Raketskor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_raketskor_nattsvart",
+    "nameSv": "Nattsvart Raketskor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 169,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_raketskor_rosenrosa",
+    "nameSv": "Rosenrosa Raketskor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_raketskor_rostbrun",
+    "nameSv": "Rostbrun Raketskor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_raketskor_solgyllene",
+    "nameSv": "Solgyllene Raketskor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_raketskor_vintervit",
+    "nameSv": "Vintervit Raketskor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sandaler_djuphavsbla",
+    "nameSv": "Djuphavsblå Sandaler",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sandaler_isbla",
+    "nameSv": "Isblå Sandaler",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sandaler_korallrod",
+    "nameSv": "Korallröd Sandaler",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sandaler_korpsvart",
+    "nameSv": "Korpsvart Sandaler",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 85,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sandaler_kosmisk",
+    "nameSv": "Kosmisk Sandaler",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sandaler_kungabla",
+    "nameSv": "Kungablå Sandaler",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sandaler_rostbrun",
+    "nameSv": "Rostbrun Sandaler",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sandaler_silverglans",
+    "nameSv": "Silverglans Sandaler",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 202,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sneakers_djuphavsbla",
+    "nameSv": "Djuphavsblå Sneakers",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sneakers_glodande",
+    "nameSv": "Glödande Sneakers",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sneakers_korallrod",
+    "nameSv": "Korallröd Sneakers",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sneakers_korpsvart",
+    "nameSv": "Korpsvart Sneakers",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 238,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sneakers_myllergron",
+    "nameSv": "Myllergrön Sneakers",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 139,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sneakers_rosenrosa",
+    "nameSv": "Rosenrosa Sneakers",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sneakers_rostbrun",
+    "nameSv": "Rostbrun Sneakers",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_sneakers_vintervit",
+    "nameSv": "Vintervit Sneakers",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_stovlar_glodande",
+    "nameSv": "Glödande Stövlar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_stovlar_gyllene",
+    "nameSv": "Gyllene Stövlar",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_stovlar_isbla",
+    "nameSv": "Isblå Stövlar",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_stovlar_korallrod",
+    "nameSv": "Korallröd Stövlar",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_stovlar_korpsvart",
+    "nameSv": "Korpsvart Stövlar",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_stovlar_myllergron",
+    "nameSv": "Myllergrön Stövlar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_stovlar_rosenrosa",
+    "nameSv": "Rosenrosa Stövlar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_stovlar_solgyllene",
+    "nameSv": "Solgyllene Stövlar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 62,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_taspetsskor_glodande",
+    "nameSv": "Glödande Tåspetsskor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_taspetsskor_isbla",
+    "nameSv": "Isblå Tåspetsskor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_taspetsskor_korpsvart",
+    "nameSv": "Korpsvart Tåspetsskor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_taspetsskor_kungabla",
+    "nameSv": "Kungablå Tåspetsskor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_taspetsskor_lavendellila",
+    "nameSv": "Lavendellila Tåspetsskor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_taspetsskor_rosenrosa",
+    "nameSv": "Rosenrosa Tåspetsskor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_taspetsskor_rostbrun",
+    "nameSv": "Rostbrun Tåspetsskor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_taspetsskor_vintervit",
+    "nameSv": "Vintervit Tåspetsskor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 41,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_tofflor_barnstensgul",
+    "nameSv": "Bärnstensgul Tofflor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_tofflor_djuphavsbla",
+    "nameSv": "Djuphavsblå Tofflor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_tofflor_isbla",
+    "nameSv": "Isblå Tofflor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_tofflor_kungabla",
+    "nameSv": "Kungablå Tofflor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_tofflor_lavendellila",
+    "nameSv": "Lavendellila Tofflor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_tofflor_myllergron",
+    "nameSv": "Myllergrön Tofflor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_tofflor_silverglans",
+    "nameSv": "Silverglans Tofflor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_tofflor_skogsgron",
+    "nameSv": "Skogsgrön Tofflor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_traskor_barnstensgul",
+    "nameSv": "Bärnstensgul Träskor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_traskor_galax",
+    "nameSv": "Galax Träskor",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_traskor_korpsvart",
+    "nameSv": "Korpsvart Träskor",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_traskor_lavendellila",
+    "nameSv": "Lavendellila Träskor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_traskor_myllergron",
+    "nameSv": "Myllergrön Träskor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_traskor_rosenrosa",
+    "nameSv": "Rosenrosa Träskor",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_traskor_silverglans",
+    "nameSv": "Silverglans Träskor",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoes_traskor_vintervit",
+    "nameSv": "Vintervit Träskor",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ballong_djuphavsbla",
+    "nameSv": "Djuphavsblå Ballong",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ballong_kungabla",
+    "nameSv": "Kungablå Ballong",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ballong_lavendellila",
+    "nameSv": "Lavendellila Ballong",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ballong_nattsvart",
+    "nameSv": "Nattsvart Ballong",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 187,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ballong_rosenrosa",
+    "nameSv": "Rosenrosa Ballong",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 126,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ballong_rostbrun",
+    "nameSv": "Rostbrun Ballong",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ballong_silverglans",
+    "nameSv": "Silverglans Ballong",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ballong_skogsgron",
+    "nameSv": "Skogsgrön Ballong",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_cape_barnstensgul",
+    "nameSv": "Bärnstensgul Cape",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_cape_glodande",
+    "nameSv": "Glödande Cape",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_cape_isbla",
+    "nameSv": "Isblå Cape",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_cape_kungabla",
+    "nameSv": "Kungablå Cape",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_cape_myllergron",
+    "nameSv": "Myllergrön Cape",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_cape_regnbags",
+    "nameSv": "Regnbågs Cape",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_cape_rosenrosa",
+    "nameSv": "Rosenrosa Cape",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_cape_solgyllene",
+    "nameSv": "Solgyllene Cape",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_fjadermantel_barnstensgul",
+    "nameSv": "Bärnstensgul Fjädermantel",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 75,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_fjadermantel_djuphavsbla",
+    "nameSv": "Djuphavsblå Fjädermantel",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_fjadermantel_glodande",
+    "nameSv": "Glödande Fjädermantel",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_fjadermantel_korallrod",
+    "nameSv": "Korallröd Fjädermantel",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_fjadermantel_korpsvart",
+    "nameSv": "Korpsvart Fjädermantel",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_fjadermantel_myllergron",
+    "nameSv": "Myllergrön Fjädermantel",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_fjadermantel_nattsvart",
+    "nameSv": "Nattsvart Fjädermantel",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_fjadermantel_solgyllene",
+    "nameSv": "Solgyllene Fjädermantel",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_halsduk_djuphavsbla",
+    "nameSv": "Djuphavsblå Halsduk",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_halsduk_isbla",
+    "nameSv": "Isblå Halsduk",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_halsduk_korallrod",
+    "nameSv": "Korallröd Halsduk",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_halsduk_kungabla",
+    "nameSv": "Kungablå Halsduk",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_halsduk_nattsvart",
+    "nameSv": "Nattsvart Halsduk",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_halsduk_regnbags",
+    "nameSv": "Regnbågs Halsduk",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_halsduk_rostbrun",
+    "nameSv": "Rostbrun Halsduk",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_halsduk_skogsgron",
+    "nameSv": "Skogsgrön Halsduk",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_pilkoger_glodande",
+    "nameSv": "Glödande Pilkoger",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_pilkoger_isbla",
+    "nameSv": "Isblå Pilkoger",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 222,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_pilkoger_korpsvart",
+    "nameSv": "Korpsvart Pilkoger",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_pilkoger_kungabla",
+    "nameSv": "Kungablå Pilkoger",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_pilkoger_lavendellila",
+    "nameSv": "Lavendellila Pilkoger",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": "ach_stars_45"
+  },
+  {
+    "id": "item_shoulders_back_pilkoger_rosenrosa",
+    "nameSv": "Rosenrosa Pilkoger",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_pilkoger_rostbrun",
+    "nameSv": "Rostbrun Pilkoger",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_pilkoger_solgyllene",
+    "nameSv": "Solgyllene Pilkoger",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ryggsack_korallrod",
+    "nameSv": "Korallröd Ryggsäck",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ryggsack_myllergron",
+    "nameSv": "Myllergrön Ryggsäck",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ryggsack_nattsvart",
+    "nameSv": "Nattsvart Ryggsäck",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ryggsack_rosenrosa",
+    "nameSv": "Rosenrosa Ryggsäck",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ryggsack_rostbrun",
+    "nameSv": "Rostbrun Ryggsäck",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 99,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ryggsack_skogsgron",
+    "nameSv": "Skogsgrön Ryggsäck",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ryggsack_solgyllene",
+    "nameSv": "Solgyllene Ryggsäck",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_ryggsack_vintervit",
+    "nameSv": "Vintervit Ryggsäck",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_snackskal_korallrod",
+    "nameSv": "Korallröd Snäckskal",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_snackskal_korpsvart",
+    "nameSv": "Korpsvart Snäckskal",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_snackskal_kungabla",
+    "nameSv": "Kungablå Snäckskal",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_snackskal_lavendellila",
+    "nameSv": "Lavendellila Snäckskal",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_snackskal_nattsvart",
+    "nameSv": "Nattsvart Snäckskal",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_snackskal_rosenrosa",
+    "nameSv": "Rosenrosa Snäckskal",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_snackskal_silverglans",
+    "nameSv": "Silverglans Snäckskal",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_snackskal_vintervit",
+    "nameSv": "Vintervit Snäckskal",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 155,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_vingar_barnstensgul",
+    "nameSv": "Bärnstensgul Vingar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_vingar_djuphavsbla",
+    "nameSv": "Djuphavsblå Vingar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_vingar_galax",
+    "nameSv": "Galax Vingar",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_vingar_gyllene",
+    "nameSv": "Gyllene Vingar",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_vingar_kungabla",
+    "nameSv": "Kungablå Vingar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 53,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_vingar_nattsvart",
+    "nameSv": "Nattsvart Vingar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 33,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_vingar_rosenrosa",
+    "nameSv": "Rosenrosa Vingar",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_shoulders_back_vingar_solgyllene",
+    "nameSv": "Solgyllene Vingar",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_drakssvans_djuphavsbla",
+    "nameSv": "Djuphavsblå Drakssvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_drakssvans_korpsvart",
+    "nameSv": "Korpsvart Drakssvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_drakssvans_kungabla",
+    "nameSv": "Kungablå Drakssvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_drakssvans_lavendellila",
+    "nameSv": "Lavendellila Drakssvans",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_drakssvans_myllergron",
+    "nameSv": "Myllergrön Drakssvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_drakssvans_nattsvart",
+    "nameSv": "Nattsvart Drakssvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_drakssvans_rostbrun",
+    "nameSv": "Rostbrun Drakssvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_drakssvans_vintervit",
+    "nameSv": "Vintervit Drakssvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 149,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_hundsvans_galax",
+    "nameSv": "Galax Hundsvans",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_hundsvans_korallrod",
+    "nameSv": "Korallröd Hundsvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_hundsvans_korpsvart",
+    "nameSv": "Korpsvart Hundsvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 93,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_hundsvans_kungabla",
+    "nameSv": "Kungablå Hundsvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_hundsvans_regnbags",
+    "nameSv": "Regnbågs Hundsvans",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_hundsvans_silverglans",
+    "nameSv": "Silverglans Hundsvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_hundsvans_skogsgron",
+    "nameSv": "Skogsgrön Hundsvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_hundsvans_vintervit",
+    "nameSv": "Vintervit Hundsvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kattsvans_barnstensgul",
+    "nameSv": "Bärnstensgul Kattsvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kattsvans_djuphavsbla",
+    "nameSv": "Djuphavsblå Kattsvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kattsvans_glodande",
+    "nameSv": "Glödande Kattsvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kattsvans_isbla",
+    "nameSv": "Isblå Kattsvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kattsvans_lavendellila",
+    "nameSv": "Lavendellila Kattsvans",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kattsvans_rosenrosa",
+    "nameSv": "Rosenrosa Kattsvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kattsvans_rostbrun",
+    "nameSv": "Rostbrun Kattsvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kattsvans_vintervit",
+    "nameSv": "Vintervit Kattsvans",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kometsvans_djuphavsbla",
+    "nameSv": "Djuphavsblå Komet-svans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kometsvans_galax",
+    "nameSv": "Galax Komet-svans",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kometsvans_korpsvart",
+    "nameSv": "Korpsvart Komet-svans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kometsvans_kungabla",
+    "nameSv": "Kungablå Komet-svans",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kometsvans_rosenrosa",
+    "nameSv": "Rosenrosa Komet-svans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 120,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kometsvans_silverglans",
+    "nameSv": "Silverglans Komet-svans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kometsvans_skogsgron",
+    "nameSv": "Skogsgrön Komet-svans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 250,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_kometsvans_solgyllene",
+    "nameSv": "Solgyllene Komet-svans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_odlesvans_barnstensgul",
+    "nameSv": "Bärnstensgul Ödlesvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 214,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_odlesvans_glodande",
+    "nameSv": "Glödande Ödlesvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_odlesvans_isbla",
+    "nameSv": "Isblå Ödlesvans",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_odlesvans_korpsvart",
+    "nameSv": "Korpsvart Ödlesvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_odlesvans_nattsvart",
+    "nameSv": "Nattsvart Ödlesvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_odlesvans_regnbags",
+    "nameSv": "Regnbågs Ödlesvans",
+    "rarity": "LEGENDARY",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_odlesvans_rostbrun",
+    "nameSv": "Rostbrun Ödlesvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_odlesvans_vintervit",
+    "nameSv": "Vintervit Ödlesvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_ravsvans_djuphavsbla",
+    "nameSv": "Djuphavsblå Rävsvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_ravsvans_isbla",
+    "nameSv": "Isblå Rävsvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_ravsvans_kungabla",
+    "nameSv": "Kungablå Rävsvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_ravsvans_lavendellila",
+    "nameSv": "Lavendellila Rävsvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_ravsvans_rosenrosa",
+    "nameSv": "Rosenrosa Rävsvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_ravsvans_rostbrun",
+    "nameSv": "Rostbrun Rävsvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_ravsvans_silverglans",
+    "nameSv": "Silverglans Rävsvans",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_ravsvans_skogsgron",
+    "nameSv": "Skogsgrön Rävsvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_regnbagssvans_glodande",
+    "nameSv": "Glödande Regnbågssvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_regnbagssvans_korpsvart",
+    "nameSv": "Korpsvart Regnbågssvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 180,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_regnbagssvans_kungabla",
+    "nameSv": "Kungablå Regnbågssvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_regnbagssvans_myllergron",
+    "nameSv": "Myllergrön Regnbågssvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_regnbagssvans_rostbrun",
+    "nameSv": "Rostbrun Regnbågssvans",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_regnbagssvans_silverglans",
+    "nameSv": "Silverglans Regnbågssvans",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_regnbagssvans_skogsgron",
+    "nameSv": "Skogsgrön Regnbågssvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 48,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_regnbagssvans_solgyllene",
+    "nameSv": "Solgyllene Regnbågssvans",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_sjojungfrufena_barnstensgul",
+    "nameSv": "Bärnstensgul Sjöjungfrufena",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_sjojungfrufena_djuphavsbla",
+    "nameSv": "Djuphavsblå Sjöjungfrufena",
+    "rarity": "RARE",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_sjojungfrufena_glodande",
+    "nameSv": "Glödande Sjöjungfrufena",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 69,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_sjojungfrufena_lavendellila",
+    "nameSv": "Lavendellila Sjöjungfrufena",
+    "rarity": "UNCOMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_sjojungfrufena_rostbrun",
+    "nameSv": "Rostbrun Sjöjungfrufena",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_sjojungfrufena_silverglans",
+    "nameSv": "Silverglans Sjöjungfrufena",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_sjojungfrufena_skogsgron",
+    "nameSv": "Skogsgrön Sjöjungfrufena",
+    "rarity": "COMMON",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  },
+  {
+    "id": "item_tail_sjojungfrufena_vintervit",
+    "nameSv": "Vintervit Sjöjungfrufena",
+    "rarity": "EPIC",
+    "unlockStarRequirement": 0,
+    "unlockAchievementId": null
+  }
+]
