@@ -977,7 +977,10 @@ class LixoEnginesTest {
         val engine = ProgressionAndGiftEngine(random = ZeroRandom())
         val catalog = listOf(
             chestFixtureItem("e1", rarity = Rarity.EPIC),
-            chestFixtureItem("e2", rarity = Rarity.EPIC)
+            chestFixtureItem("e2", rarity = Rarity.EPIC),
+            // An unowned LEGENDARY so that tier is not an exhausted (empty) tier; ZeroRandom still
+            // picks EPIC (pickRarity's nextInt(total) -> 0 -> the first present tier).
+            chestFixtureItem("l1", rarity = Rarity.LEGENDARY)
         )
         val profile = ChildProfile(
             id = "p1",
@@ -1013,6 +1016,76 @@ class LixoEnginesTest {
         assertEquals(0, run.updatedProfile.chestsSinceRarePlus)
         assertEquals(0, run.updatedProfile.chestsSinceEpicPlus)
         assertEquals(8, run.updatedProfile.chestsSinceLegendary)
+    }
+
+    @Test
+    fun advanceChestPity_resetsExhaustedTierCounters() {
+        val base = ChildProfile(
+            id = "p",
+            displayName = "S",
+            chestsSinceRarePlus = 2,
+            chestsSinceEpicPlus = 5,
+            chestsSinceLegendary = 7
+        )
+
+        val a = ProgressionAndGiftEngine.advanceChestPity(base, Rarity.EPIC, setOf(Rarity.LEGENDARY))
+        assertEquals(0, a.chestsSinceLegendary)
+        assertEquals(0, a.chestsSinceEpicPlus)
+        assertEquals(0, a.chestsSinceRarePlus)
+
+        val b = ProgressionAndGiftEngine.advanceChestPity(base, Rarity.COMMON, setOf(Rarity.LEGENDARY))
+        assertEquals(0, b.chestsSinceLegendary)
+        assertEquals(6, b.chestsSinceEpicPlus)
+        assertEquals(3, b.chestsSinceRarePlus)
+
+        val c = ProgressionAndGiftEngine.advanceChestPity(base, Rarity.COMMON, setOf(Rarity.EPIC, Rarity.LEGENDARY))
+        assertEquals(0, c.chestsSinceEpicPlus)
+        assertEquals(0, c.chestsSinceLegendary)
+        assertEquals(3, c.chestsSinceRarePlus)
+
+        val d = ProgressionAndGiftEngine.advanceChestPity(
+            base,
+            Rarity.COMMON,
+            setOf(Rarity.RARE, Rarity.EPIC, Rarity.LEGENDARY)
+        )
+        assertEquals(0, d.chestsSinceRarePlus)
+        assertEquals(0, d.chestsSinceEpicPlus)
+        assertEquals(0, d.chestsSinceLegendary)
+    }
+
+    @Test
+    fun chestPity_floorCappedWhenTierExhausted() {
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val eligible = catalog.filter(ProgressionAndGiftEngine::isChestEligible)
+        val unlocked = eligible.filter { it.rarity == Rarity.LEGENDARY }.map { it.id }.toMutableSet()
+        var profile = ChildProfile(id = "p", displayName = "S", chestsSinceLegendary = 19)
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+
+        val rolled = mutableListOf<Rarity>()
+        repeat(50) {
+            val outcome = engine.rollChest(
+                catalog,
+                unlocked,
+                chestsSinceRarePlus = profile.chestsSinceRarePlus,
+                chestsSinceEpicPlus = profile.chestsSinceEpicPlus,
+                chestsSinceLegendary = profile.chestsSinceLegendary
+            )!!
+            rolled += outcome.rolledItem.rarity
+            outcome.newlyUnlockedItem?.let { unlocked += it.id }
+            profile = ProgressionAndGiftEngine.advanceChestPity(
+                profile,
+                outcome.rolledItem.rarity,
+                ProgressionAndGiftEngine.exhaustedChestTiers(catalog, unlocked)
+            )
+            assertEquals(0, profile.chestsSinceLegendary, "chestsSinceLegendary must stay 0 once LEGENDARY is exhausted")
+        }
+
+        assertEquals(Rarity.EPIC, rolled.first(), "Floor is capped LEGENDARY -> EPIC once every LEGENDARY is owned")
+        assertFalse(rolled.any { it == Rarity.LEGENDARY }, "No LEGENDARY can be rolled once the tier is exhausted")
+        assertTrue(
+            rolled.take(10).any { it == Rarity.COMMON || it == Rarity.UNCOMMON },
+            "A stuck-floor bug would never let COMMON/UNCOMMON through"
+        )
     }
 
     @Test

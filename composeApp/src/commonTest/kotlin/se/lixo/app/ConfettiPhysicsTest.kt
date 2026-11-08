@@ -167,4 +167,19 @@ class ConfettiPhysicsTest {
             }
         }
     }
+
+    @Test
+    fun chestTeaserSpec_commonHasNoAnimatedEffects() {
+        val common = chestTeaserSpecFor(Rarity.COMMON)
+        assertEquals(0f, common.glowAlpha)
+        assertEquals(0f, common.ringAlpha)
+        assertEquals(0, common.sparkleCount)
+        assertEquals(0f, common.shakeAmplitudeDp)
+
+        for (r in listOf(Rarity.COMMON, Rarity.UNCOMMON, Rarity.RARE, Rarity.EPIC)) {
+            assertEquals(0f, chestTeaserSpecFor(r).shakeAmplitudeDp, "shake must be off below LEGENDARY: $r")
+        }
+
+        assertTrue(chestTeaserSpecFor(Rarity.LEGENDARY).shakeAmplitudeDp > 0f)
+    }
 }

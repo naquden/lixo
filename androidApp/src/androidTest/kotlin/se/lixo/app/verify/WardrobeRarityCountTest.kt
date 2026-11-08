@@ -6,16 +6,20 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -23,6 +27,7 @@ import org.junit.Test
 import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.Rarity
+import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.AndroidPlatformContext
 import se.lixo.app.platform.createPlatformTextToSpeechEngine
 import se.lixo.app.screenshots.FakeCloudGateway
@@ -86,8 +91,11 @@ class WardrobeRarityCountTest {
         lastError?.let { throw it }
     }
 
-    @Test
-    fun wardrobe_showsPerRarityCollectionCounts() {
+    /**
+     * Shared fixture for both wardrobe rarity tests: 2 unlocked COMMON HATs and 1 unlocked
+     * LEGENDARY HAT (plus a stale unknown id), rendering the real [WardrobeScreen].
+     */
+    private fun setUpWardrobeWithCommonAndLegendary(): Triple<LixoRepository, List<WardrobeItem>, WardrobeItem> {
         val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = false, profileStore = null)
         val profile = repo.createProfile("Testa", 7)
         val catalog = repo.wardrobeCatalog.value
@@ -124,6 +132,12 @@ class WardrobeRarityCountTest {
         }
         awaitComposeHierarchy()
         compose.mainClock.advanceTimeBy(700)
+        return Triple(repo, catalog, legendary)
+    }
+
+    @Test
+    fun wardrobe_showsPerRarityCollectionCounts() {
+        val (repo, catalog, legendary) = setUpWardrobeWithCommonAndLegendary()
 
         for (r in Rarity.entries) {
             val total = catalog.count { it.rarity == r }
@@ -141,5 +155,27 @@ class WardrobeRarityCountTest {
         compose.onNodeWithText(legendary.nameSv).assertExists()
 
         shot("wardrobe_rarity_counts")
+    }
+
+    @Test
+    fun wardrobe_legendaryBadgeStaysOnOneLine() {
+        setUpWardrobeWithCommonAndLegendary()
+
+        val legendaryText = LixoStrings.rarityName(Rarity.LEGENDARY).uppercase()
+        val commonText = LixoStrings.rarityName(Rarity.COMMON).uppercase()
+
+        val legendaryNode = compose.onNodeWithText(legendaryText).assertExists().fetchSemanticsNode()
+        // There are TWO COMMON (VANLIG) cards unlocked, so onNodeWithText would throw on multiple
+        // matches; take the first one.
+        val commonNode = compose.onAllNodesWithText(commonText)[0].fetchSemanticsNode()
+
+        assertEquals(commonNode.size.height, legendaryNode.size.height)
+
+        val layouts = mutableListOf<TextLayoutResult>()
+        legendaryNode.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        assertEquals(1, layouts.first().lineCount)
+        assertFalse(layouts.first().didOverflowWidth)
+
+        shot("012_wardrobe_legendary_label")
     }
 }

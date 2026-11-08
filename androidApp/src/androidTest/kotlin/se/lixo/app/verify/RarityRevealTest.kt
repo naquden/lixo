@@ -81,6 +81,11 @@ class RarityRevealTest {
     }
 
     @Test
+    fun commonChest_teaserThenReveal() {
+        runReveal(Rarity.COMMON)
+    }
+
+    @Test
     fun epicChest_teaserThenReveal() {
         runReveal(Rarity.EPIC)
     }

@@ -4,10 +4,11 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
-- [ ] 012 — Rarity follow-ups from 011 review: pity floor stuck when tier exhausted, idle teaser animations, 'LEGENDARISK' label wrap, misplaced WardrobeScreen KDoc (bug, after 011) → [plan](doc/plans/012-rarity-followups.md)
 
 ## Done
 
+- [x] 012 — Rarity follow-ups from 011 review: pity floor stuck when tier exhausted, idle teaser animations, 'LEGENDARISK' label wrap, misplaced WardrobeScreen KDoc (bug, after 011) → [plan](doc/plans/012-rarity-followups.md)  
+  _Verified 2026-11-08: `verify/WardrobeRarityCountTest` 2/2 (new `wardrobe_legendaryBadgeStaysOnOneLine`), `RarityRevealTest` 3/3 on emulator-5554; `LixoEnginesTest` 82/82 (2 new pity tests), `ConfettiPhysicsTest` 10/10, pytest 28/28. Screenshots in temp/verify012/. Known LOW: Flitkista `cap=` diagnostic log rescans catalog per tier and logs post-unlock cap; TextAutoSize import out of order in WardrobeScreen.kt._
 - [x] 011 — Rarity: rarity-first drop odds 40/28/18/10/4, chest pity, visual ladder, chest teaser, collection counts (feature) → [plan](doc/plans/011-rarity-odds-and-feel.md)  
   _Verified 2026-11-08: `verify/RarityRevealTest` 2/2, `WardrobeRarityCountTest` 1/1, `ItemCatalogScreenshotTest` 1/1, `ProfilePersistenceTest` 3/3 on emulator-5554 (DB 5→6 migration OK); unit + pytest 28/28 (ids/names/rarities identical to fixture). Screenshots in temp/verify011/. Known LOW: pity floor never resets once every eligible item of that tier is owned; teaser infinite transitions run for all rarities; 'LEGENDARISK' label wraps in wardrobe card; misplaced WardrobeScreen KDoc._
 - [x] 010 — Persist level progress (regression from 008: map relocks, stars and chests are handed out again after restart) (bug, after 008) → [plan](doc/plans/010-persist-level-progress.md)  

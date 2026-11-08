@@ -27,7 +27,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -158,33 +160,48 @@ fun RewardChest(
     val spec = remember(rarity) { chestTeaserSpecFor(rarity) }
     val glowColor = if (spec.goldGlow) LixoColors.Gold else LixoColors.rarityColor(rarity)
 
-    val pulse = rememberInfiniteTransition(label = "chestTeaserPulse").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = spec.pulsePeriodMs),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "chestTeaserPulse"
-    )
-    val sparklePhase = rememberInfiniteTransition(label = "chestTeaserSparkle").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "chestTeaserSparkle"
-    )
-    val shake = rememberInfiniteTransition(label = "chestTeaserShake").animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 70, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "chestTeaserShake"
-    )
+    // Each teaser transition only runs its infinite clock when the spec actually uses it; COMMON
+    // (and the lower tiers for shake) get a constant state instead, so idle cards don't pay for
+    // an animation invalidation every frame (see WardrobeItemPreview for the same pattern).
+    val pulse: State<Float> = if (spec.glowAlpha > 0f || spec.ringAlpha > 0f) {
+        rememberInfiniteTransition(label = "chestTeaserPulse").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = spec.pulsePeriodMs),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "chestTeaserPulse"
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
+    val sparklePhase: State<Float> = if (spec.sparkleCount > 0) {
+        rememberInfiniteTransition(label = "chestTeaserSparkle").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2400, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "chestTeaserSparkle"
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
+    val shake: State<Float> = if (spec.shakeAmplitudeDp > 0f) {
+        rememberInfiniteTransition(label = "chestTeaserShake").animateFloat(
+            initialValue = -1f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 70, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "chestTeaserShake"
+        )
+    } else {
+        remember { mutableFloatStateOf(0f) }
+    }
     val breathe = rememberInfiniteTransition(label = "chestBreathe").animateFloat(
         initialValue = 1.0f,
         targetValue = 1.05f,
@@ -252,7 +269,7 @@ fun RewardChest(
                 scaleX = breathe.value * squashX.value
                 scaleY = breathe.value * squashY.value
                 transformOrigin = TransformOrigin(0.5f, 1f)
-                translationX = if (state == ChestState.WAITING) {
+                translationX = if (state == ChestState.WAITING && spec.shakeAmplitudeDp > 0f) {
                     shake.value * spec.shakeAmplitudeDp.dp.toPx()
                 } else {
                     0f

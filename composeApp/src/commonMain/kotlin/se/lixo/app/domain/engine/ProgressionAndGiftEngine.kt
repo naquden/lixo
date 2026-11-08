@@ -150,13 +150,38 @@ class ProgressionAndGiftEngine(
         }
 
         /**
-         * Advances [profile]'s Flitkista pity counters after rolling [rolled]: resets the counter
-         * for [rolled]'s tier and every lower tier to 0, and increments the rest.
+         * The chest-eligible rarity tiers that have no unowned item left in [allItems] given
+         * [unlockedItemIds] (see [isChestEligible]). A tier with zero chest-eligible items also
+         * counts as exhausted, so a catalog missing a rarity entirely never floors pity forever at
+         * that tier (see [rollChest]/[advanceChestPity]).
          */
-        fun advanceChestPity(profile: ChildProfile, rolled: Rarity): ChildProfile = profile.copy(
-            chestsSinceRarePlus = if (rolled >= Rarity.RARE) 0 else profile.chestsSinceRarePlus + 1,
-            chestsSinceEpicPlus = if (rolled >= Rarity.EPIC) 0 else profile.chestsSinceEpicPlus + 1,
-            chestsSinceLegendary = if (rolled == Rarity.LEGENDARY) 0 else profile.chestsSinceLegendary + 1
+        fun exhaustedChestTiers(allItems: List<WardrobeItem>, unlockedItemIds: Set<String>): Set<Rarity> =
+            Rarity.entries
+                .filter { r -> allItems.none { isChestEligible(it) && it.rarity == r && it.id !in unlockedItemIds } }
+                .toSet()
+
+        /**
+         * Advances [profile]'s Flitkista pity counters after rolling [rolled]: resets the counter
+         * for [rolled]'s tier and every lower tier to 0, and increments the rest. A counter also
+         * resets when its tier and every higher tier are in [exhaustedTiers] (see
+         * [exhaustedChestTiers]), since there is nothing left to pity toward there.
+         */
+        fun advanceChestPity(
+            profile: ChildProfile,
+            rolled: Rarity,
+            exhaustedTiers: Set<Rarity> = emptySet()
+        ): ChildProfile = profile.copy(
+            chestsSinceRarePlus = if (rolled >= Rarity.RARE ||
+                exhaustedTiers.containsAll(listOf(Rarity.RARE, Rarity.EPIC, Rarity.LEGENDARY))
+            ) 0 else profile.chestsSinceRarePlus + 1,
+            chestsSinceEpicPlus = if (rolled >= Rarity.EPIC ||
+                exhaustedTiers.containsAll(listOf(Rarity.EPIC, Rarity.LEGENDARY))
+            ) 0 else profile.chestsSinceEpicPlus + 1,
+            chestsSinceLegendary = if (rolled == Rarity.LEGENDARY || Rarity.LEGENDARY in exhaustedTiers) {
+                0
+            } else {
+                profile.chestsSinceLegendary + 1
+            }
         )
     }
 
@@ -329,13 +354,17 @@ class ProgressionAndGiftEngine(
                 println(
                     "LixoRewards: Flitkista floor=${
                         chestMinRarity(profile.chestsSinceRarePlus, profile.chestsSinceEpicPlus, profile.chestsSinceLegendary)
+                    } cap=${
+                        Rarity.entries.lastOrNull { it !in exhaustedChestTiers(allWardrobeItems, workingUnlockedIds) }
                     } rolled=${o.rolledItem.rarity} id=${o.rolledItem.id} dup=${o.isDuplicate}"
                 )
             }
         } else {
             null
         }
-        val pityProfile = chestOutcome?.let { advanceChestPity(profile, it.rolledItem.rarity) } ?: profile
+        val pityProfile = chestOutcome?.let {
+            advanceChestPity(profile, it.rolledItem.rarity, exhaustedChestTiers(allWardrobeItems, workingUnlockedIds))
+        } ?: profile
 
         // 4. Extra repetition gift roll (`project.md` §2 "Extra repetition ger en present med ett föremål. Dubblett -> ingenting händer.")
         val giftOutcome = if (isReplay && eligibleForRepetitionGift && allWardrobeItems.isNotEmpty()) {
@@ -459,14 +488,23 @@ class ProgressionAndGiftEngine(
     }
 
     /**
+     * The highest chest-eligible rarity tier in [pool] that still has at least one unowned item,
+     * or null when everything in [pool] is owned.
+     */
+    private fun highestTierWithUnowned(pool: List<WardrobeItem>, unlockedItemIds: Set<String>): Rarity? =
+        exhaustedChestTiers(pool, unlockedItemIds).let { ex -> Rarity.entries.lastOrNull { it !in ex } }
+
+    /**
      * Rolls a chest item for the effort chest "Flitkistan" (`project.md` §2 "Presenter / gåvor"):
      * the pool is every catalog item except weekly-streak set pieces and achievement-linked items,
      * with no subject bias. The chest prefers unowned items (nearest rarity with an unowned item,
      * lower before higher); only when every eligible item is already owned does it roll a
      * duplicate, which unlocks nothing. [chestsSinceRarePlus]/[chestsSinceEpicPlus]/
      * [chestsSinceLegendary] (default 0, see [ChildProfile]) set a pity floor via
-     * [chestMinRarity]; when none applies (all 0) the roll is identical to today's. Returns null
-     * if the pool is empty.
+     * [chestMinRarity]; when none applies (all 0) the roll is identical to today's. The floor is
+     * capped at the highest tier that still has an unowned chest-eligible item, so it never points
+     * at a fully owned tier, falling back to COMMON when everything is owned. Returns null if the
+     * pool is empty.
      */
     fun rollChest(
         allItems: List<WardrobeItem>,
@@ -477,7 +515,10 @@ class ProgressionAndGiftEngine(
     ): GiftRollOutcome? {
         val candidatePool = allItems.filter { isChestEligible(it) }
         if (candidatePool.isEmpty()) return null
-        val floor = chestMinRarity(chestsSinceRarePlus, chestsSinceEpicPlus, chestsSinceLegendary)
+        val floor = minOf(
+            chestMinRarity(chestsSinceRarePlus, chestsSinceEpicPlus, chestsSinceLegendary),
+            highestTierWithUnowned(candidatePool, unlockedItemIds) ?: Rarity.COMMON
+        )
         return rollWeighted(candidatePool, unlockedItemIds, preferUnowned = true, minRarity = floor)
     }
 

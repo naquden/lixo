@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,6 +40,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
@@ -54,15 +56,6 @@ import se.lixo.app.ui.theme.LixoIcon
 import se.lixo.app.ui.theme.LixoIcons
 import se.lixo.app.ui.theme.LixoStrings
 import se.lixo.app.ui.theme.TtsIconButton
-
-/**
- * Duolingo-styled 3D Wardrobe Screen:
- * - Clean 3D avatar viewport stage.
- * - Simple color swatches for base avatar customization.
- * - Horizontal avatar character picker with locked star costs.
- * - Equipment slot category pills.
- * - Fortnite rarity-accented item cards with clear equip/unequip states.
- */
 
 /** Owned/total collection count for one [rarity], against the whole catalog passed in. */
 data class RarityCollectionCount(val rarity: Rarity, val owned: Int, val total: Int)
@@ -120,6 +113,14 @@ private fun RarityCollectionRow(counts: List<RarityCollectionCount>) {
     }
 }
 
+/**
+ * Duolingo-styled 3D Wardrobe Screen:
+ * - Clean 3D avatar viewport stage.
+ * - Simple color swatches for base avatar customization.
+ * - Horizontal avatar character picker with locked star costs.
+ * - Equipment slot category pills.
+ * - Fortnite rarity-accented item cards with clear equip/unequip states.
+ */
 @Composable
 fun WardrobeScreen(
     profile: ChildProfile,
@@ -459,7 +460,14 @@ fun WardrobeScreen(
                                         text = LixoStrings.rarityName(item.rarity).uppercase(),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = rarityColor
+                                        color = rarityColor,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        autoSize = TextAutoSize.StepBased(
+                                            minFontSize = 7.sp,
+                                            maxFontSize = 10.sp,
+                                            stepSize = 0.5.sp
+                                        )
                                     )
                                 }
                                 Spacer(Modifier.height(3.dp))
