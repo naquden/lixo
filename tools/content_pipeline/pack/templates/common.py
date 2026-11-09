@@ -40,10 +40,13 @@ def layer(
     stroke: Optional[Tuple[str, float]] = None,
     mirror: bool = False,
     pattern_clip: bool = False,
+    parallax: Optional[float] = None,
 ) -> dict:
     """Builds a layer dict, omitting every value equal to its schema default (order 0, shading
-    "gradient", mirror "none", patternClip false, fill.shade 0), so the written JSON stays small
-    and matches `ContentLayer`'s Kotlin defaults 1:1."""
+    "gradient", mirror "none", patternClip false, fill.shade 0, parallax unset), so the written
+    JSON stays small and matches `ContentLayer`'s Kotlin defaults 1:1. [parallax] overrides the
+    bone/z-bucket default horizontal parallax (see `DEFAULT_PARALLAX`/`BACK_BUCKET_PARALLAX`),
+    e.g. BACK-bucket hair uses `parallax=0.9` so it stays attached to the head under yaw."""
     out: dict = {"bone": bone, "z": z, "d": d}
     fill: dict = {"role": role}
     if shade:
@@ -62,6 +65,8 @@ def layer(
         out["mirror"] = "x"
     if pattern_clip:
         out["patternClip"] = True
+    if parallax is not None:
+        out["parallax"] = parallax
     return out
 
 

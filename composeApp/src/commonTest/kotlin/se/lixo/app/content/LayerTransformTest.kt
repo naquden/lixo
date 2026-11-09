@@ -17,9 +17,11 @@ import se.lixo.app.ui.components.avatar.REST_POSE
 import se.lixo.app.ui.components.avatar.RigFrame
 import se.lixo.app.ui.components.avatar.PlacedLayer
 import se.lixo.app.ui.components.avatar.STANDARD_BONE_ORIGIN
+import se.lixo.app.ui.components.avatar.avatarFrame
 import se.lixo.app.ui.components.avatar.boneTransforms
 import se.lixo.app.ui.components.avatar.buildAvatarDrawList
 import se.lixo.app.ui.components.avatar.buildItemDrawList
+import se.lixo.app.ui.components.avatar.faceMatrix
 import se.lixo.app.ui.components.avatar.layerMatrix
 import se.lixo.app.ui.components.avatar.placedBoundsPx
 import se.lixo.app.ui.components.avatar.previewFrame
@@ -148,6 +150,65 @@ class LayerTransformTest {
 
         assertEquals(100f, u.center.x, 0.01f)
         assertEquals(50f, u.center.y, 0.01f)
+    }
+
+    @Test
+    fun itemLayerStretchesToAvatarTorso_partLayerDoesNot() {
+        val torsoCat = cat.copy(bones = mapOf(Bone.TORSO to BoneOverride(size = listOf(100f, 88f))))
+        val bones = boneTransforms(torsoCat, REST_POSE, 0f, RigFrame(Offset.Zero, 1f))
+
+        val itemScale = bones[Bone.TORSO]!!.itemScale
+        assertEquals(1.25f, itemScale.x, 1e-3f)
+        assertEquals(1.1f, itemScale.y, 1e-3f)
+
+        val shirt = content.itemsById["item_shirt_test_tee"]!!
+        val shirtLayer = shirt.layers.single()
+        val itemPlaced = PlacedLayer(shirtLayer, Bone.TORSO, mirrored = false, item = shirt, partName = null)
+        val itemMatrix = layerMatrix(itemPlaced, bones)
+        val itemOrigin = itemMatrix.map(Offset.Zero)
+        val itemDx = itemMatrix.map(Offset(10f, 0f)) - itemOrigin
+        val itemDy = itemMatrix.map(Offset(0f, 10f)) - itemOrigin
+        assertEquals(12.5f, itemDx.x, 1e-3f)
+        assertEquals(11f, itemDy.y, 1e-3f)
+
+        val partPlaced = PlacedLayer(shirtLayer, Bone.TORSO, mirrored = false, item = null, partName = "torso")
+        val partMatrix = layerMatrix(partPlaced, bones)
+        val partOrigin = partMatrix.map(Offset.Zero)
+        val partDx = partMatrix.map(Offset(10f, 0f)) - partOrigin
+        val partDy = partMatrix.map(Offset(0f, 10f)) - partOrigin
+        assertEquals(10f, partDx.x, 1e-3f)
+        assertEquals(10f, partDy.y, 1e-3f)
+    }
+
+    @Test
+    fun faceScalesToEffectiveHead() {
+        val headCat = cat.copy(bones = mapOf(Bone.HEAD to BoneOverride(size = listOf(66f, 60f))))
+        val bones = boneTransforms(headCat, REST_POSE, 0f, RigFrame(Offset.Zero, 1f))
+        val head = bones[Bone.HEAD]!!
+
+        val m = faceMatrix(bones)
+        val origin = m.map(Offset.Zero)
+        assertEquals(head.origin.x, origin.x, 1e-3f)
+        assertEquals(head.origin.y, origin.y, 1e-3f)
+
+        val corner = m.map(Offset(56f, 56f))
+        assertEquals(head.origin.x + 66f, corner.x, 1e-3f)
+        assertEquals(head.origin.y + 60f, corner.y, 1e-3f)
+    }
+
+    @Test
+    fun avatarFrameKeepsStandardScaleAndShrinksTallAvatar() {
+        assertEquals(1f, avatarFrame(Size(340f, 340f), cat).pxPerAu, 1e-3f)
+
+        val tallCat = cat.copy(
+            bones = mapOf(
+                Bone.HEAD to BoneOverride(size = listOf(50f, 64f)),
+                Bone.TORSO to BoneOverride(size = listOf(64f, 80f)),
+                Bone.LEG_L to BoneOverride(size = listOf(30f, 84f)),
+                Bone.LEG_R to BoneOverride(size = listOf(30f, 84f))
+            )
+        )
+        assertTrue(avatarFrame(Size(340f, 340f), tallCat).pxPerAu < 1f)
     }
 
     @Test

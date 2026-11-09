@@ -3,10 +3,11 @@
   "nameKey": "avatar_cat.name",
   "order": 0,
   "humanoid": false,
-  "skinHex": "#4A90E2",
+  "skinHex": "#FFFFFF",
   "defaultTintHex": "#F5A623",
   "unlock": {"type": "default"},
-  "body": "standard",
-  "ears": "cat",
-  "tail": "default"
+  "bones": {"HEAD": [66, 60], "TORSO": [70, 62], "ARM": [32, 62], "LEG": [34, 58]},
+  "palette": {"primary": "#FFFFFF", "secondary": "#F48FB1", "accent": "#C77700"},
+  "pose": {"headBob": 1.2, "tailWag": 1.3},
+  "extras": ["cat_ears", "cat_muzzle", "cat_stripes", "cat_tail"]
 }

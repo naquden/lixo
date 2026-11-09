@@ -511,17 +511,74 @@ class ContentPackPipelineTests(unittest.TestCase):
                     errors = self.validate_pack.layer_errors(layer, box, allowed_roles=None)
                     self.assertEqual(errors, [], f"{slot_id}:{style.key}: {errors}")
 
-        avatar_parts = list(self.avatar_body.STANDARD_BODY) + list(self.avatar_body.EARS.values()) + [
-            self.avatar_body.DEFAULT_TAIL
-        ]
-        for part in avatar_parts:
-            self.assertLessEqual(len(part["layers"]), 24)
-            for layer in part["layers"]:
-                box = self.validate_pack.STANDARD_BONE_BOX[layer["bone"]]
-                errors = self.validate_pack.layer_errors(
-                    layer, box, allowed_roles=self.validate_pack.AVATAR_PART_ROLES
+        allowed_roles = self.validate_pack.AVATAR_PART_ROLES | self.validate_pack.AVATAR_PALETTE_ROLES
+        for avatar in self.build_pack.build_avatars():
+            effective_boxes = {
+                bone: tuple(box["size"]) for bone, box in avatar.get("bones", {}).items()
+            }
+            for part in avatar["parts"]:
+                self.assertLessEqual(len(part["layers"]), 24)
+                for layer in part["layers"]:
+                    bone = layer["bone"]
+                    box = effective_boxes.get(bone, self.validate_pack.STANDARD_BONE_BOX[bone])
+                    errors = self.validate_pack.layer_errors(layer, box, allowed_roles=allowed_roles)
+                    self.assertEqual(errors, [], f"avatar {avatar['id']} part {part['part']}: {errors}")
+
+    def test_avatars_pairwise_distinct(self) -> None:
+        avatars = self.build_pack.build_avatars()
+        for i in range(len(avatars)):
+            for j in range(i + 1, len(avatars)):
+                a, b = avatars[i], avatars[j]
+                self.assertTrue(
+                    (a["skinHex"], a["defaultTintHex"]) != (b["skinHex"], b["defaultTintHex"])
+                    and a.get("bones", {}) != b.get("bones", {}),
+                    f"{a['id']} and {b['id']} are not visually distinct",
                 )
-                self.assertEqual(errors, [], f"part {part['part']}: {errors}")
+
+    def test_avatars_have_two_signature_parts(self) -> None:
+        for avatar in self.build_pack.build_avatars():
+            signature = [p for p in avatar["parts"] if p["part"] not in self.avatar_body.BODY_PART_NAMES]
+            self.assertGreaterEqual(len(signature), 2, f"{avatar['id']} has too few signature parts")
+
+    def test_built_avatars_validate(self) -> None:
+        for avatar in self.build_pack.build_avatars():
+            self.assertEqual(self.validate_pack.avatar_errors(avatar), [], avatar["id"])
+
+    def test_body_parts_standard_matches_legacy(self) -> None:
+        sizes = self.avatar_body.expand_bones({})
+        parts = {p["part"]: p for p in self.avatar_body.body_parts(sizes)}
+        self.assertEqual(parts["torso"]["layers"][0]["d"], "M 0 0 L 80 0 L 80 80 L 0 80 Z")
+        self.assertEqual(parts["arms"]["layers"][0]["d"], "M 0 0 L 38 0 L 38 48 L 0 48 Z")
+        self.assertEqual(parts["hands"]["layers"][0]["d"], "M 0 6 L 38 6 L 38 38 L 0 38 Z")
+        self.assertEqual(parts["shoes"]["layers"][0]["d"], "M -3 62 L 43 62 L 43 80 L -3 80 Z")
+
+        published = json.loads(
+            (self.pack_dir / "published" / "pack_v1.json").read_text(encoding="utf-8")
+        )
+        legacy_cat = next(a for a in published["avatars"] if a["id"] == "avatar_cat")
+        legacy_head = next(p for p in legacy_cat["parts"] if p["part"] == "head")
+        self.assertEqual(parts["head"]["layers"][0]["d"], legacy_head["layers"][0]["d"])
+
+    def test_avatar_palette_validation(self) -> None:
+        avatars = self.build_pack.build_avatars()
+        cat = next(a for a in avatars if a["id"] == "avatar_cat")
+
+        no_palette = copy.deepcopy(cat)
+        del no_palette["palette"]
+        errors = self.validate_pack.avatar_errors(no_palette)
+        self.assertTrue(any("fill.role not allowed" in e for e in errors), errors)
+
+        bad_palette = copy.deepcopy(cat)
+        bad_palette["palette"]["primary"] = "nope"
+        errors = self.validate_pack.avatar_errors(bad_palette)
+        self.assertTrue(any("palette.primary invalid" in e for e in errors), errors)
+
+    def test_stability_against_published_v1(self) -> None:
+        pack = json.loads(self.build_pack.build(2).decode("utf-8"))
+        published = json.loads(
+            (self.pack_dir / "published" / "pack_v1.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(self.validate_pack.stability_errors(pack, published), [])
 
     def test_pack_ids_names_rarities_unchanged(self) -> None:
         catalog = generate_catalog(per_slot=64, seed=42)

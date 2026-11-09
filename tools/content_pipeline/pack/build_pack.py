@@ -179,12 +179,25 @@ def build_avatars() -> List[dict]:
     avatars = []
     for f in sorted(TEMPLATES_AVATARS_DIR.glob("avatar_*.json")):
         raw = json.loads(f.read_text(encoding="utf-8"))
-        parts = list(avatar_body.STANDARD_BODY)
-        ears = raw.get("ears")
-        if ears:
-            parts.append(avatar_body.EARS[ears])
-        if raw.get("tail") == "default":
-            parts.append(avatar_body.DEFAULT_TAIL)
+        sizes = avatar_body.expand_bones(raw.get("bones", {}))
+        parts = avatar_body.assemble_parts(sizes, raw.get("extras", []))
+
+        standard_sizes = dict(avatar_body.STANDARD_SIZES)
+        standard_sizes["HAND"] = (
+            standard_sizes["ARM"][0], round(standard_sizes["ARM"][1] * avatar_body.HAND_ASPECT, 2)
+        )
+        bones_out = {}
+        for bone, (w, h) in sizes.items():
+            if bone == "TAIL":
+                continue
+            kind = (
+                "ARM" if bone in ("ARM_L", "ARM_R") else
+                "LEG" if bone in ("LEG_L", "LEG_R") else
+                "HAND" if bone in ("HAND_L", "HAND_R") else bone
+            )
+            if (w, h) != standard_sizes.get(kind):
+                bones_out[bone] = {"size": [_round3(w), _round3(h)]}
+
         avatar = {
             "id": raw["id"],
             "nameKey": raw["nameKey"],
@@ -194,12 +207,15 @@ def build_avatars() -> List[dict]:
             "defaultTintHex": raw["defaultTintHex"],
             "unlock": raw["unlock"],
             "face": {},
-            "pose": {},
+            "bones": bones_out,
+            "pose": {k: _round3(v) for k, v in raw.get("pose", {}).items()},
             "parts": [
                 {"part": p["part"], "layers": [_round_layer_numbers(l) for l in p["layers"]]}
                 for p in parts
             ],
         }
+        if raw.get("palette") is not None:
+            avatar["palette"] = dict(raw["palette"])
         avatars.append(avatar)
     avatars.sort(key=lambda a: a["order"])
     return avatars

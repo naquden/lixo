@@ -4,12 +4,17 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
-- [ ] 021 — Authoring pipeline: port 72 shapes + 6 avatars to layers, build bundled content_pack.json, stability diff (feature, after 020) → [plan](doc/plans/021-content-pack-authoring-pipeline.md)
-  _Not passed 2026-11-09 (wf_44921b77-24a): pipeline built, BundledPackValidTest green, BundledCatalogRenderTest 2/2 but produced 0/48 avatar style screenshots (only items_01..20.png). Pre-existing pytest failure: `test_item_ids_are_stable_across_per_slot_changes` (tools/tests/test_pipelines.py:364) — per_slot=32 can't fit the 11 LEGENDARY achievement rewards from 2f19e59 (`_assign_achievement_items` raises for ach_read_fast_12); use per_slot ≥ 44. Old-vs-new renderer comparison never done (022 deleted old renderer) → hand-review item sheets or compare against HEAD worktree._
-
+- [ ] 027 — Held items (HAND_LEFT/RIGHT) scale uniformly, round shields stay round on slim avatars (bug) → [plan](doc/plans/027-held-items-uniform-scale.md)
+- [ ] 028 — Item previews on standard bones with base-body ghost, not chibi cat (bug) → [plan](doc/plans/028-item-preview-standard-bones.md)
+- [ ] 029 — Dog tail visible past the left arm (bug) → [plan](doc/plans/029-dog-tail-visible.md)
 
 ## Done
 
+- [x] 026 — Distinct avatars: own silhouette (bone sizes), colours, palette, signature parts (hair/beard/muzzle/skirt), items stretch per bone (feature, after 021) → [plan](doc/plans/026-distinct-avatars.md)  
+  _Verified 2026-11-09 (wf_3b7e3745-12a): `BundledCatalogRenderTest` 3/3 on emulator-5554 (S25 not attached); AvatarSilhouetteTest 2/2, LayerTransformTest 9/9, ContentPackValidatorTest 18/18, BundledPackValidTest 1/1, pytest 46/46; 6 bare + 48 equipped + 20 item sheets in temp/verify/lixo_screenshots/verify026/, 6 avatars distinct. LOW: round shields/swords stretch non-uniformly on slim avatars; ItemPreview now uses cat (chibi) bones; dog tail hidden behind arm; HAT_REACH_AU=67 hard-coded; feet moved to 108*base on all screens (check AvatarMapScreen margin)._
+
+- [x] 021 — Authoring pipeline: port 72 shapes + 6 avatars to layers, build bundled content_pack.json, stability diff (feature, after 020) → [plan](doc/plans/021-content-pack-authoring-pipeline.md)  
+  _Verified 2026-11-09: `BundledCatalogRenderTest` 3/3 on emulator-5554 (fixed @Before wiping the other test's PNGs; added `everyAvatar_rendersBare`); 20 item sheets + 48 equipped + 6 bare avatars in temp/verify/lixo_screenshots/verify021/; python tests 40/40 (per_slot fix already in). Port faithful to 2f19e59 (avatars differed only by cat/dog ears). Avatars look alike → 026._
 - [x] 025 — Events/holiday specials: TrustedClock, EventEngine, event drops, themed chest, banner, Jul 2026 sample (feature, after 023 + 024) → [plan](doc/plans/025-content-events.md)  
   _Verified 2026-11-09 (wf_44921b77-24a): `EventBannerTest` 3/3, `EventChestThemeTest` 2/2 on emulator-5554; screenshots temp/verify/lixo_screenshots/verify_025_*.png. LOW: TrustedClock high-water mark raised from unanchored device time (forward-set clock sticks until first server anchor)._
 - [x] 024 — Cloud sync of content pack: Firestore meta/chunks, sha256, Room cache, hot-swap, upload_pack.py (feature, after 022) → [plan](doc/plans/024-cloud-content-sync.md)  

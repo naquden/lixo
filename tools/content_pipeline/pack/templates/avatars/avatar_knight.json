@@ -3,10 +3,11 @@
   "nameKey": "avatar_knight.name",
   "order": 2,
   "humanoid": true,
-  "skinHex": "#4A90E2",
-  "defaultTintHex": "#F5A623",
+  "skinHex": "#7F8C9A",
+  "defaultTintHex": "#F2C29B",
   "unlock": {"type": "stars", "stars": 30},
-  "body": "standard",
-  "ears": null,
-  "tail": null
+  "bones": {"HEAD": [56, 54], "TORSO": [100, 88], "ARM": [46, 86], "LEG": [44, 84]},
+  "palette": {"primary": "#6D4C41", "secondary": "#B0BEC5", "accent": "#C0392B"},
+  "pose": {"breath": 0.8, "headBob": 0.7},
+  "extras": ["knight_pauldrons", "knight_breastplate", "knight_sideburns"]
 }

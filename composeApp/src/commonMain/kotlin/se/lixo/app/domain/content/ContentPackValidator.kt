@@ -44,6 +44,7 @@ object ContentPackValidator {
     private val ID_REGEX = Regex("^[a-z][a-z0-9_]{2,63}$")
     private val PART_REGEX = Regex("^[a-z][a-z0-9_]{1,31}$")
     private val AVATAR_PART_ROLES = setOf(PaletteRole.SKIN, PaletteRole.TINT, PaletteRole.EYE, PaletteRole.OUTLINE)
+    private val AVATAR_PALETTE_ROLES = setOf(PaletteRole.PRIMARY, PaletteRole.SECONDARY, PaletteRole.ACCENT)
 
     /**
      * Validates [json] against [appAchievementIds] (every id must have an achievement reward
@@ -334,6 +335,13 @@ object ContentPackValidator {
         if (avatar.face.eyeStyles !in 1..8) return "face.eyeStyles out of range"
         if (avatar.face.smileStyles !in 1..8) return "face.smileStyles out of range"
 
+        avatar.palette?.let { palette ->
+            if (parseContentHex(palette.primary) == null) return "palette.primary is not a valid hex colour"
+            if (parseContentHex(palette.secondary) == null) return "palette.secondary is not a valid hex colour"
+            if (parseContentHex(palette.accent) == null) return "palette.accent is not a valid hex colour"
+        }
+        val allowedRoles = if (avatar.palette != null) AVATAR_PART_ROLES + AVATAR_PALETTE_ROLES else AVATAR_PART_ROLES
+
         if (avatar.parts.size > MAX_PARTS) return "too many parts"
         val partNames = HashSet<String>()
         for (part in avatar.parts) {
@@ -350,7 +358,7 @@ object ContentPackValidator {
                 } else {
                     standard
                 }
-                val reason = layerError(layer, effective, AVATAR_PART_ROLES)
+                val reason = layerError(layer, effective, allowedRoles)
                 if (reason != null) return "part '${part.part}' layer invalid: $reason"
             }
         }

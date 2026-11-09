@@ -3,10 +3,11 @@
   "nameKey": "avatar_dog.name",
   "order": 1,
   "humanoid": false,
-  "skinHex": "#4A90E2",
-  "defaultTintHex": "#F5A623",
+  "skinHex": "#E57373",
+  "defaultTintHex": "#C08A5A",
   "unlock": {"type": "stars", "stars": 12},
-  "body": "standard",
-  "ears": "dog",
-  "tail": "default"
+  "bones": {"HEAD": [62, 56], "TORSO": [90, 72], "ARM": [40, 70], "LEG": [42, 66]},
+  "palette": {"primary": "#F3E0C8", "secondary": "#3E2723", "accent": "#EF5350"},
+  "pose": {"tailWag": 1.8, "armSwing": 1.2},
+  "extras": ["dog_ears", "dog_snout", "dog_spot", "dog_tail"]
 }

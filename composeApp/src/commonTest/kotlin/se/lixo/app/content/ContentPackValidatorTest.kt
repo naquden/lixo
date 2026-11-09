@@ -1,8 +1,10 @@
 package se.lixo.app.content
 
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -99,6 +101,74 @@ class ContentPackValidatorTest {
         val accepted = accept(json)
         assertEquals(2, accepted.skipped.size)
         assertEquals(0, accepted.pack.events.size)
+    }
+
+    private fun setDogEarsFillRole(mutable: MutableMap<String, JsonElement>, role: String) {
+        val parts = (mutable["parts"] as JsonArray).map { el ->
+            val part = el.jsonObject
+            if ((part["part"] as? JsonPrimitive)?.content == "ears") {
+                val layers = (part["layers"] as JsonArray).map { layerEl ->
+                    val layer = LinkedHashMap((layerEl as JsonObject).toMap())
+                    val fill = LinkedHashMap((layer["fill"] as JsonObject).toMap())
+                    fill["role"] = JsonPrimitive(role)
+                    layer["fill"] = JsonObject(fill)
+                    JsonObject(layer)
+                }
+                val mutablePart = LinkedHashMap(part.toMap())
+                mutablePart["layers"] = JsonArray(layers)
+                JsonObject(mutablePart)
+            } else {
+                el
+            }
+        }
+        mutable["parts"] = JsonArray(parts)
+    }
+
+    @Test
+    fun skipsAvatarWithPaletteRoleButNoPalette() {
+        val json = TestPackFixture.editAvatar("avatar_dog") {
+            setDogEarsFillRole(this, "primary")
+        }
+        val accepted = accept(json)
+        assertEquals(1, accepted.skipped.size)
+        assertEquals(SkipKind.AVATAR, accepted.skipped[0].kind)
+        assertEquals("avatar_dog", accepted.skipped[0].id)
+        assertEquals(1, accepted.pack.avatars.size)
+    }
+
+    @Test
+    fun acceptsAvatarPaletteRoleWithPalette() {
+        val json = TestPackFixture.editAvatar("avatar_dog") {
+            setDogEarsFillRole(this, "primary")
+            this["palette"] = JsonObject(
+                linkedMapOf(
+                    "primary" to JsonPrimitive("#112233"),
+                    "secondary" to JsonPrimitive("#445566"),
+                    "accent" to JsonPrimitive("#778899")
+                )
+            )
+        }
+        val accepted = accept(json)
+        assertEquals(0, accepted.skipped.size)
+        assertEquals(2, accepted.pack.avatars.size)
+        assertEquals("#112233", accepted.pack.avatars[1].palette!!.primary)
+    }
+
+    @Test
+    fun skipsAvatarWithBadPaletteHex() {
+        val json = TestPackFixture.editAvatar("avatar_dog") {
+            this["palette"] = JsonObject(
+                linkedMapOf(
+                    "primary" to JsonPrimitive("nope"),
+                    "secondary" to JsonPrimitive("#445566"),
+                    "accent" to JsonPrimitive("#778899")
+                )
+            )
+        }
+        val accepted = accept(json)
+        assertEquals(1, accepted.skipped.size)
+        assertEquals(SkipKind.AVATAR, accepted.skipped[0].kind)
+        assertTrue(accepted.skipped[0].reason.contains("palette"), accepted.skipped[0].reason)
     }
 
     @Test

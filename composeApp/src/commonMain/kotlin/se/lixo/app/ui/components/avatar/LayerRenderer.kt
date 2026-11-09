@@ -134,7 +134,8 @@ private fun DrawScope.drawPlacedLayer(
     }
 }
 
-/** The face: eyes + smile, drawn once in HEAD-local au (56×56), per approach F step 4. */
+/** The face: eyes + smile, designed once in a 56×56 au box and stretched to the avatar's effective
+ * HEAD box by [faceMatrix], per approach F step 4. */
 private fun DrawScope.drawFace(avatar: ContentAvatar, eyeIndex: Int, smileIndex: Int, bones: Map<Bone, BoneTransform>) {
     withTransform({ transform(faceMatrix(bones)) }) {
         val color = Color(CONTENT_EYE_ARGB)
@@ -251,7 +252,7 @@ fun DrawScope.drawAvatar(
     auraPhase: Float,
     drawList: AvatarDrawList = buildAvatarDrawList(content, appearance)
 ) {
-    val frame = avatarFrame(size)
+    val frame = avatarFrame(size, drawList.avatar)
     val bones = boneTransforms(drawList.avatar, pose, yaw, frame)
     drawStage(frame, drawList.hasLegendary)
     if (drawList.hasLegendary) drawLegendaryAura(frame, auraPhase)

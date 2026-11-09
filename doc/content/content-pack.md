@@ -22,9 +22,13 @@ which is a pure model layer: nothing in the app reads a content pack yet (that s
 
 Every path (`ContentLayer.d`) is written in bone-local **avatar units (au)**. The origin is the
 top-left of the bone's box and `y` points down — the same convention `Avatar3DController` already
-uses for its hand-drawn shapes. An avatar can override a bone's box with
-`ContentAvatar.bones[bone]`: when it does, the renderer scales that bone's layers by
-`avatarBoneSize / STANDARD_BONE_BOX[bone]`, so one item fits every avatar without per-avatar art.
+uses for its hand-drawn shapes. An avatar can override a bone's box with `ContentAvatar.bones[bone]`: when it does, the renderer
+scales **item** layers (never avatar part layers, which are already authored in the effective
+box) on that bone by `BoneTransform.itemScale = avatarBoneSize / STANDARD_BONE_BOX[bone]`, so one
+item fits every avatar without per-avatar art — sleeves, gloves and hand-held items on an oversized
+arm/hand stretch together because `HAND` is derived from `ARM`. The face (eyes/smile, designed
+once in a 56×56 au box) is stretched the same way onto the avatar's effective `HEAD` box by
+`faceMatrix`.
 
 A layer's path must stay inside its bone box **expanded by `BONE_BOX_OVERHANG` (1.5×) on every
 side** (`Skeleton.expandedBoneBox`), so hats, capes and weapons can stick out past their anchor
@@ -88,6 +92,7 @@ order.
 | `pose` | `AvatarPose` | all `1.0` |
 | `parts` | List\<AvatarPart> | `[]` |
 | `face` | `AvatarFace` | `{eyeStyles=4, smileStyles=4}` |
+| `palette` | `ContentPalette?` (`{primary, secondary, accent}` hex) | `null` |
 
 `AvatarUnlock` is `{type: "default" | "stars", stars: Int = 0}` (a plain class, not a polymorphic
 discriminator — `"type"` would otherwise clash with kotlinx's own `classDiscriminator`).
@@ -170,8 +175,11 @@ Each run uses one frozen snapshot of the pack, taken when the run starts (`repos
 | `eye` | app constant (`CONTENT_EYE_ARGB`) |
 | `outline` | app constant (`CONTENT_OUTLINE_ARGB`) |
 
-**Avatar part layers may only use `skin`, `tint`, `eye` or `outline`** — an avatar part has no
-item palette to draw `primary`/`secondary`/`accent` from. Item layers may use any role.
+**Avatar part layers may only use `skin`, `tint`, `eye` or `outline`**, plus `primary`/`secondary`/
+`accent` when the avatar has its own `palette` — a part without an avatar `palette` has no source
+for those roles. Item layers may use any role; their `primary`/`secondary`/`accent` always come
+from the item's own `palette` (`resolveRoleColor` only falls back to the avatar's `palette` when
+there is no item, i.e. for avatar part layers).
 
 Item layers are checked against `STANDARD_BONE_BOX` (an item must fit the unscaled skeleton; the
 renderer, not the pack, is responsible for `scale`-ing it per avatar). Avatar part layers are
@@ -409,3 +417,35 @@ An item preview is framed from its PLACED bounds (after the bones have been posi
 10% margin on every side) — never from `ActiveContent.itemBounds`, which unions boxes from
 different bones' LOCAL spaces and would collapse a multi-bone item (e.g. mirrored gloves) onto
 one spot. `ItemPreviewHints.yaw` is in RADIANS (unlike the turntable's degrees).
+
+### Avatar frame (026)
+
+`avatarFrame(canvasSize, avatar)` shrinks an avatar (below the base `min(w,h)/340` scale, never
+below 0.45× that) whenever its HEAD top plus a 67au "tallest hat" reach, scaled to that avatar's
+own effective HEAD height, would exceed a 290au budget above the feet — e.g. the witch's tall
+head with a style-4 top hat. Standard-size avatars (cat, dog) are unaffected; the witch shrinks
+the most (~5%). Feet sit at `h * 0.56 + 108 * base` (previously 96; moved down 12au so the
+tallest hat still clears the canvas in the 340dp screenshot). A `null` avatar keeps the old,
+unshrunk scale (`ItemPreview`'s default avatar).
+
+## Avatar sources (pipeline)
+
+An avatar source JSON (`tools/content_pipeline/pack/templates/avatars/avatar_*.json`) is compact:
+
+- `bones`: `{"HEAD": [w,h], "TORSO": [w,h], "ARM": [w,h], "LEG": [w,h]}`. Missing keys mean
+  standard. `avatar_body.expand_bones` mirrors `ARM`/`LEG` into `ARM_L`/`ARM_R`/`LEG_L`/`LEG_R`
+  and derives `HAND_L`/`HAND_R` as `(armW, round(armH * 0.475, 2))` — the standard 38×80 arm's
+  hand stays 38×38 — so sleeves, gloves and hand-held items always line up with no gap. `TAIL` is
+  always the standard 40×60; it isn't part of an avatar's silhouette table.
+- `palette`: `{primary, secondary, accent}`, written straight into `ContentAvatar.palette`.
+- `pose`: `AvatarPose` fields that differ from `1.0`.
+- `extras`: a list of ids from `templates/avatars/extras.py`'s `EXTRAS` map. Each id builds one
+  named part; a part whose name already exists in `avatar_body.body_parts` (torso, arms, hands,
+  legs, pants, shoes, head) **replaces it in place** instead of being appended — this is how a
+  skirt or robe becomes the avatar's own `pants` part (so a `PANTS` item still hides it) and how
+  stockings become its `legs` part.
+- Z-bucket rule for extras: `drawLayerList` draws the face just before the first `FACE`+ layer, so
+  a PATCH feature that must sit under the eyes/smile (muzzle, snout, tongue, cheek, jaw shadow,
+  eye spot, stripes, chin) goes in z `HEAD` with `order >= 2` (the head block itself is order 1).
+  A LINE or NOSE feature that draws over the face (whiskers, nose, lashes, brows) goes in z
+  `FACE`.

@@ -66,7 +66,6 @@ class BundledCatalogRenderTest {
         } catch (_: Throwable) {}
         val baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         outDir = File(baseDir, "lixo_screenshots/verify021").apply { mkdirs() }
-        outDir.listFiles()?.filter { it.extension == "png" }?.forEach { it.delete() }
 
         val json = runBlocking { BundledContentPack.readJson() }
         val result = BundledContentPack.validate(json)
@@ -76,6 +75,11 @@ class BundledCatalogRenderTest {
         content = ActiveContent.from(accepted.pack)
         assertEquals(6, content.avatarsOrdered.size)
         assertTrue("expected >= 580 items, got ${content.items.size}", content.items.size >= 580)
+    }
+
+    /** Each test clears only its own screenshots; @Before runs per test, so a dir-wide wipe here deleted the other test's output. */
+    private fun clearShots(prefix: String) {
+        outDir.listFiles()?.filter { it.extension == "png" && it.name.startsWith(prefix) }?.forEach { it.delete() }
     }
 
     private fun shot(name: String) {
@@ -88,6 +92,7 @@ class BundledCatalogRenderTest {
 
     @Test
     fun everyItem_rendersInItemPreview() {
+        clearShots("items_")
         val batches = content.items.chunked(30)
         val batch = mutableIntStateOf(0)
         compose.mainClock.autoAdvance = false
@@ -124,6 +129,7 @@ class BundledCatalogRenderTest {
 
     @Test
     fun everyAvatar_wearsStyles0to7_inEverySlot() {
+        clearShots("avatar_")
         assertEquals(EquipmentSlot.entries.toSet(), STYLE_REPRESENTATIVES.keys)
         for ((slot, ids) in STYLE_REPRESENTATIVES) {
             assertEquals(8, ids.size)
@@ -164,6 +170,39 @@ class BundledCatalogRenderTest {
             compose.onNodeWithContentDescription(expected).assertExists()
 
             shot("avatar_${avatar.id}_style$style")
+        }
+    }
+
+    /**
+     * Fully equipped avatars look alike (the hat covers the ears, an equipped tail replaces the
+     * default one), so render every avatar bare to check its own parts: ears, default tail, skin.
+     */
+    @Test
+    fun everyAvatar_rendersBare() {
+        clearShots("bare_")
+        val avatars = content.avatarsOrdered
+        val idx = mutableIntStateOf(0)
+        compose.mainClock.autoAdvance = false
+
+        compose.setContent {
+            LixoTheme {
+                key(idx.intValue) {
+                    Box(Modifier.background(Color.White)) {
+                        AvatarViewport(
+                            content,
+                            AvatarAppearance(avatars[idx.intValue].id),
+                            Modifier.size(340.dp),
+                            interactiveRotation = false
+                        )
+                    }
+                }
+            }
+        }
+
+        avatars.forEachIndexed { i, avatar ->
+            compose.runOnUiThread { idx.intValue = i }
+            compose.mainClock.advanceTimeBy(500)
+            shot("bare_${avatar.id}")
         }
     }
 

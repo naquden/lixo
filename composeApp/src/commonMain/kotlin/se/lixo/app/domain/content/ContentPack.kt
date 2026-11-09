@@ -61,7 +61,9 @@ data class ContentAvatar(
     val bones: Map<Bone, BoneOverride> = emptyMap(),
     val pose: AvatarPose = AvatarPose(),
     val parts: List<AvatarPart> = emptyList(),
-    val face: AvatarFace = AvatarFace()
+    val face: AvatarFace = AvatarFace(),
+    /** Colours for PRIMARY/SECONDARY/ACCENT roles on this avatar's own part layers (hair, beard, muzzle). */
+    val palette: ContentPalette? = null
 )
 
 @Serializable

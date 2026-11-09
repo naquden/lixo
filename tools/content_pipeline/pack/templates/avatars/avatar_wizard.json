@@ -3,10 +3,11 @@
   "nameKey": "avatar_wizard.name",
   "order": 4,
   "humanoid": true,
-  "skinHex": "#4A90E2",
-  "defaultTintHex": "#F5A623",
+  "skinHex": "#5E35B1",
+  "defaultTintHex": "#F2C29B",
   "unlock": {"type": "stars", "stars": 90},
-  "body": "standard",
-  "ears": null,
-  "tail": null
+  "bones": {"HEAD": [54, 60], "TORSO": [70, 94], "ARM": [30, 90], "LEG": [34, 68]},
+  "palette": {"primary": "#ECEFF1", "secondary": "#FFD54F", "accent": "#3949AB"},
+  "pose": {"headBob": 0.6, "breath": 0.7, "armSwing": 0.6},
+  "extras": ["wizard_beard", "wizard_brows", "wizard_robe"]
 }

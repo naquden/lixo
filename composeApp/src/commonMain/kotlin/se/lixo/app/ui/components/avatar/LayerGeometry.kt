@@ -17,6 +17,7 @@ import se.lixo.app.domain.content.Bone
 import se.lixo.app.domain.content.ContentAvatar
 import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.domain.content.ContentLayer
+import se.lixo.app.domain.content.ContentPalette
 import se.lixo.app.domain.content.ContentPaths
 import se.lixo.app.domain.content.CONTENT_EYE_ARGB
 import se.lixo.app.domain.content.CONTENT_OUTLINE_ARGB
@@ -51,10 +52,24 @@ val REST_POSE = ProceduralIdlePose(
 /** Where the avatar's feet are on screen, and how many px map to one avatar unit (au). */
 data class RigFrame(val feet: Offset, val pxPerAu: Float)
 
-/** Fits the whole avatar into [canvasSize] the same way the old `drawLowPolyAvatarScene` did. */
-fun avatarFrame(canvasSize: Size): RigFrame {
-    val s = (min(canvasSize.width, canvasSize.height) / 340f).coerceAtLeast(0.45f)
-    val feet = Offset(canvasSize.width / 2f, canvasSize.height * 0.56f + 96f * s)
+/** The tallest hat (top hat at legendary scale 1.15, 58 au × 1.15) reaches this far above the head top. */
+private const val HAT_REACH_AU = 67f
+
+/** How many au of headTop+hat reach fit above the feet before [avatarFrame] shrinks the avatar down. */
+private const val AVATAR_REACH_BUDGET_AU = 290f
+
+/**
+ * Fits the whole avatar into [canvasSize] the same way the old `drawLowPolyAvatarScene` did, but
+ * shrinks avatars whose head (plus the tallest hat's reach, scaled to their own HEAD bone) would not
+ * fit above the feet in a square canvas — e.g. the witch with a tall hat. A null [avatar] (or one
+ * with standard bones) keeps the old, unshrunk scale.
+ */
+fun avatarFrame(canvasSize: Size, avatar: ContentAvatar? = null): RigFrame {
+    val base = (min(canvasSize.width, canvasSize.height) / 340f).coerceAtLeast(0.45f)
+    val headTopAu = -boneLayoutAu(avatar).getValue(Bone.HEAD).origin.y
+    val reach = headTopAu + HAT_REACH_AU * effectiveBoneSize(avatar, Bone.HEAD).height / 56f
+    val s = base * min(1f, AVATAR_REACH_BUDGET_AU / reach)
+    val feet = Offset(canvasSize.width / 2f, canvasSize.height * 0.56f + 108f * base)
     return RigFrame(feet, s)
 }
 
@@ -193,7 +208,8 @@ data class BoneTransform(
     val breathScaleY: Float,
     val breathPivot: Offset,
     val parallaxPx: Float,
-    val yawPx: Float
+    val yawPx: Float,
+    val itemScale: Offset
 )
 
 /** [boneTransforms] fitting [avatar] into [canvasSize] the same way [avatarFrame] does. */
@@ -202,7 +218,7 @@ fun boneTransforms(
     pose: ProceduralIdlePose,
     yaw: Float,
     canvasSize: Size
-): Map<Bone, BoneTransform> = boneTransforms(avatar, pose, yaw, avatarFrame(canvasSize))
+): Map<Bone, BoneTransform> = boneTransforms(avatar, pose, yaw, avatarFrame(canvasSize, avatar))
 
 /** [yaw] is in DEGREES, matching the turntable drag gesture state. */
 fun boneTransforms(
@@ -230,16 +246,24 @@ fun boneTransforms(
         val bl = layout[bone] ?: BoneLayout(Offset.Zero, Offset.Zero)
         val originAu = if (bone == Bone.HEAD) bl.origin + Offset(0f, headBobAu) else bl.origin
         val pivotAu = if (bone == Bone.HEAD) bl.pivot + Offset(0f, headBobAu) else bl.pivot
+        val eff = effectiveBoneSize(avatar, bone)
+        val std = STANDARD_BONE_BOX[bone] ?: Size.Zero
+        val itemScale = if (std.width != 0f && std.height != 0f) {
+            Offset(eff.width / std.width, eff.height / std.height)
+        } else {
+            Offset(1f, 1f)
+        }
         BoneTransform(
             origin = toPx(frame, originAu),
             pxPerAu = frame.pxPerAu,
-            effectiveSize = effectiveBoneSize(avatar, bone),
+            effectiveSize = eff,
             rotationDeg = rotations[bone] ?: 0f,
             pivot = toPx(frame, pivotAu),
             breathScaleY = if (bone == Bone.TORSO) breathScale else 1f,
             breathPivot = breathPivotPx,
             parallaxPx = yawPx * (DEFAULT_PARALLAX[bone] ?: 0f),
-            yawPx = yawPx
+            yawPx = yawPx,
+            itemScale = itemScale
         )
     }
 }
@@ -305,11 +329,8 @@ fun layerMatrix(p: PlacedLayer, bones: Map<Bone, BoneTransform>, sideOffsetAu: F
     val m = boneMatrix(p.bone, bones, parallax, p.layer.breath)
 
     if (p.item != null) {
-        val eff = t.effectiveSize
+        m.scale(t.itemScale.x, t.itemScale.y)
         val std = STANDARD_BONE_BOX[p.bone] ?: Size.Zero
-        if (std.width != 0f && std.height != 0f) {
-            m.scale(eff.width / std.width, eff.height / std.height)
-        }
         if (p.item.scale != 1f) {
             val frac = ITEM_SCALE_PIVOT[p.bone] ?: Offset.Zero
             val pivot = Offset(frac.x * std.width, frac.y * std.height)
@@ -332,10 +353,13 @@ fun layerMatrix(p: PlacedLayer, bones: Map<Bone, BoneTransform>, sideOffsetAu: F
     return m
 }
 
-/** The HEAD bone matrix, as for an unmirrored item layer with item scale 1: used to draw the face. */
+/** The HEAD bone matrix, as for an unmirrored item layer with item scale 1, further stretched from
+ * the 56×56 au face design box to the effective HEAD box: used to draw the face. */
 fun faceMatrix(bones: Map<Bone, BoneTransform>): Matrix {
     val t = bones[Bone.HEAD] ?: error("no BoneTransform for HEAD")
-    return boneMatrix(Bone.HEAD, bones, t.parallaxPx, breath = false)
+    val m = boneMatrix(Bone.HEAD, bones, t.parallaxPx, breath = false)
+    m.scale(t.itemScale.x, t.itemScale.y)
+    return m
 }
 
 /** [c] lerped towards white ([shade] > 0) or black ([shade] < 0). */
@@ -345,11 +369,19 @@ fun applyShade(c: Color, shade: Float): Color = when {
     else -> c
 }
 
-/** Resolves one [PaletteRole] to a concrete [Color], per `doc/plans/020-layer-renderer.md` approach E. */
-fun resolveRoleColor(role: PaletteRole, item: ContentItem?, skin: Color, tint: Color): Color = when (role) {
-    PaletteRole.PRIMARY -> item?.palette?.primary?.let(::parseContentHex)?.let(::Color) ?: Color.Gray
-    PaletteRole.SECONDARY -> item?.palette?.secondary?.let(::parseContentHex)?.let(::Color) ?: Color.Gray
-    PaletteRole.ACCENT -> item?.palette?.accent?.let(::parseContentHex)?.let(::Color) ?: Color.Gray
+/** Resolves one [PaletteRole] to a concrete [Color], per `doc/plans/020-layer-renderer.md` approach E.
+ * PRIMARY/SECONDARY/ACCENT prefer the [item]'s own palette, falling back to [avatarPalette] (the
+ * avatar's own palette, used by its part layers) and then to gray. */
+fun resolveRoleColor(
+    role: PaletteRole,
+    item: ContentItem?,
+    skin: Color,
+    tint: Color,
+    avatarPalette: ContentPalette? = null
+): Color = when (role) {
+    PaletteRole.PRIMARY -> (item?.palette ?: avatarPalette)?.primary?.let(::parseContentHex)?.let(::Color) ?: Color.Gray
+    PaletteRole.SECONDARY -> (item?.palette ?: avatarPalette)?.secondary?.let(::parseContentHex)?.let(::Color) ?: Color.Gray
+    PaletteRole.ACCENT -> (item?.palette ?: avatarPalette)?.accent?.let(::parseContentHex)?.let(::Color) ?: Color.Gray
     PaletteRole.SKIN -> skin
     PaletteRole.TINT -> tint
     PaletteRole.EYE -> Color(CONTENT_EYE_ARGB)
@@ -390,9 +422,9 @@ fun buildAvatarDrawList(content: ActiveContent, appearance: AvatarAppearance): A
     val tint = (appearance.tintHex ?: parseContentHex(avatar.defaultTintHex))?.let(::Color) ?: Color.Gray
 
     fun fillOf(layer: ContentLayer, item: ContentItem?): Color =
-        applyShade(resolveRoleColor(layer.fill.role, item, skin, tint), layer.fill.shade)
+        applyShade(resolveRoleColor(layer.fill.role, item, skin, tint, avatar.palette), layer.fill.shade)
     fun strokeOf(layer: ContentLayer, item: ContentItem?): Color? =
-        layer.stroke?.let { resolveRoleColor(it.role, item, skin, tint) }
+        layer.stroke?.let { resolveRoleColor(it.role, item, skin, tint, avatar.palette) }
 
     val partLayers = avatar.parts.filter { it.part !in hidden }.flatMap { part ->
         part.layers.flatMap { layer -> expandMirror(layer, null, part.part, fillOf(layer, null), strokeOf(layer, null)) }
@@ -423,8 +455,8 @@ fun buildItemDrawList(content: ActiveContent, item: ContentItem): ItemDrawList {
 
     val itemLayers = sortLayers(
         item.layers.flatMap { layer ->
-            val fill = applyShade(resolveRoleColor(layer.fill.role, item, skin, tint), layer.fill.shade)
-            val stroke = layer.stroke?.let { resolveRoleColor(it.role, item, skin, tint) }
+            val fill = applyShade(resolveRoleColor(layer.fill.role, item, skin, tint, avatar.palette), layer.fill.shade)
+            val stroke = layer.stroke?.let { resolveRoleColor(it.role, item, skin, tint, avatar.palette) }
             expandMirror(layer, item, null, fill, stroke)
         }
     )
@@ -435,8 +467,8 @@ fun buildItemDrawList(content: ActiveContent, item: ContentItem): ItemDrawList {
         sortLayers(
             avatar.parts.filter { it.part !in hiddenParts }.flatMap { part ->
                 part.layers.flatMap { layer ->
-                    val fill = applyShade(resolveRoleColor(layer.fill.role, null, skin, tint), layer.fill.shade)
-                    val stroke = layer.stroke?.let { resolveRoleColor(it.role, null, skin, tint) }
+                    val fill = applyShade(resolveRoleColor(layer.fill.role, null, skin, tint, avatar.palette), layer.fill.shade)
+                    val stroke = layer.stroke?.let { resolveRoleColor(it.role, null, skin, tint, avatar.palette) }
                     expandMirror(layer, null, part.part, fill, stroke)
                 }
             }.filter { it.bone in placedBones }

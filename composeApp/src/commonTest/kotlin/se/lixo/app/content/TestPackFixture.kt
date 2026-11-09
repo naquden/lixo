@@ -50,6 +50,21 @@ object TestPackFixture {
         this["items"] = JsonArray(items)
     }
 
+    /** Like [editItem], but [block] mutates the fields of the avatar with id [id] (the avatar is left untouched if not found). */
+    fun editAvatar(id: String, block: MutableMap<String, JsonElement>.() -> Unit): String = edit {
+        val avatars = (this["avatars"] as JsonArray).map { element ->
+            val obj = element.jsonObject
+            if ((obj["id"] as? JsonPrimitive)?.content == id) {
+                val mutableAvatar = LinkedHashMap<String, JsonElement>(obj)
+                mutableAvatar.block()
+                JsonObject(mutableAvatar)
+            } else {
+                element
+            }
+        }
+        this["avatars"] = JsonArray(avatars)
+    }
+
     /** Like [edit], but [block] mutates the fields of the top-level `dropRules` object. */
     fun editDropRules(block: MutableMap<String, JsonElement>.() -> Unit): String = edit {
         val mutableDropRules = LinkedHashMap<String, JsonElement>(this["dropRules"]!!.jsonObject)

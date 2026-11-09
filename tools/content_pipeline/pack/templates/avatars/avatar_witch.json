@@ -3,10 +3,11 @@
   "nameKey": "avatar_witch.name",
   "order": 5,
   "humanoid": true,
-  "skinHex": "#4A90E2",
-  "defaultTintHex": "#F5A623",
+  "skinHex": "#2E7D32",
+  "defaultTintHex": "#A5D6A7",
   "unlock": {"type": "stars", "stars": 135},
-  "body": "standard",
-  "ears": null,
-  "tail": null
+  "bones": {"HEAD": [50, 64], "TORSO": [64, 80], "ARM": [28, 82], "LEG": [30, 84]},
+  "palette": {"primary": "#263238", "secondary": "#8E24AA", "accent": "#FF7043"},
+  "pose": {"headBob": 1.3, "armSwing": 1.1},
+  "extras": ["witch_hair", "witch_face", "witch_stockings", "witch_skirt"]
 }

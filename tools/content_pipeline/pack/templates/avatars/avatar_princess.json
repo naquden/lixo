@@ -3,10 +3,11 @@
   "nameKey": "avatar_princess.name",
   "order": 3,
   "humanoid": true,
-  "skinHex": "#4A90E2",
-  "defaultTintHex": "#F5A623",
+  "skinHex": "#F48FB1",
+  "defaultTintHex": "#F2C29B",
   "unlock": {"type": "stars", "stars": 55},
-  "body": "standard",
-  "ears": null,
-  "tail": null
+  "bones": {"HEAD": [54, 58], "TORSO": [66, 74], "ARM": [28, 78], "LEG": [30, 88]},
+  "palette": {"primary": "#F6C945", "secondary": "#F06292", "accent": "#FFF59D"},
+  "pose": {"headBob": 1.1, "armSwing": 0.7},
+  "extras": ["princess_hair", "princess_skirt", "princess_face", "princess_tiara"]
 }

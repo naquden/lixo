@@ -40,6 +40,7 @@ TOKEN_REGEX = re.compile(r"[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE
 SEPARATOR_REGEX = re.compile(r"^[\s,]*$")
 
 AVATAR_PART_ROLES = {"skin", "tint", "eye", "outline"}
+AVATAR_PALETTE_ROLES = {"primary", "secondary", "accent"}
 
 STANDARD_BONE_BOX = {
     "ROOT": (160.0, 240.0),
@@ -406,6 +407,13 @@ def avatar_errors(avatar: dict) -> List[str]:
     if unlock.get("type") == "stars" and unlock.get("stars", 0) < 1:
         errors.append(f"avatar {aid}: unlock.stars must be >= 1")
 
+    palette = avatar.get("palette")
+    if palette is not None:
+        for key in ("primary", "secondary", "accent"):
+            if parse_hex(palette.get(key, "")) is None:
+                errors.append(f"avatar {aid}: palette.{key} invalid")
+    allowed_roles = AVATAR_PART_ROLES | AVATAR_PALETTE_ROLES if palette else AVATAR_PART_ROLES
+
     bones = avatar.get("bones", {})
     overrides: Dict[str, Tuple[float, float]] = {}
     for bone, override in bones.items():
@@ -445,7 +453,7 @@ def avatar_errors(avatar: dict) -> List[str]:
                 errors.append(f"avatar {aid}: no bone box for {bone}")
                 continue
             effective = overrides.get(bone, standard)
-            for e in layer_errors(layer, effective, AVATAR_PART_ROLES):
+            for e in layer_errors(layer, effective, allowed_roles):
                 errors.append(f"avatar {aid}: part '{name}' {e}")
     return errors
 
