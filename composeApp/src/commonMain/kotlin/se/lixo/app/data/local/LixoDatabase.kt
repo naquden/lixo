@@ -20,9 +20,10 @@ import androidx.room.RoomDatabaseConstructor
         DictionaryEntryEntity::class,
         FriendEntity::class,
         AppSettingsEntity::class,
-        LexiconMetaEntity::class
+        LexiconMetaEntity::class,
+        WardrobeCatalogMetaEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @ConstructedBy(LixoDatabaseConstructor::class)

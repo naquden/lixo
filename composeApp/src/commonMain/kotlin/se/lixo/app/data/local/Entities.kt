@@ -69,6 +69,11 @@ data class TaskEntity(
     val rewardItemId: String?
 )
 
+/**
+ * This table holds ONLY remote wardrobe items (`doc/plans/015-remote-wardrobe-items.md`); the
+ * bundled catalog never touches Room. Enum columns (`slotId`/`rarityId`/`subjectId`/`pattern`/
+ * `ornament`) store the Kotlin enum constant's `.name` (e.g. "HAT", "LEGENDARY"), not its `id`.
+ */
 @Entity(tableName = "wardrobe_items")
 data class WardrobeItemEntity(
     @PrimaryKey val id: String,
@@ -87,7 +92,9 @@ data class WardrobeItemEntity(
     @ColumnInfo(defaultValue = "0") val styleIndex: Int = 0,
     @ColumnInfo(defaultValue = "4294967295") val secondaryColorHex: Long = 0xFFFFFFFF,
     @ColumnInfo(defaultValue = "'NONE'") val pattern: String = "NONE",
-    @ColumnInfo(defaultValue = "'NONE'") val ornament: String = "NONE"
+    @ColumnInfo(defaultValue = "'NONE'") val ornament: String = "NONE",
+    @ColumnInfo(defaultValue = "0") val retired: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val minAppVersionCode: Int = 0
 )
 
 /**
@@ -172,6 +179,17 @@ data class LexiconMetaEntity(
     @PrimaryKey val singletonId: Int = 1,
     val version: Int,
     val entryCount: Int
+)
+
+/**
+ * The version of the remote wardrobe items currently cached in `wardrobe_items` (`doc/plans/015`).
+ * Also stores the app versionCode that validated the cached items (doc/plans/018).
+ */
+@Entity(tableName = "wardrobe_catalog_meta")
+data class WardrobeCatalogMetaEntity(
+    @PrimaryKey val singletonId: Int = 1,
+    val version: Int,
+    @ColumnInfo(defaultValue = "0") val appVersionCode: Int = 0
 )
 
 @Entity(tableName = "friends")

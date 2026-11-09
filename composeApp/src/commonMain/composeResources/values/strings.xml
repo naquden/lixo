@@ -2,7 +2,7 @@
 <resources>
     <!-- App & Navigation -->
     <string name="app_name">Lixo</string>
-    <string name="nav_map">Karta</string>
+    <string name="nav_map">Lär dig</string>
     <string name="nav_wardrobe">Garderob</string>
     <string name="nav_trophies_friends">Troféer &amp; Vänner</string>
     <string name="nav_parent_settings">Föräldravy</string>

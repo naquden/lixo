@@ -16,6 +16,7 @@ import platform.AVFAudio.AVSpeechBoundary
 import platform.AVFAudio.AVSpeechSynthesizer
 import platform.AVFAudio.AVSpeechSynthesisVoice
 import platform.AVFAudio.AVSpeechUtterance
+import platform.Foundation.NSBundle
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDefaults
@@ -36,6 +37,8 @@ actual class PlatformFeatureFlags actual constructor() {
     actual val isOnDeviceSttSupported: Boolean = true
     actual val isNative3DSceneViewSupported: Boolean = true
     actual val isDebugBuild: Boolean = kotlin.native.Platform.isDebugBinary
+    actual val appVersionCode: Int =
+        (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String)?.toIntOrNull() ?: 0
 }
 
 class IosSpeechRecognitionEngine : SpeechRecognitionEngine {

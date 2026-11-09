@@ -33,7 +33,13 @@ data class LevelCompletionOutcome(
     val streakIncrementedToday: Boolean,
     val chestOutcome: GiftRollOutcome? = null,
     val chestPointsAwardedHalf: Int = 0,
-    val newlyUnlockedAchievements: List<Achievement> = emptyList()
+    val newlyUnlockedAchievements: List<Achievement> = emptyList(),
+    val nextChallengeByRewardItemId: Map<String, Achievement> = emptyMap(),
+    /**
+     * Next tiers (with profile progress) for achievements resolved this run whose reward item was
+     * already owned (no chest, no duplicate), so the "Ny utmaning!" step still shows (doc/plans/018).
+     */
+    val ownedRewardNextChallenges: List<Achievement> = emptyList()
 ) {
     /** Derived view of [newlyUnlockedRewards] for call sites that only care about the items. */
     val newlyUnlockedItems: List<WardrobeItem> get() = newlyUnlockedRewards.map { it.item }
@@ -84,12 +90,19 @@ data class LevelCompletionOutcome(
  *   `doc/plans/002-level-reward-item-ids.md`) when it resolves, is unowned, and is chest-eligible;
  *   otherwise it falls back to [rollOnboardingItem]. Off-schedule clears and replays ignore
  *   `rewardItemIdForTask` entirely.
- * - Achievements (`doc/plans/004-achievement-tracking.md`): [AchievementEngine] evaluates the
- *   profile's definitions against a [RunFacts] built from the run. At most
+ * - Achievements (`doc/plans/004-achievement-tracking.md`, tiered into ladders by
+ *   `doc/plans/014-achievement-ladders.md`): [AchievementEngine] evaluates the profile's
+ *   definitions against a [RunFacts] built from the run. At most
  *   [BalanceConfig.MAX_ITEMS_PER_SOURCE_PER_RUN] achievement reward (1) is handed out per run, in
  *   `achievementDefinitions` order, merging any already-pending ids
  *   ([ChildProfile.pendingAchievementRewardIds]) with newly unlocked ones; the rest stay queued
- *   for a later run.
+ *   for a later run. [LevelCompletionOutcome.nextChallengeByRewardItemId] maps each awarded
+ *   achievement's reward item id to its chain's next tier (if any), for the "Ny utmaning!" prompt.
+ *   When the reward item is already owned, nothing is awarded or queued, but the chain's next tier
+ *   goes into [LevelCompletionOutcome.ownedRewardNextChallenges].
+ * - Retired items (`doc/plans/015-remote-wardrobe-items.md`) are excluded from every pool here
+ *   (chests, onboarding, gifts, the weekly-streak set piece, the star curve) but stay owned and
+ *   renderable if already unlocked.
  */
 class ProgressionAndGiftEngine(
     private val random: Random = Random.Default,
@@ -99,10 +112,12 @@ class ProgressionAndGiftEngine(
     companion object {
         /**
          * Shared eligibility filter for chest/onboarding/level rolls: excludes weekly-streak set
-         * pieces and achievement-linked items, which have their own dedicated reward moments.
+         * pieces and achievement-linked items, which have their own dedicated reward moments, and
+         * retired items (`doc/plans/015-remote-wardrobe-items.md`), which stay owned/renderable
+         * but are pulled out of every drop pool.
          */
         fun isChestEligible(item: WardrobeItem): Boolean =
-            !item.isWeeklyStreakSetPiece && item.unlockAchievementId == null
+            !item.isWeeklyStreakSetPiece && item.unlockAchievementId == null && !item.retired
 
         /**
          * Items preferred for the onboarding track (`doc/plans/002-level-reward-item-ids.md`):
@@ -319,6 +334,7 @@ class ProgressionAndGiftEngine(
                     item.id !in workingUnlockedIds &&
                         item.unlockAchievementId == null &&
                         !item.isWeeklyStreakSetPiece &&
+                        !item.retired &&
                         item.unlockStarRequirement in 1..newTotalStars
                 }
                 .sortedWith(compareBy({ it.unlockStarRequirement }, { it.id }))
@@ -405,7 +421,7 @@ class ProgressionAndGiftEngine(
         // 6. Unlock Weekly Streak Set piece if reaching 7-day streak multiple
         if (didIncrementStreak && nextStreakDays > 0 && nextStreakDays % BalanceConfig.WEEKLY_STREAK_DAYS_FOR_SET_REWARD == 0) {
             allWardrobeItems.firstOrNull {
-                it.isWeeklyStreakSetPiece && it.unlockAchievementId == null && it.id !in workingUnlockedIds
+                it.isWeeklyStreakSetPiece && it.unlockAchievementId == null && it.id !in workingUnlockedIds && !it.retired
             }?.let { setPiece ->
                 award(setPiece, RewardSource.WEEKLY_STREAK)
             }
@@ -415,12 +431,14 @@ class ProgressionAndGiftEngine(
         // post-run streak/star values, then award at most 1 chest this run (progression-defined
         // order), merging already-pending ids with newly unlocked ones; the rest stay pending.
         val facts = (runFacts ?: RunFacts(level.subject, level.id, completedInAiMode))
-            .copy(streakDaysAfterRun = nextStreakDays, totalStarsAfterRun = newTotalStars)
+            .copy(streakDaysAfterRun = nextStreakDays, totalStarsAfterRun = newTotalStars, earnedStarsThisRun = clampedStars)
         val evaluation = achievementEngine.evaluate(facts, AchievementState.of(profile), achievementDefinitions)
         val newlyIds = evaluation.newlyUnlocked.map { it.id }.toSet()
         val queue = achievementDefinitions.filter { it.id in profile.pendingAchievementRewardIds || it.id in newlyIds }
         var slotsLeft = BalanceConfig.MAX_ITEMS_PER_SOURCE_PER_RUN
         val stillPending = linkedSetOf<String>()
+        val awardedAchievements = mutableListOf<Achievement>()
+        val ownedRewardAchievements = mutableListOf<Achievement>()
         for (ach in queue) {
             val item = allWardrobeItems.find { it.id == ach.rewardItemId }
             if (item == null) {
@@ -428,11 +446,14 @@ class ProgressionAndGiftEngine(
                 continue
             }
             if (item.id in workingUnlockedIds) {
+                ownedRewardAchievements += ach
+                println("LixoRewards: achievement ${ach.id} reward ${item.id} already owned, no chest")
                 continue
             }
             if (slotsLeft > 0) {
                 award(item, RewardSource.ACHIEVEMENT, ach.titleSv)
                 slotsLeft--
+                awardedAchievements += ach
                 println("LixoRewards: achievement ${ach.id} awarded ${item.id}")
             } else {
                 stillPending += ach.id
@@ -458,6 +479,19 @@ class ProgressionAndGiftEngine(
             chestsSinceLegendary = pityProfile.chestsSinceLegendary
         )
 
+        val nextChallengeByRewardItemId = awardedAchievements.mapNotNull { ach ->
+            AchievementEngine.nextTier(ach, achievementDefinitions, updatedProfile.unlockedAchievementIds)
+                ?.let { next -> ach.rewardItemId to AchievementEngine.withProfileProgress(listOf(next), updatedProfile).single() }
+        }.toMap()
+
+        val awardedNextIds = nextChallengeByRewardItemId.values.mapTo(HashSet()) { it.id }
+        val ownedRewardNextChallenges = AchievementEngine.withProfileProgress(
+            ownedRewardAchievements.mapNotNull {
+                AchievementEngine.nextTier(it, achievementDefinitions, updatedProfile.unlockedAchievementIds)
+            }.distinctBy { it.id }.filter { it.id !in awardedNextIds },
+            updatedProfile
+        )
+
         return LevelCompletionOutcome(
             updatedProfile = updatedProfile,
             updatedLevelProgress = updatedProgress,
@@ -468,7 +502,9 @@ class ProgressionAndGiftEngine(
             streakIncrementedToday = didIncrementStreak,
             chestOutcome = chestOutcome,
             chestPointsAwardedHalf = chestPointsAwardedHalf,
-            newlyUnlockedAchievements = evaluation.newlyUnlocked
+            newlyUnlockedAchievements = evaluation.newlyUnlocked,
+            nextChallengeByRewardItemId = nextChallengeByRewardItemId,
+            ownedRewardNextChallenges = ownedRewardNextChallenges
         )
     }
 

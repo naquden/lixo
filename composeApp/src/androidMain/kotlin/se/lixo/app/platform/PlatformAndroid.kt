@@ -14,6 +14,7 @@ import android.speech.tts.UtteranceProgressListener
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
+import androidx.core.content.pm.PackageInfoCompat
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.coroutines.CompletableDeferred
@@ -35,6 +36,8 @@ import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
 import se.lixo.app.data.local.ProfileStore
 import se.lixo.app.data.local.RoomProfileStore
+import se.lixo.app.data.local.RoomWardrobeCatalogCache
+import se.lixo.app.data.local.WardrobeCatalogCache
 import java.util.Locale
 
 object AndroidPlatformContext {
@@ -87,6 +90,16 @@ actual class PlatformFeatureFlags actual constructor() {
     actual val isDebugBuild: Boolean =
         (AndroidPlatformContext.applicationContext?.applicationInfo?.flags ?: 0) and
             ApplicationInfo.FLAG_DEBUGGABLE != 0
+
+    // composeApp is a library module (namespace se.lixo.shared), so there is no
+    // BuildConfig.VERSION_CODE for the app itself; read it from the installed package instead.
+    actual val appVersionCode: Int = try {
+        AndroidPlatformContext.applicationContext?.let { ctx ->
+            PackageInfoCompat.getLongVersionCode(ctx.packageManager.getPackageInfo(ctx.packageName, 0)).toInt()
+        } ?: 0
+    } catch (_: Throwable) {
+        0
+    }
 }
 
 @Composable
@@ -373,6 +386,13 @@ actual fun createPlatformLixoDatabase(): LixoDatabase? {
  */
 fun createAndroidProfileStore(context: Context, dbFileName: String): ProfileStore =
     RoomProfileStore(buildLixoDatabase(context.applicationContext, dbFileName).lixoDao())
+
+/**
+ * For instrumented tests only: builds a [WardrobeCatalogCache] backed by a separate Room
+ * database file, same caveats as [createAndroidProfileStore] (`doc/plans/015`).
+ */
+fun createAndroidWardrobeCatalogCache(context: Context, dbFileName: String): WardrobeCatalogCache =
+    RoomWardrobeCatalogCache(buildLixoDatabase(context.applicationContext, dbFileName).lixoDao())
 
 actual object PendingEmailLinkStorage {
     private const val PREFS_NAME = "lixo_email_link_auth_prefs"

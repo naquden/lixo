@@ -13,16 +13,21 @@ import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.engine.RunFacts
+import se.lixo.app.domain.model.ACHIEVEMENT_LADDERS
+import se.lixo.app.domain.model.Achievement
+import se.lixo.app.domain.model.AchievementAction
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.DailyActivityRecord
+import se.lixo.app.domain.model.HANDMADE_ACHIEVEMENT_IDS
 import se.lixo.app.domain.model.MathProblem
 import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.Subject
+import se.lixo.app.domain.model.achievementId
 
 class AchievementEngineTest {
 
@@ -47,6 +52,12 @@ class AchievementEngineTest {
         hintStep1Sv = "h1",
         hintStep2Sv = "h2"
     )
+
+    /** Only the 12 legacy achievement ids, so old behavior-focused tests aren't tripped up by the other 36 new tiers. */
+    private fun legacyDefs(): List<Achievement> {
+        val legacyIds = HANDMADE_ACHIEVEMENT_IDS + BalanceConfig.STAR_ACHIEVEMENT_MILESTONES.map(BalanceConfig::starAchievementId)
+        return LixoRepository.buildSeedAchievements().filter { it.id in legacyIds }
+    }
 
     // --- (a) Speed reader ---
 
@@ -178,7 +189,7 @@ class AchievementEngineTest {
 
         val engine = AchievementEngine()
         val def = LixoRepository.buildSeedAchievements().single { it.id == "ach_math_clock_money" }
-        var state = AchievementState(progress = mapOf(def.id to 7))
+        var state = AchievementState(progress = mapOf(def.id to 7, def.action!!.let { "chain:${it.name}" } to 7))
 
         var eval = engine.evaluate(
             RunFacts(Subject.MATH, "l1", isAiMode = true, mathFirstTryByType = score.firstTryCorrectByType),
@@ -225,7 +236,7 @@ class AchievementEngineTest {
     // --- (e) requiresAiMode / already-unlocked ---
 
     @Test
-    fun requiresAiMode_enforced_andAlreadyUnlockedNeverRetriggers() {
+    fun requiresAiMode_enforcedAndAlreadyUnlockedNeverRetriggers() {
         val engine = AchievementEngine()
         val def = LixoRepository.buildSeedAchievements().single { it.id == "ach_speed_reader_5" }
         assertTrue(def.requiresAiMode)
@@ -243,8 +254,10 @@ class AchievementEngineTest {
             unlocked,
             listOf(def)
         )
+        // Chain counters now always update, even for an already-unlocked tier, so only the
+        // unlock set (not the whole state) is guaranteed to stay unchanged.
         assertTrue(eval2.newlyUnlocked.isEmpty())
-        assertEquals(unlocked, eval2.state)
+        assertEquals(unlocked.unlockedIds, eval2.state.unlockedIds)
     }
 
     // --- (f) recordLevelCompletion integration ---
@@ -256,7 +269,7 @@ class AchievementEngineTest {
     fun recordLevelCompletion_19Stars_noAchievement_20Stars_unlocksAchStars20() {
         val engine = ProgressionAndGiftEngine(random = Random(42))
         val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val achievements = LixoRepository.buildSeedAchievements()
+        val achievements = legacyDefs()
         val mathLevel = level(order = 2, subject = Subject.MATH)
         val today = DailyActivityRecord(profileId = "p19", calendarDateIso = "2026-11-01")
 
@@ -314,7 +327,7 @@ class AchievementEngineTest {
     fun recordLevelCompletion_profileAt100Stars_unlocksOnePendingPerRun() {
         val engine = ProgressionAndGiftEngine(random = Random(42))
         val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val achievements = LixoRepository.buildSeedAchievements()
+        val achievements = legacyDefs()
         val mathLevel = level(order = 2, subject = Subject.MATH)
         val today = DailyActivityRecord(profileId = "p100", calendarDateIso = "2026-11-01")
 
@@ -409,7 +422,7 @@ class AchievementEngineTest {
     fun recordLevelCompletion_replayWithNoNetNewStars_addsNothing() {
         val engine = ProgressionAndGiftEngine(random = Random(42))
         val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val achievements = LixoRepository.buildSeedAchievements()
+        val achievements = legacyDefs()
         val mathLevel = level(order = 2, subject = Subject.MATH)
         val today = DailyActivityRecord(profileId = "p19r", calendarDateIso = "2026-11-01")
         val profile = baseMathProfile("p19r", totalStars = 19).copy(
@@ -452,7 +465,7 @@ class AchievementEngineTest {
     fun recordLevelCompletion_achievementStacksWithFlitkista_inOrder() {
         val engine = ProgressionAndGiftEngine(random = Random(42))
         val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val achievements = LixoRepository.buildSeedAchievements()
+        val achievements = legacyDefs()
         val mathLevel = level(order = 2, subject = Subject.MATH)
         val today = DailyActivityRecord(profileId = "p_stack2", calendarDateIso = "2026-11-01")
         val profile = ChildProfile(
@@ -493,14 +506,14 @@ class AchievementEngineTest {
     fun recordLevelCompletion_twoUnlocksInOneRun_oneNowOneNextRun() {
         val engine = ProgressionAndGiftEngine(random = Random(42))
         val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val achievements = LixoRepository.buildSeedAchievements()
+        val achievements = legacyDefs()
         val mathLevel = level(order = 2, subject = Subject.MATH)
         val today = DailyActivityRecord(profileId = "p_two", calendarDateIso = "2026-11-01")
         val profile = ChildProfile(
             id = "p_two",
             displayName = "Saga",
             totalStars = 19,
-            achievementProgress = mapOf("ach_math_clock_money" to 14)
+            achievementProgress = mapOf("ach_math_clock_money" to 14, "chain:CLOCK_MONEY" to 14)
         )
 
         val outcome = engine.recordLevelCompletion(
@@ -537,7 +550,7 @@ class AchievementEngineTest {
     fun recordLevelCompletion_alreadyOwnedRewardItem_noChestButUnlocked() {
         val engine = ProgressionAndGiftEngine(random = Random(42))
         val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val achievements = LixoRepository.buildSeedAchievements()
+        val achievements = legacyDefs()
         val def = achievements.single { it.id == "ach_stars_20" }
         val mathLevel = level(order = 2, subject = Subject.MATH)
         val today = DailyActivityRecord(profileId = "p_owned", calendarDateIso = "2026-11-01")
@@ -573,7 +586,7 @@ class AchievementEngineTest {
     fun recordLevelCompletion_day7Streak_bothWeeklyStreakAndAchievementAwarded() {
         val engine = ProgressionAndGiftEngine(random = Random(42))
         val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val achievements = LixoRepository.buildSeedAchievements()
+        val achievements = legacyDefs()
         val mathLevel = level(order = 2, subject = Subject.MATH)
         val today = DailyActivityRecord(
             profileId = "p_day7",
@@ -646,9 +659,9 @@ class AchievementEngineTest {
     // --- (h) Seed ---
 
     @Test
-    fun seedAchievements_allZeroAndLocked_12Total_rewardItemsDistinctFromLevelPool() {
+    fun seedAchievements_allZeroAndLocked_48Total_rewardItemsDistinctFromLevelPool() {
         val achievements = LixoRepository.buildSeedAchievements()
-        assertEquals(12, achievements.size)
+        assertEquals(48, achievements.size)
         for (ach in achievements) {
             assertEquals(0, ach.currentCount)
             assertFalse(ach.isUnlocked)
@@ -657,11 +670,29 @@ class AchievementEngineTest {
             assertEquals(ach.id, item.unlockAchievementId)
         }
 
+        for ((action, tiers) in achievements.groupBy { it.action }) {
+            assertTrue(action != null, "every seed achievement must have an action")
+            val tierNumbers = tiers.sortedBy { it.tier }.map { it.tier }
+            assertEquals((1..tiers.size).toList(), tierNumbers)
+        }
+
         val rewardIds = achievements.map { it.rewardItemId }.toSet()
         val levelRewardPoolIds = LixoRepository.buildLevelRewardPool(LixoRepository.buildSeedWardrobeCatalog())
             .map { it.id }
             .toSet()
         assertTrue(rewardIds.none { it in levelRewardPoolIds })
+    }
+
+    @Test
+    fun seed_everyNonHandmadeTierHasOneCatalogItemWithLadderRarity() {
+        val achievements = LixoRepository.buildSeedAchievements()
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        for (ach in achievements) {
+            if (ach.id in HANDMADE_ACHIEVEMENT_IDS) continue
+            val matches = catalog.filter { it.unlockAchievementId == ach.id }
+            assertEquals(1, matches.size, "expected exactly 1 catalog item for ${ach.id}")
+            assertEquals(ach.rarity, matches.single().rarity)
+        }
     }
 
     // --- (i) withProfileProgress overlay ---
@@ -673,7 +704,7 @@ class AchievementEngineTest {
         val freshOverlay = AchievementEngine.withProfileProgress(definitions, fresh)
         assertTrue(freshOverlay.all { it.currentCount == 0 && !it.isUnlocked })
 
-        val partial = fresh.copy(achievementProgress = mapOf("ach_math_clock_money" to 6))
+        val partial = fresh.copy(achievementProgress = mapOf("ach_math_clock_money" to 6, "chain:CLOCK_MONEY" to 6))
         val partialOverlay = AchievementEngine.withProfileProgress(definitions, partial)
         assertEquals(6, partialOverlay.single { it.id == "ach_math_clock_money" }.currentCount)
 
@@ -682,5 +713,325 @@ class AchievementEngineTest {
         val speedReader = unlockedOverlay.single { it.id == "ach_speed_reader_5" }
         assertEquals(speedReader.targetCount, speedReader.currentCount)
         assertTrue(speedReader.isUnlocked)
+    }
+
+    @Test
+    fun withProfileProgress_legacyClockMoney6_showsOnTier15() {
+        val definitions = LixoRepository.buildSeedAchievements()
+        val profile = ChildProfile(id = "p", displayName = "Saga", achievementProgress = mapOf("ach_math_clock_money" to 6))
+        val overlay = AchievementEngine.withProfileProgress(definitions, profile)
+        assertEquals(6, overlay.single { it.id == "ach_math_clock_money" }.currentCount)
+    }
+
+    // --- (j) Ladder well-formedness ---
+
+    @Test
+    fun ladders_wellFormed() {
+        assertEquals(AchievementAction.entries, ACHIEVEMENT_LADDERS.keys.toList())
+
+        val allIds = mutableListOf<String>()
+        for ((action, tiers) in ACHIEVEMENT_LADDERS) {
+            val targets = tiers.map { it.target }
+            assertEquals(targets.sorted().distinct(), targets, "targets must be strictly ascending for $action")
+            val rarityOrdinals = tiers.map { it.rarity.ordinal }
+            for (i in 1 until rarityOrdinals.size) {
+                assertTrue(rarityOrdinals[i] >= rarityOrdinals[i - 1], "rarity must be non-decreasing for $action")
+            }
+            tiers.forEach { allIds += achievementId(action, it) }
+        }
+        assertEquals(48, allIds.size)
+        assertEquals(allIds.distinct(), allIds, "all 48 ids must be unique")
+
+        val legacyExpected = mapOf(
+            "ach_speed_reader_5" to (5 to Rarity.EPIC),
+            "ach_pronunciation_master_10" to (10 to Rarity.LEGENDARY),
+            "ach_math_clock_money" to (15 to Rarity.EPIC),
+            "ach_weekly_streak_7" to (7 to Rarity.LEGENDARY)
+        ) + BalanceConfig.STAR_ACHIEVEMENT_MILESTONES.associate { stars ->
+            val rarity = when (stars) {
+                20, 45, 75 -> Rarity.RARE
+                120, 175, 250 -> Rarity.EPIC
+                else -> Rarity.LEGENDARY
+            }
+            BalanceConfig.starAchievementId(stars) to (stars to rarity)
+        }
+        for ((id, expected) in legacyExpected) {
+            val occurrences = ACHIEVEMENT_LADDERS.values.flatten().filter { it.legacyId == id }
+            assertEquals(1, occurrences.size, "legacy id $id must appear exactly once")
+            assertEquals(expected.first, occurrences.single().target)
+            assertEquals(expected.second, occurrences.single().rarity)
+        }
+
+        val avatarMilestones = AvatarType.entries.map { it.unlockStarsRequired }.toSet()
+        for (tier in ACHIEVEMENT_LADDERS.getValue(AchievementAction.COLLECT_STARS)) {
+            assertFalse(tier.target in avatarMilestones)
+        }
+
+        assertEquals(listOf(20, 45, 75, 120, 175, 250, 350, 480), BalanceConfig.STAR_ACHIEVEMENT_MILESTONES)
+    }
+
+    // --- (k) Chain counting ---
+
+    @Test
+    fun readStory_distinctLevels_sharedCounter_mathIgnored() {
+        val engine = AchievementEngine()
+        val defs = LixoRepository.buildSeedAchievements().filter { it.action == AchievementAction.READ_STORY }
+        var state = AchievementState()
+
+        var eval = engine.evaluate(RunFacts(Subject.SWEDISH, "l1", isAiMode = false), state, defs)
+        state = eval.state
+        assertTrue("ach_read_story_1" in state.unlockedIds)
+
+        // A math run never counts toward READ_STORY.
+        eval = engine.evaluate(RunFacts(Subject.MATH, "m1", isAiMode = false), state, defs)
+        state = eval.state
+        assertEquals(1, state.countedLevelIds["chain:READ_STORY"]?.size)
+
+        eval = engine.evaluate(RunFacts(Subject.SWEDISH, "l2", isAiMode = false), state, defs)
+        state = eval.state
+        eval = engine.evaluate(RunFacts(Subject.SWEDISH, "l3", isAiMode = false), state, defs)
+        state = eval.state
+        assertTrue("ach_read_story_3" in state.unlockedIds)
+    }
+
+    @Test
+    fun perfectLevel_onlyThreeStarRuns_replayCountsOnce() {
+        val engine = AchievementEngine()
+        val defs = LixoRepository.buildSeedAchievements().filter { it.action == AchievementAction.PERFECT_LEVEL }
+        var state = AchievementState()
+
+        var eval = engine.evaluate(RunFacts(Subject.SWEDISH, "l1", isAiMode = false, earnedStarsThisRun = 2), state, defs)
+        state = eval.state
+        assertTrue(eval.newlyUnlocked.isEmpty())
+
+        eval = engine.evaluate(RunFacts(Subject.SWEDISH, "l1", isAiMode = false, earnedStarsThisRun = 3), state, defs)
+        state = eval.state
+        assertTrue("ach_perfect_level_1" in state.unlockedIds)
+
+        // Replaying the same level at 3 stars doesn't count again.
+        eval = engine.evaluate(RunFacts(Subject.SWEDISH, "l1", isAiMode = false, earnedStarsThisRun = 3), state, defs)
+        state = eval.state
+        assertEquals(1, state.countedLevelIds["chain:PERFECT_LEVEL"]?.size)
+    }
+
+    @Test
+    fun firstTry_sumsAllTypes() {
+        val engine = AchievementEngine()
+        val defs = LixoRepository.buildSeedAchievements().filter { it.action == AchievementAction.FIRST_TRY }
+        val eval = engine.evaluate(
+            RunFacts(
+                Subject.MATH,
+                "l1",
+                isAiMode = false,
+                mathFirstTryByType = mapOf(
+                    MathProblemType.ADDITION to 1,
+                    MathProblemType.SUBTRACTION to 1,
+                    MathProblemType.CLOCK to 1,
+                    MathProblemType.MONEY to 1
+                )
+            ),
+            AchievementState(),
+            defs
+        )
+        assertEquals(4, eval.state.progress["chain:FIRST_TRY"])
+    }
+
+    @Test
+    fun streak_3UnlocksTargets2And3_neverDrops() {
+        val engine = AchievementEngine()
+        val defs = LixoRepository.buildSeedAchievements().filter { it.action == AchievementAction.STREAK_DAY }
+        var state = AchievementState()
+
+        var eval = engine.evaluate(RunFacts(Subject.MATH, "l1", isAiMode = false, streakDaysAfterRun = 3), state, defs)
+        state = eval.state
+        assertTrue("ach_streak_day_2" in state.unlockedIds)
+        assertTrue("ach_streak_day_3" in state.unlockedIds)
+
+        // A broken streak (down to 1 day) never drops the stored chain counter.
+        eval = engine.evaluate(RunFacts(Subject.MATH, "l2", isAiMode = false, streakDaysAfterRun = 1), state, defs)
+        state = eval.state
+        assertEquals(3, state.progress["chain:STREAK_DAY"])
+    }
+
+    // --- (l) Legacy carry-over ---
+
+    @Test
+    fun legacy_speedReaderCountedLevels_carryOver() {
+        val engine = AchievementEngine()
+        val defs = LixoRepository.buildSeedAchievements().filter { it.action == AchievementAction.READ_FAST }
+        val legacyState = AchievementState(
+            countedLevelIds = mapOf("ach_speed_reader_5" to setOf("l1", "l2", "l3", "l4"))
+        )
+
+        val eval = engine.evaluate(
+            RunFacts(Subject.SWEDISH, "l5", isAiMode = true, achievedWpm = 40, referenceWpm = 40),
+            legacyState,
+            defs
+        )
+        assertTrue("ach_read_fast_1" in eval.newlyUnlocked.map { it.id })
+        assertTrue("ach_read_fast_3" in eval.newlyUnlocked.map { it.id })
+        assertTrue("ach_speed_reader_5" in eval.newlyUnlocked.map { it.id })
+    }
+
+    @Test
+    fun legacy_speedReaderCountedLevels_carryOverWith3Legacy_unlocksOnlyLowerTiers() {
+        val engine = AchievementEngine()
+        val defs = LixoRepository.buildSeedAchievements().filter { it.action == AchievementAction.READ_FAST }
+        val legacyState = AchievementState(
+            countedLevelIds = mapOf("ach_speed_reader_5" to setOf("l1", "l2", "l3"))
+        )
+
+        val eval = engine.evaluate(
+            RunFacts(Subject.SWEDISH, "l4", isAiMode = true, achievedWpm = 40, referenceWpm = 40),
+            legacyState,
+            defs
+        )
+        val unlockedNowIds = eval.newlyUnlocked.map { it.id }
+        assertTrue("ach_read_fast_1" in unlockedNowIds)
+        assertTrue("ach_read_fast_3" in unlockedNowIds)
+        assertFalse("ach_speed_reader_5" in unlockedNowIds)
+    }
+
+    @Test
+    fun legacy_clockMoneyUnlocked_neverRetriggers() {
+        val engine = AchievementEngine()
+        val defs = LixoRepository.buildSeedAchievements().filter { it.action == AchievementAction.CLOCK_MONEY }
+        val legacyState = AchievementState(
+            progress = mapOf("ach_math_clock_money" to 15),
+            unlockedIds = setOf("ach_math_clock_money")
+        )
+
+        val eval = engine.evaluate(RunFacts(Subject.MATH, "l1", isAiMode = false), legacyState, defs)
+        assertTrue("ach_clock_money_3" in eval.newlyUnlocked.map { it.id })
+        assertTrue("ach_clock_money_8" in eval.newlyUnlocked.map { it.id })
+        assertFalse("ach_math_clock_money" in eval.newlyUnlocked.map { it.id })
+    }
+
+    // --- (m) Multi-unlock / next-tier / current-tier ---
+
+    @Test
+    fun multiUnlock_freshFirst3StarReading_oneChestOnePending() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val achievements = LixoRepository.buildSeedAchievements()
+        val readingLevel = level(order = 1, subject = Subject.SWEDISH)
+        val today = DailyActivityRecord(profileId = "p_fresh", calendarDateIso = "2026-11-01")
+        val profile = ChildProfile(id = "p_fresh", displayName = "Saga")
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = readingLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = false,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1L,
+            achievementDefinitions = achievements,
+            runFacts = RunFacts(Subject.SWEDISH, readingLevel.id, isAiMode = false)
+        )
+
+        assertEquals(
+            setOf("ach_read_story_1", "ach_perfect_level_1"),
+            outcome.newlyUnlockedAchievements.map { it.id }.toSet()
+        )
+        assertEquals(1, outcome.newlyUnlockedRewards.count { it.source == RewardSource.ACHIEVEMENT })
+        assertEquals(setOf("ach_perfect_level_1"), outcome.updatedProfile.pendingAchievementRewardIds)
+    }
+
+    @Test
+    fun currentTiers_lowestLockedOrTopWhenDone() {
+        val definitions = LixoRepository.buildSeedAchievements()
+        val profile = ChildProfile(
+            id = "p",
+            displayName = "Saga",
+            unlockedAchievementIds = ACHIEVEMENT_LADDERS.getValue(AchievementAction.READ_STORY)
+                .map { achievementId(AchievementAction.READ_STORY, it) }
+                .toSet()
+        )
+        val tiers = AchievementEngine.currentTiers(definitions, profile)
+        val readStoryTier = tiers.single { it.action == AchievementAction.READ_STORY }
+        assertEquals(5, readStoryTier.tier) // top tier, since the whole chain is unlocked
+
+        val solveMathTier = tiers.single { it.action == AchievementAction.SOLVE_MATH }
+        assertEquals(1, solveMathTier.tier) // lowest locked tier
+    }
+
+    @Test
+    fun nextChallenge_filledForAwardedAchievement() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val achievements = LixoRepository.buildSeedAchievements()
+        val readingLevel = level(order = 1, subject = Subject.SWEDISH)
+        val today = DailyActivityRecord(profileId = "p_next", calendarDateIso = "2026-11-01")
+        val profile = ChildProfile(id = "p_next", displayName = "Saga")
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = readingLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 1,
+            completedInAiMode = false,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1L,
+            achievementDefinitions = achievements,
+            runFacts = RunFacts(Subject.SWEDISH, readingLevel.id, isAiMode = false)
+        )
+
+        val readStoryDef = achievements.single { it.id == "ach_read_story_1" }
+        val nextId = outcome.nextChallengeByRewardItemId[readStoryDef.rewardItemId]?.id
+        assertEquals("ach_read_story_3", nextId)
+    }
+
+    @Test
+    fun nextChallenge_shownWhenRewardAlreadyOwned() {
+        val engine = ProgressionAndGiftEngine(random = Random(42))
+        val catalog = LixoRepository.buildSeedWardrobeCatalog()
+        val achievements = LixoRepository.buildSeedAchievements()
+        val readingLevel = level(order = 1, subject = Subject.SWEDISH)
+        val today = DailyActivityRecord(profileId = "p_owned_next", calendarDateIso = "2026-11-01")
+        val profile = ChildProfile(id = "p_owned_next", displayName = "Saga")
+        val readStoryDef = achievements.single { it.id == "ach_read_story_1" }
+
+        val outcome = engine.recordLevelCompletion(
+            profile = profile,
+            level = readingLevel,
+            previousProgress = null,
+            earnedStarsThisRun = 1,
+            completedInAiMode = false,
+            elapsedSeconds = 20,
+            achievedWpm = 0,
+            completedTimedChallenge = false,
+            eligibleForRepetitionGift = false,
+            rewardItemIdForTask = null,
+            clearedLevelsCountBeforeRun = 0,
+            allWardrobeItems = catalog,
+            currentlyUnlockedItemIds = setOf(readStoryDef.rewardItemId!!),
+            todayActivityBeforeRun = today,
+            nowEpochMillis = 1L,
+            achievementDefinitions = achievements,
+            runFacts = RunFacts(Subject.SWEDISH, readingLevel.id, isAiMode = false)
+        )
+
+        assertTrue(outcome.newlyUnlockedRewards.none { it.item.id == readStoryDef.rewardItemId })
+        assertTrue(readStoryDef.rewardItemId !in outcome.nextChallengeByRewardItemId)
+        assertTrue("ach_read_story_3" in outcome.ownedRewardNextChallenges.map { it.id })
+        assertTrue("ach_read_story_1" !in outcome.updatedProfile.pendingAchievementRewardIds)
+        assertTrue("ach_read_story_1" in outcome.updatedProfile.unlockedAchievementIds)
     }
 }

@@ -227,11 +227,15 @@ def build_lexicon_writes(lexicon: Dict[str, Any], doc_prefix: str) -> List[Dict[
     return writes
 
 
-def upload(bundle: Dict[str, Any], lexicon: Dict[str, Any], project_id: str, database_id: str) -> int:
-    token = _load_firebase_cli_access_token()
-    doc_prefix = f"projects/{project_id}/databases/{database_id}/documents"
+def firestore_doc_prefix(project_id: str, database_id: str) -> str:
+    return f"projects/{project_id}/databases/{database_id}/documents"
+
+
+def commit_writes(writes: List[Dict[str, Any]], project_id: str, database_id: str, token: str | None = None) -> int:
+    """Batches `writes` into Firestore `documents:commit` POSTs of up to BATCH_SIZE each, in order."""
+    token = token or _load_firebase_cli_access_token()
+    doc_prefix = firestore_doc_prefix(project_id, database_id)
     commit_url = f"https://firestore.googleapis.com/v1/{doc_prefix}:commit"
-    writes = build_writes(bundle, doc_prefix) + build_lexicon_writes(lexicon, doc_prefix)
 
     for start in range(0, len(writes), BATCH_SIZE):
         chunk = writes[start : start + BATCH_SIZE]
@@ -248,6 +252,12 @@ def upload(bundle: Dict[str, Any], lexicon: Dict[str, Any], project_id: str, dat
             if resp.status not in (200, 201):
                 raise RuntimeError(f"Firestore commit failed with HTTP {resp.status}")
     return len(writes)
+
+
+def upload(bundle: Dict[str, Any], lexicon: Dict[str, Any], project_id: str, database_id: str) -> int:
+    doc_prefix = firestore_doc_prefix(project_id, database_id)
+    writes = build_writes(bundle, doc_prefix) + build_lexicon_writes(lexicon, doc_prefix)
+    return commit_writes(writes, project_id, database_id)
 
 
 def main(argv: List[str] | None = None) -> int:

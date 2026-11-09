@@ -38,6 +38,7 @@ data class ReadingAlignmentSessionState(
     /**
      * Manual Reading Mode rule (`project.md` §2):
      * "Knappen inaktiv tills rimlig lästid passerat (baserat på textlängd); synlig 'laddning'"
+     * Since 017 the wait is a fixed BalanceConfig.MANUAL_MODE_UNLOCK_SECONDS, not text-length based.
      */
     val manualModeButtonChargeFraction: Float
         get() {
@@ -88,7 +89,7 @@ class ForcedAlignmentEngine {
         val effectiveTimedChallenge = isTimedChallengeRequested && mode == ReadingMode.AI_LISTENING
 
         val tokens = tokenizeStory(storyText)
-        val minManualMillis = calculateMinimumManualReadingMillis(tokens.size)
+        val minManualMillis = calculateMinimumManualReadingMillis()
 
         return ReadingAlignmentSessionState(
             mode = mode,
@@ -117,11 +118,7 @@ class ForcedAlignmentEngine {
             }
     }
 
-    fun calculateMinimumManualReadingMillis(wordCount: Int): Long {
-        val fromWords = wordCount * BalanceConfig.MANUAL_MODE_MIN_SECONDS_PER_WORD * 1000f
-        val minFloor = BalanceConfig.MANUAL_MODE_MIN_TOTAL_SECONDS * 1000f
-        return max(fromWords, minFloor).toLong()
-    }
+    fun calculateMinimumManualReadingMillis(): Long = BalanceConfig.MANUAL_MODE_UNLOCK_SECONDS * 1000L
 
     /**
      * Processes a batch of incoming STT tokens against the active story sequence using

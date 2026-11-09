@@ -44,11 +44,10 @@ object BalanceConfig {
     const val READING_YELLOW_TWO_STAR_PENALTY_RATIO = 0.25f
 
     /**
-     * Minimum time per word in Manual Reading Mode before "Jag har läst klart" button unlocks.
-     * Prevents instant button mashing while remaining fair for fast child readers.
+     * Fixed wait in Manual Reading Mode before the done button ('Klar med läsningen')
+     * unlocks; same for every story regardless of length, see doc/plans/017.
      */
-    const val MANUAL_MODE_MIN_SECONDS_PER_WORD = 0.35f
-    const val MANUAL_MODE_MIN_TOTAL_SECONDS = 4.0f
+    const val MANUAL_MODE_UNLOCK_SECONDS = 15
 
     /**
      * Reference Words Per Minute (WPM) by difficulty tier (1..6, roughly ages 6..12).
@@ -174,13 +173,19 @@ object BalanceConfig {
      */
     const val MAX_ITEMS_PER_SOURCE_PER_RUN = 1
 
-    // --- Star-collection achievements (§2 "Epic/Legendary via prestationer", see doc/plans/004) ---
+    // --- Star-collection achievements (§2 "Epic/Legendary via prestationer", see doc/plans/004, doc/plans/014) ---
     /**
-     * Star milestones for the `ach_stars_<N>` achievements. 160 levels x 3 stars = 480 max, on a
-     * widening-gap curve, deliberately kept off the [AvatarType] unlock milestones (12, 30, 55,
-     * 90, 135) so the big moments don't land in the same run. See doc/plans/004.
+     * The legacy `ach_stars_<N>` tiers of the plan-014 COLLECT_STARS ladder: 160 levels x 3 stars =
+     * 480 max, on a widening-gap curve, deliberately kept off the [AvatarType] unlock milestones (12,
+     * 30, 55, 90, 135) so the big moments don't land in the same run. The ladder's new 5 and 10 tiers
+     * (`ach_stars_5`/`ach_stars_10`) are NOT milestones here and also stay off the AvatarType
+     * thresholds. This is a getter (not an initializer) so BalanceConfig and AchievementLadders never
+     * depend on each other during init. See doc/plans/014.
      */
-    val STAR_ACHIEVEMENT_MILESTONES: List<Int> = listOf(20, 45, 75, 120, 175, 250, 350, 480)
+    val STAR_ACHIEVEMENT_MILESTONES: List<Int>
+        get() = ACHIEVEMENT_LADDERS.getValue(AchievementAction.COLLECT_STARS)
+            .filter { it.legacyId != null }
+            .map { it.target }
 
     /** The achievement id for a given [STAR_ACHIEVEMENT_MILESTONES] entry. */
     fun starAchievementId(stars: Int): String = "ach_stars_$stars"

@@ -1,5 +1,6 @@
 package se.lixo.app.ui.theme
 
+import se.lixo.app.domain.model.AchievementStrings
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.MathProblemType
@@ -15,8 +16,8 @@ object LixoStrings {
     const val APP_NAME = "Lixo"
 
     // Bottom Navigation
-    const val NAV_MAP = "Karta"
-    const val NAV_FRIENDS = "Kompisar"
+    const val NAV_LEARN = "Lär dig"
+    const val NAV_AVATAR = "Avatar"
     const val NAV_TROPHIES = "Troféer"
     const val NAV_PARENT_SETTINGS = "Förälder"
 
@@ -39,7 +40,7 @@ object LixoStrings {
     const val TUTORIAL_MANUAL_FALLBACK_BTN = "Läs själv"
     const val TUTORIAL_SKIP_BTN = "Hoppa över"
     const val TUTORIAL_REWARD_BANNER = "Bra jobbat! Du låste upp din första hatt."
-    const val TUTORIAL_CONTINUE_TO_MAP_BTN = "Gå till kartan"
+    const val TUTORIAL_CONTINUE_TO_MAP_BTN = "Börja lära dig"
 
     // Campaign Map
     const val MAP_STARS_LABEL = "stjärnor"
@@ -126,7 +127,14 @@ object LixoStrings {
 
     // Trophies
     const val TROPHIES_TITLE = "Troféer"
-    const val TROPHIES_SUBTITLE = "Klara utmaningar för att låsa upp sällsynta föremål."
+    const val TROPHIES_SUBTITLE = "Klara utmaningar. Få skatter!"
+
+    // Challenge cards (doc/plans/014)
+    const val CHALLENGE_READ_ALOUD_CD = "Läs upp"
+    const val CHALLENGE_DONE = "Klart!"
+    const val CHALLENGE_DONE_SPOKEN = "Klart! Du har tagit alla troféer här."
+    const val NEXT_CHALLENGE_TITLE = "Ny utmaning!"
+    const val NEXT_CHALLENGE_OK_BTN = "Okej!"
 
     // Kompisbyn (avatar map) & friends
     const val AVATAR_MAP_TITLE = "Kompisbyn"
@@ -204,13 +212,7 @@ object LixoStrings {
         EquipmentSlot.TAIL -> "Svans"
     }
 
-    fun rarityName(rarity: Rarity): String = when (rarity) {
-        Rarity.COMMON -> "Vanlig"
-        Rarity.UNCOMMON -> "Ovanlig"
-        Rarity.RARE -> "Sällsynt"
-        Rarity.EPIC -> "Episk"
-        Rarity.LEGENDARY -> "Legendarisk"
-    }
+    fun rarityName(rarity: Rarity): String = AchievementStrings.rarityNameSv(rarity)
 
     fun rarityNamePlural(rarity: Rarity): String = when (rarity) {
         Rarity.COMMON -> "Vanliga"
@@ -256,4 +258,7 @@ object LixoStrings {
         MathProblemType.MONEY -> "Pengar"
         MathProblemType.WORD_PROBLEM -> "Problemlösning"
     }
+
+    /** Accessibility label for a challenge progress indicator, e.g. "12 av 30". */
+    fun challengeProgressA11y(current: Int, target: Int): String = "$current av $target"
 }

@@ -55,5 +55,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(libs.gitlive.firebase.auth)
     androidTestImplementation(libs.kotlinx.datetime)
+    androidTestImplementation(libs.sqlite.bundled)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

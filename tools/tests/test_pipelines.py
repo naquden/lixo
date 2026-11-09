@@ -11,16 +11,23 @@ from tools.asset_pipeline.blender_avatar_pipeline import (
 )
 from tools.content_pipeline.upload_content import validate_bundle
 from tools.item_pipeline.generate_wardrobe_items import (
+    ACHIEVEMENT_REWARDS,
     EPIC_ACCENT_GOLD,
     EPIC_ACCENT_SILVER,
+    HANDMADE_ITEM_IDS,
     LEGENDARY_COLORWAYS,
     RARITIES,
+    REMOTE_ITEMS_PATH,
     SLOTS,
-    STAR_ACHIEVEMENT_REWARDS,
+    bundled_item_ids,
     generate_catalog,
+    generate_remote_legendaries,
     render_kotlin,
     slug_key,
 )
+from tools.item_pipeline.upload_wardrobe_items import build_writes, validate_remote_items
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 SEED_BUNDLE_PATH = (
     Path(__file__).resolve().parents[2]
@@ -222,6 +229,7 @@ class LixoPipelineAndSpecificationTests(unittest.TestCase):
         self.assertTrue(rules_file.exists())
         rules_text = rules_file.read_text(encoding="utf-8")
         self.assertIn("public_avatars", rules_text)
+        self.assertIn("match /wardrobe/{docId}", rules_text)
 
     def test_firebase_project_id_configured_across_all_configs(self) -> None:
         firebaserc = json.loads((self.repo_root / ".firebaserc").read_text(encoding="utf-8"))
@@ -402,17 +410,16 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
             self.assertEqual(len(set_pieces), 1, f"slot {slot.slot_id} must have exactly 1 set piece")
             self.assertEqual(set_pieces[0].rarity, "LEGENDARY")
 
-    def test_star_achievement_items_reserved(self) -> None:
+    def test_achievement_items_reserved(self) -> None:
         catalog = generate_catalog(per_slot=64, seed=42)
         all_items = [i for slot in SLOTS for i in catalog[slot.slot_id]]
 
-        stars_seen = [stars for stars, _rarity in STAR_ACHIEVEMENT_REWARDS]
-        self.assertEqual(stars_seen, sorted(set(stars_seen)), "milestones must be strictly ascending")
-        self.assertLessEqual(max(stars_seen), 480)
+        self.assertEqual(len(ACHIEVEMENT_REWARDS), 44)
+        ids_seen = [achievement_id for achievement_id, _rarity in ACHIEVEMENT_REWARDS]
+        self.assertEqual(len(ids_seen), len(set(ids_seen)), "achievement ids must be unique")
 
         matched_slots = []
-        for stars, rarity in STAR_ACHIEVEMENT_REWARDS:
-            achievement_id = f"ach_stars_{stars}"
+        for achievement_id, rarity in ACHIEVEMENT_REWARDS:
             matches = [i for i in all_items if i.unlock_achievement_id == achievement_id]
             self.assertEqual(len(matches), 1, f"expected exactly 1 item for {achievement_id}")
             item = matches[0]
@@ -421,7 +428,18 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
             self.assertFalse(item.is_weekly_streak_set_piece)
             matched_slots.append(item.slot.slot_id)
 
-        self.assertEqual(len(matched_slots), len(set(matched_slots)), "all 8 slots must differ")
+        reserved_count = len([i for i in all_items if i.unlock_achievement_id is not None])
+        self.assertEqual(reserved_count, 44)
+
+        star_ids = [achievement_id for achievement_id, _rarity in ACHIEVEMENT_REWARDS[:8]]
+        self.assertEqual(
+            star_ids,
+            [f"ach_stars_{n}" for n in (20, 45, 75, 120, 175, 250, 350, 480)],
+        )
+        self.assertEqual(matched_slots[:8], [slot.slot_id for slot in SLOTS[:8]])
+
+        for a, b in zip(matched_slots, matched_slots[1:]):
+            self.assertNotEqual(a, b, "consecutive achievement rewards must be in different slots")
 
     def test_rejects_per_slot_smaller_than_rarity_count(self) -> None:
         with self.assertRaises(ValueError):
@@ -489,6 +507,147 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
             style_key = slug_key(first_item.style_name)
             colorway_key = slug_key(first_item.colorway_name)
             self.assertIn(f'id = "item_{slot.slot_id}_{style_key}_{colorway_key}"', kotlin_source)
+
+
+def _one_valid_remote_item() -> dict:
+    items = generate_remote_legendaries({"version": 0, "items": []}, per_slot=1, seed=42)["items"]
+    return copy.deepcopy(items[0])
+
+
+class RemoteWardrobeItemTests(unittest.TestCase):
+    def test_remote_legendaries_deterministic(self) -> None:
+        result_a = generate_remote_legendaries({"version": 0, "items": []}, per_slot=2, seed=42)
+        result_b = generate_remote_legendaries({"version": 0, "items": []}, per_slot=2, seed=42)
+        self.assertEqual(result_a, result_b)
+        self.assertEqual(result_a["version"], 1)
+        self.assertEqual(len(result_a["items"]), 18)
+        for item in result_a["items"]:
+            self.assertEqual(item["rarity"], "LEGENDARY")
+        by_slot: dict = {}
+        for item in result_a["items"]:
+            by_slot.setdefault(item["slot"], 0)
+            by_slot[item["slot"]] += 1
+        for count in by_slot.values():
+            self.assertEqual(count, 2)
+
+    def test_remote_legendaries_ids_unique_and_not_bundled(self) -> None:
+        result = generate_remote_legendaries({"version": 0, "items": []}, per_slot=2, seed=42)
+        ids = [item["id"] for item in result["items"]]
+        self.assertEqual(len(ids), len(set(ids)))
+        bundled = bundled_item_ids()
+        self.assertTrue(set(ids).isdisjoint(bundled))
+        self.assertEqual(validate_remote_items(result, bundled), [])
+
+    def test_remote_legendaries_append_only(self) -> None:
+        first = generate_remote_legendaries({"version": 0, "items": []}, per_slot=2, seed=42)
+        second = generate_remote_legendaries(first, per_slot=1, seed=42)
+        self.assertEqual(second["version"], 2)
+        self.assertEqual(second["items"][: len(first["items"])], first["items"])
+        old_ids = {item["id"] for item in first["items"]}
+        new_ids = {item["id"] for item in second["items"][len(first["items"]) :]}
+        self.assertTrue(new_ids.isdisjoint(old_ids))
+
+    def test_upload_validator_rejects_bad_items(self) -> None:
+        bundled = bundled_item_ids()
+
+        bundled_id_item = _one_valid_remote_item()
+        bundled_id_item["id"] = "item_hat_weekly_hero"
+        errors = validate_remote_items({"version": 1, "items": [bundled_id_item]}, bundled)
+        self.assertTrue(any("item_hat_weekly_hero" in e for e in errors))
+
+        style_item = _one_valid_remote_item()
+        style_item["styleIndex"] = 9
+        errors = validate_remote_items({"version": 1, "items": [style_item]}, bundled)
+        self.assertTrue(any(style_item["id"] in e for e in errors))
+
+        slot_item = _one_valid_remote_item()
+        slot_item["slot"] = "CAPE"
+        errors = validate_remote_items({"version": 1, "items": [slot_item]}, bundled)
+        self.assertTrue(any(slot_item["id"] in e for e in errors))
+
+        ach_item = _one_valid_remote_item()
+        ach_item["unlockAchievementId"] = "ach_x"
+        errors = validate_remote_items({"version": 1, "items": [ach_item]}, bundled)
+        self.assertTrue(any(ach_item["id"] in e for e in errors))
+
+        star_item = _one_valid_remote_item()
+        star_item["unlockStarRequirement"] = 5
+        errors = validate_remote_items({"version": 1, "items": [star_item]}, bundled)
+        self.assertTrue(any(star_item["id"] in e for e in errors))
+
+        set_piece_item = _one_valid_remote_item()
+        set_piece_item["isWeeklyStreakSetPiece"] = True
+        errors = validate_remote_items({"version": 1, "items": [set_piece_item]}, bundled)
+        self.assertTrue(any(set_piece_item["id"] in e for e in errors))
+
+        mesh_item = _one_valid_remote_item()
+        mesh_item["meshAssetPath"] = "x.glb"
+        errors = validate_remote_items({"version": 1, "items": [mesh_item]}, bundled)
+        self.assertTrue(any(mesh_item["id"] in e for e in errors))
+
+        dup_a = _one_valid_remote_item()
+        dup_b = copy.deepcopy(dup_a)
+        errors = validate_remote_items({"version": 1, "items": [dup_a, dup_b]}, bundled)
+        self.assertTrue(any(dup_a["id"] in e for e in errors))
+
+        blank_name_item = _one_valid_remote_item()
+        blank_name_item["nameSv"] = "  "
+        errors = validate_remote_items({"version": 1, "items": [blank_name_item]}, bundled)
+        self.assertTrue(any(blank_name_item["id"] in e for e in errors))
+
+    def test_build_writes_meta_last(self) -> None:
+        base = _one_valid_remote_item()
+        used_ids: set = set()
+        items = []
+        for i in range(450):
+            item = copy.deepcopy(base)
+            item["id"] = f"item_hat_synthetic_{i}"
+            used_ids.add(item["id"])
+            items.append(item)
+        remote = {"version": 3, "items": items}
+        writes = build_writes(remote, "projects/p/databases/d/documents")
+
+        self.assertEqual(len(writes), 4)
+        chunk_writes = writes[:3]
+        meta_write = writes[3]
+
+        self.assertEqual(meta_write["update"]["name"], "projects/p/databases/d/documents/wardrobe/meta")
+        self.assertEqual(meta_write["update"]["fields"]["chunkCount"]["integerValue"], "3")
+        self.assertEqual(meta_write["update"]["fields"]["version"]["integerValue"], "3")
+
+        for i, write in enumerate(chunk_writes):
+            self.assertEqual(write["update"]["name"], f"projects/p/databases/d/documents/wardrobe/chunk_{i}")
+            values = write["update"]["fields"]["items"]["arrayValue"]["values"]
+            for v in values:
+                self.assertIn("stringValue", v)
+                json.loads(v["stringValue"])  # round-trips
+
+    def test_remote_item_keys_match_kotlin_wardrobe_item(self) -> None:
+        models_text = (REPO_ROOT / "composeApp/src/commonMain/kotlin/se/lixo/app/domain/model/Models.kt").read_text(
+            encoding="utf-8"
+        )
+        match = re.search(r"data class WardrobeItem\(\n(.*?)\n\)", models_text, re.S)
+        self.assertIsNotNone(match)
+        field_names = set(re.findall(r"val (\w+):", match.group(1)))
+
+        item = _one_valid_remote_item()
+        self.assertEqual(set(item.keys()), field_names)
+
+    def test_handmade_ids_match_repositories_kt(self) -> None:
+        repo_text = (
+            REPO_ROOT / "composeApp/src/commonMain/kotlin/se/lixo/app/data/repository/Repositories.kt"
+        ).read_text(encoding="utf-8")
+        start = repo_text.index("fun buildSeedWardrobeCatalog")
+        end = repo_text.index("items.addAll(GENERATED_WARDROBE_ITEMS)", start)
+        section = repo_text[start:end]
+        ids = set(re.findall(r'id = "(item_[a-z0-9_]+)"', section))
+        ids.add("item_hat_starter_explorer")
+        self.assertEqual(ids, set(HANDMADE_ITEM_IDS))
+
+    def test_checked_in_remote_file_is_valid(self) -> None:
+        remote = json.loads(REMOTE_ITEMS_PATH.read_text(encoding="utf-8"))
+        errors = validate_remote_items(remote, bundled_item_ids())
+        self.assertEqual(errors, [])
 
 
 if __name__ == "__main__":

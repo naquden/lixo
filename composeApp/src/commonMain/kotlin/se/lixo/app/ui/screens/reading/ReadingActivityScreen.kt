@@ -833,6 +833,7 @@ fun ReadingActivityScreen(
                 onEquipItem = onEquipItem,
                 onSelectAvatar = onSelectAvatar,
                 onFinished = { celebrationSequenceFinished = true },
+                ttsEngine = ttsEngine,
                 modifier = Modifier.fillMaxSize()
             )
         }

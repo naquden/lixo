@@ -87,7 +87,13 @@ class ProfilePersistenceTest {
     }
 
     private fun newRepo(isDebugBuild: Boolean) =
-        LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = isDebugBuild, profileStore = store)
+        LixoRepository(
+            FakeCloudGateway(),
+            lexiconCache = null,
+            isDebugBuild = isDebugBuild,
+            profileStore = store,
+            wardrobeCache = null
+        )
 
     @Test
     fun releaseColdStart_keepsCreatedProfile() {

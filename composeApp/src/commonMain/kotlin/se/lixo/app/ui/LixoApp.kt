@@ -114,6 +114,7 @@ fun LixoApp(
 
     LaunchedEffect(Unit) {
         repository.loadCachedLexicon()
+        repository.loadCachedWardrobe()
         repository.syncCurriculumFromCloud()
     }
 
@@ -336,14 +337,14 @@ fun LixoApp(
                         LixoBottomNavBar(
                             items = listOf(
                                 LixoNavItem(
-                                    icon = LixoIcons.Home,
-                                    label = LixoStrings.NAV_MAP,
+                                    icon = LixoIcons.LearnBook,
+                                    label = LixoStrings.NAV_LEARN,
                                     selected = currentDestination == LixoMainDestination.MAP_HOME,
                                     onClick = { currentDestination = LixoMainDestination.MAP_HOME }
                                 ),
                                 LixoNavItem(
                                     icon = LixoIcons.Friends,
-                                    label = LixoStrings.NAV_FRIENDS,
+                                    label = LixoStrings.NAV_AVATAR,
                                     selected = currentDestination == LixoMainDestination.AVATAR_MAP ||
                                         currentDestination == LixoMainDestination.WARDROBE,
                                     onClick = { currentDestination = LixoMainDestination.AVATAR_MAP }
@@ -413,7 +414,7 @@ fun LixoApp(
                                 )
                             }
                             LixoMainDestination.TROPHIES -> {
-                                TrophiesScreen(achievements = AchievementEngine.withProfileProgress(achievements, activeProfile))
+                                TrophiesScreen(achievements = AchievementEngine.withProfileProgress(achievements, activeProfile), ttsEngine = ttsEngine)
                             }
                             LixoMainDestination.PARENT_SETTINGS -> {
                                 ParentGateAndDashboardScreen(

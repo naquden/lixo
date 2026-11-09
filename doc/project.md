@@ -77,7 +77,7 @@ Reserv när AI-lyssning inte räcker (nekad mikrofon, bakgrundsljud, flaky STT, 
 | **Ger** | Kampanjframsteg, dagligt mål, streak |
 | **Reducerat** | Högst 1 stjärna |
 | **Ger inte** | Present, uttalsprestationer, ord-logg, tidsuppdrag |
-| **Minsta tid** | Knappen inaktiv tills rimlig lästid passerat (baserat på textlängd); synlig "laddning" |
+| **Minsta tid** | Knappen inaktiv i en fast tid på 15 s (`BalanceConfig.MANUAL_MODE_UNLOCK_SECONDS`), oavsett textlängd; synlig "laddning"-nedräkning |
 | **Lägesval** | Väljs vid start; byte mitt i tillåts inte |
 | **Förälder** | Ingen bekräftelse krävs |
 

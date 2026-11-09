@@ -34,4 +34,18 @@ val MIGRATION_5_6: Migration = object : Migration(5, 6) {
     }
 }
 
-val LIXO_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+/**
+ * Adds remote-wardrobe-item support (`doc/plans/015-remote-wardrobe-items.md`).
+ * `appVersionCode` on `wardrobe_catalog_meta` was added by plan 018 while v7 was still unreleased.
+ */
+val MIGRATION_6_7: Migration = object : Migration(6, 7) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE `wardrobe_items` ADD COLUMN `retired` INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE `wardrobe_items` ADD COLUMN `minAppVersionCode` INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `wardrobe_catalog_meta` (`singletonId` INTEGER NOT NULL, `version` INTEGER NOT NULL, `appVersionCode` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`singletonId`))"
+        )
+    }
+}
+
+val LIXO_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)

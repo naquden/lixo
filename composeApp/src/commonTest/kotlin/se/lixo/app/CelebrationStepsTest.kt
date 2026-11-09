@@ -2,8 +2,10 @@ package se.lixo.app
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import se.lixo.app.domain.engine.GiftRollOutcome
 import se.lixo.app.domain.engine.LevelCompletionOutcome
+import se.lixo.app.domain.model.Achievement
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
@@ -28,10 +30,22 @@ class CelebrationStepsTest {
         subjectTheme = Subject.SWEDISH
     )
 
+    private fun achievement(id: String, rewardItemId: String) = Achievement(
+        id = id,
+        titleSv = "T $id",
+        descriptionSv = "D $id",
+        rarity = Rarity.UNCOMMON,
+        requiresAiMode = false,
+        targetCount = 3,
+        rewardItemId = rewardItemId
+    )
+
     private fun outcome(
         rewards: List<UnlockedReward> = emptyList(),
         avatars: Set<AvatarType> = emptySet(),
-        gift: GiftRollOutcome? = null
+        gift: GiftRollOutcome? = null,
+        nextChallenges: Map<String, Achievement> = emptyMap(),
+        ownedRewardNext: List<Achievement> = emptyList()
     ) = LevelCompletionOutcome(
         updatedProfile = ChildProfile(id = "p", displayName = "T"),
         updatedLevelProgress = LevelProgress(
@@ -47,7 +61,9 @@ class CelebrationStepsTest {
         newlyUnlockedAvatars = avatars,
         newlyUnlockedRewards = rewards,
         giftOutcome = gift,
-        streakIncrementedToday = false
+        streakIncrementedToday = false,
+        nextChallengeByRewardItemId = nextChallenges,
+        ownedRewardNextChallenges = ownedRewardNext
     )
 
     @Test
@@ -177,6 +193,89 @@ class CelebrationStepsTest {
             ),
             steps
         )
+    }
+
+    @Test
+    fun achievementChest_followedByNextChallenge() {
+        val a = item("a")
+        val next = achievement("ach_read_story_3", "reward_next")
+        val steps = buildCelebrationSteps(
+            outcome(
+                rewards = listOf(UnlockedReward(a, RewardSource.ACHIEVEMENT)),
+                nextChallenges = mapOf(a.id to next)
+            )
+        )
+        assertEquals(
+            listOf(
+                CelebrationStep.Stars,
+                CelebrationStep.Chest(a, RewardSource.ACHIEVEMENT),
+                CelebrationStep.EquipPrompt(a),
+                CelebrationStep.NextChallenge(next)
+            ),
+            steps
+        )
+    }
+
+    @Test
+    fun finalTier_noNextChallenge() {
+        val a = item("a")
+        val steps = buildCelebrationSteps(
+            outcome(
+                rewards = listOf(UnlockedReward(a, RewardSource.ACHIEVEMENT)),
+                nextChallenges = emptyMap()
+            )
+        )
+        assertEquals(
+            listOf(
+                CelebrationStep.Stars,
+                CelebrationStep.Chest(a, RewardSource.ACHIEVEMENT),
+                CelebrationStep.EquipPrompt(a)
+            ),
+            steps
+        )
+    }
+
+    @Test
+    fun nonAchievementReward_neverNextChallenge() {
+        val a = item("a")
+        val next = achievement("ach_read_story_3", "reward_next")
+        val steps = buildCelebrationSteps(
+            outcome(
+                rewards = listOf(UnlockedReward(a, RewardSource.LEVEL)),
+                nextChallenges = mapOf(a.id to next)
+            )
+        )
+        assertEquals(
+            listOf(
+                CelebrationStep.Stars,
+                CelebrationStep.Chest(a, RewardSource.LEVEL),
+                CelebrationStep.EquipPrompt(a)
+            ),
+            steps
+        )
+    }
+
+    @Test
+    fun ownedAchievementReward_stillShowsNextChallenge() {
+        val next = achievement("ach_read_story_3", "reward_next")
+        val steps = buildCelebrationSteps(outcome(ownedRewardNext = listOf(next)))
+        assertEquals(
+            listOf(CelebrationStep.Stars, CelebrationStep.NextChallenge(next)),
+            steps
+        )
+    }
+
+    @Test
+    fun ownedRewardNextChallenge_beforeAvatarPrompts() {
+        val next = achievement("ach_read_story_3", "reward_next")
+        val steps = buildCelebrationSteps(
+            outcome(ownedRewardNext = listOf(next), avatars = setOf(AvatarType.DOG))
+        )
+        val nextIndex = steps.indexOf(CelebrationStep.NextChallenge(next))
+        val avatarIndex = steps.indexOf(CelebrationStep.AvatarPrompt(AvatarType.DOG))
+        assertTrue(nextIndex in steps.indices)
+        assertTrue(avatarIndex in steps.indices)
+        assertTrue(nextIndex < avatarIndex)
     }
 
     @Test

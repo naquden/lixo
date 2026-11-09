@@ -49,6 +49,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -228,23 +232,34 @@ fun TtsIconButton(
     ttsEngine: TextToSpeechEngine,
     languageIso: String = "sv-SE",
     modifier: Modifier = Modifier,
-    tint: Color = LixoColors.Blue
+    tint: Color = LixoColors.Blue,
+    size: Dp = 36.dp,
+    contentDescription: String? = null
 ) {
+    val semanticsModifier = if (contentDescription != null) {
+        Modifier.semantics {
+            this.contentDescription = contentDescription
+            role = Role.Button
+        }
+    } else {
+        Modifier
+    }
     Box(
         modifier = modifier
-            .size(36.dp)
+            .size(size)
             .clip(CircleShape)
             .background(LixoColors.BlueTint)
             .border(1.5.dp, LixoColors.BlueBorder, CircleShape)
             .clickable {
                 ttsEngine.speak(textToSpeak, languageIso = languageIso)
-            },
+            }
+            .then(semanticsModifier),
         contentAlignment = Alignment.Center
     ) {
         LixoIcon(
             icon = LixoIcons.Speaker,
             tint = tint,
-            size = 18.dp
+            size = size / 2
         )
     }
 }

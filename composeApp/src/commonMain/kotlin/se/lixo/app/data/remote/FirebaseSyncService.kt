@@ -116,6 +116,15 @@ interface CloudSyncGateway {
     suspend fun fetchTasksForCourse(courseId: String): List<HomeworkTask>
     suspend fun fetchLexiconMeta(): LexiconMeta?
     suspend fun fetchLexiconEntries(chunkCount: Int): List<DictionaryEntry>
+    suspend fun fetchWardrobeMeta(): WardrobeMeta?
+
+    /**
+     * Each item is returned as a compact JSON-encoded string, not a [kotlinx.serialization.json.JsonElement]:
+     * GitLive's `DocumentSnapshot.data<T>()` decodes through its own `FirebaseDecoder`, which can't decode
+     * `JsonElement` (that needs the `Json` format specifically), so a `List<JsonElement>` would throw on
+     * every call and the catch below would silently turn every sync into an empty list.
+     */
+    suspend fun fetchWardrobeItems(chunkCount: Int): List<String>
 
     fun buildEmailLinkActionCodeSettings(): ActionCodeSettings
     suspend fun sendSignInLinkToEmail(email: String): Result<Unit>
@@ -134,6 +143,15 @@ data class LexiconMeta(val version: Int, val chunkCount: Int)
 
 @Serializable
 private data class LexiconChunkDoc(val entries: List<DictionaryEntry>)
+
+@Serializable
+data class WardrobeMeta(val version: Int, val chunkCount: Int)
+
+// Each entry is a compact JSON-encoded WardrobeItem string, not a structured field: GitLive
+// decodes via its own FirebaseDecoder, which cannot decode kotlinx.serialization.json.JsonElement,
+// and a typed doc would fail the whole chunk's decode on a single bad item/enum value.
+@Serializable
+private data class WardrobeChunkDoc(val items: List<String> = emptyList())
 
 @Serializable
 private data class FirestorePublicAvatarDoc(
@@ -195,8 +213,9 @@ class FirebaseSyncService(
     }
 
     override suspend fun fetchRemoteCourses(): List<Course> {
-        // Static curriculum (`courses`, `levels`, `tasks`, `lexicon`) is public read-only in Firestore
-        // with zero PII uploaded, so it can be downloaded even when user account is in Local-Only mode.
+        // Static curriculum (`courses`, `levels`, `tasks`, `lexicon`, `wardrobe`) is public
+        // read-only in Firestore with zero PII uploaded, so it can be downloaded even when user
+        // account is in Local-Only mode.
         return try {
             val snapshot = Firebase.firestore.collection("courses").get()
             snapshot.documents.map { it.data<Course>() }
@@ -240,6 +259,26 @@ class FirebaseSyncService(
             (0 until chunkCount).flatMap { i ->
                 Firebase.firestore.collection("lexicon").document("chunk_$i").get()
                     .data<LexiconChunkDoc>().entries
+            }
+        } catch (_: Throwable) {
+            emptyList()
+        }
+    }
+
+    override suspend fun fetchWardrobeMeta(): WardrobeMeta? {
+        return try {
+            val snap = Firebase.firestore.collection("wardrobe").document("meta").get()
+            if (snap.exists) snap.data<WardrobeMeta>() else null
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    override suspend fun fetchWardrobeItems(chunkCount: Int): List<String> {
+        return try {
+            (0 until chunkCount).flatMap { i ->
+                Firebase.firestore.collection("wardrobe").document("chunk_$i").get()
+                    .data<WardrobeChunkDoc>().items
             }
         } catch (_: Throwable) {
             emptyList()

@@ -17,6 +17,14 @@ expect class PlatformFeatureFlags() {
     val isOnDeviceSttSupported: Boolean
     val isNative3DSceneViewSupported: Boolean
     val isDebugBuild: Boolean
+
+    /**
+     * The installed app's version code: Android `versionCode` / iOS `CFBundleVersion`, or `0`
+     * when unknown (e.g. no Android `Context`, or an unparsable iOS bundle value). Used by
+     * [se.lixo.app.domain.engine.RemoteWardrobeValidator] to skip remote items that need a newer
+     * app build (`doc/plans/015-remote-wardrobe-items.md`).
+     */
+    val appVersionCode: Int
 }
 
 enum class SttEngineState {
@@ -79,6 +87,14 @@ interface TextToSpeechEngine {
 
     fun speak(text: String, languageIso: String = "sv-SE", speechRate: Float = 0.92f)
     fun stop()
+}
+
+/** No-op [TextToSpeechEngine], used as the default where a real engine isn't wired in (e.g. tests). */
+object NoOpTextToSpeechEngine : TextToSpeechEngine {
+    override val isAvailable: StateFlow<Boolean> = MutableStateFlow(false)
+    override val isSpeaking: StateFlow<Boolean> = MutableStateFlow(false)
+    override fun speak(text: String, languageIso: String, speechRate: Float) {}
+    override fun stop() {}
 }
 
 /** Handles the system back gesture/button where the platform has one (no-op on iOS). */

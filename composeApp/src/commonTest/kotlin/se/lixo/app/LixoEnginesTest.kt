@@ -495,6 +495,43 @@ class LixoEnginesTest {
     }
 
     @Test
+    fun manualReadingMode_unlocksAfterExactly15Seconds() {
+        val shortText = "Katten Lixo läser."
+        val longText = List(200) { "ord" }.joinToString(" ")
+
+        for (storyText in listOf(shortText, longText)) {
+            var session = alignmentEngine.startSession(
+                storyText = storyText,
+                mode = ReadingMode.MANUAL,
+                isTimedChallengeRequested = false
+            )
+            assertEquals(
+                15_000L,
+                session.manualModeMinRequiredMillis,
+                "Unlock delay must be a fixed 15s regardless of story length"
+            )
+
+            session = alignmentEngine.onTick(
+                state = session,
+                deltaMillis = 14_999L,
+                millisSinceLastWordAdvance = 0L
+            )
+            assertFalse(session.isManualCompleteButtonEnabled)
+            assertEquals(1, session.manualModeRemainingSeconds)
+            assertFalse(alignmentEngine.tryCompleteManualReading(session).isCompleted)
+
+            session = alignmentEngine.onTick(
+                state = session,
+                deltaMillis = 1L,
+                millisSinceLastWordAdvance = 0L
+            )
+            assertTrue(session.isManualCompleteButtonEnabled)
+            assertEquals(0, session.manualModeRemainingSeconds)
+            assertTrue(alignmentEngine.tryCompleteManualReading(session).isCompleted)
+        }
+    }
+
+    @Test
     fun mathEngine_revealsGrowthMindsetHintsOnWrongAttempt() {
         val problem = MathProblem(
             id = "mp_clock_1",

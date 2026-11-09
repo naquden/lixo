@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Firestore Security Rules for Lixo (project.md §3 & §6)
-// - Static curriculum content (`courses`, `levels`, `tasks`, `lexicon`) is public read-only.
+// - Static curriculum content (`courses`, `levels`, `tasks`, `lexicon`, `wardrobe`) is public read-only.
 // - Optional public friend profiles (`public_avatars/{userId}`) contain ONLY anonymous username,
 //   avatar appearance, and star count (zero PII, zero chat/DM). Users can only write/delete their own document.
 // - Child homework progress, struggled words logs, and math error logs are NEVER stored in Firestore
@@ -27,6 +27,11 @@ service cloud.firestore {
     }
 
     match /lexicon/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /wardrobe/{docId} {
       allow read: if true;
       allow write: if false;
     }

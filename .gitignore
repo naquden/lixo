@@ -49,3 +49,7 @@ Desktop.ini
 
 # Generated screenshots
 screenshots/
+
+# Python bytecode
+__pycache__/
+*.pyc

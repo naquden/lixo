@@ -4,6 +4,9 @@ import android.graphics.Bitmap
 import android.os.Environment
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -24,14 +27,16 @@ import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.platform.AndroidPlatformContext
+import se.lixo.app.platform.NoOpTextToSpeechEngine
 import se.lixo.app.ui.components.celebration.CelebrationSequenceHost
 import se.lixo.app.ui.screens.social.TrophiesScreen
 import se.lixo.app.ui.theme.LixoTheme
 
 /**
- * Verifies feature 004 (achievement tracking, doc/plans/004-achievement-tracking.md) against the
- * real [TrophiesScreen]/[ProgressionAndGiftEngine]/[CelebrationSequenceHost]: a fresh profile's
- * Trophies screen shows 0 progress for every achievement, and an achievement unlock shows a
+ * Verifies feature 004 (achievement tracking, doc/plans/004-achievement-tracking.md), tiered into
+ * ladders by doc/plans/014-achievement-ladders.md, against the real
+ * [TrophiesScreen]/[ProgressionAndGiftEngine]/[CelebrationSequenceHost]: a fresh profile's
+ * Trophies screen shows 0 progress for every challenge chain, and an achievement unlock shows a
  * "Prestation: ..." chest.
  */
 class AchievementTrackingTest {
@@ -71,23 +76,36 @@ class AchievementTrackingTest {
 
         compose.setContent {
             LixoTheme {
-                TrophiesScreen(achievements = AchievementEngine.withProfileProgress(definitions, profileState.value))
+                TrophiesScreen(
+                    achievements = AchievementEngine.withProfileProgress(definitions, profileState.value),
+                    ttsEngine = NoOpTextToSpeechEngine
+                )
             }
         }
         compose.waitForIdle()
 
-        for (text in listOf("Blixtläsaren", "Stjärnfrö", "0/5", "0/15", "0/20", "0/480")) {
+        for (text in listOf("Läs 1 saga", "Samla 5 stjärnor")) {
             assertTrue(
                 "Expected to find \"$text\" on a fresh profile's Trophies screen",
                 compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
             )
         }
-        shot("verify_004_trophies_zero")
+        val challengeCardTag = SemanticsMatcher("tag") {
+            it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("challenge_") == true
+        }
+        assertTrue(
+            "Expected 9 challenge_* cards, one per chain",
+            compose.onAllNodes(challengeCardTag).fetchSemanticsNodes().size == 9
+        )
+        shot("verify_014_trophies_zero")
 
-        val partialProfile = freshProfile.copy(achievementProgress = mapOf("ach_math_clock_money" to 6))
+        val partialProfile = freshProfile.copy(
+            achievementProgress = mapOf("chain:FIRST_TRY" to 12),
+            unlockedAchievementIds = setOf("ach_first_try_10")
+        )
         compose.runOnIdle { profileState.value = partialProfile }
         compose.waitForIdle()
-        assertTrue(compose.onAllNodesWithText("6/15", substring = true).fetchSemanticsNodes().isNotEmpty())
+        assertTrue(compose.onAllNodesWithText("12 / 30", substring = true).fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test
@@ -96,10 +114,15 @@ class AchievementTrackingTest {
         val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
         val mathLevel = levels.first { it.subject == Subject.MATH }
         val achievements = LixoRepository.buildSeedAchievements()
+        // Pre-unlock every tier except ach_math_clock_money/ach_clock_money_40, so this run's
+        // extra first-try clock/money answers unlock exactly ach_math_clock_money (13 + 2 = 15)
+        // and the celebration shows its "Prestation: ..." chest, not some lower, earlier tier.
+        val allOtherIds = achievements.map { it.id }.toSet() - setOf("ach_math_clock_money", "ach_clock_money_40")
         val profile = ChildProfile(
             id = "p_verify_ach",
             displayName = "Saga",
-            achievementProgress = mapOf("ach_math_clock_money" to 13)
+            achievementProgress = mapOf("ach_math_clock_money" to 13, "chain:CLOCK_MONEY" to 13),
+            unlockedAchievementIds = allOtherIds
         )
         val today = DailyActivityRecord(profileId = "p_verify_ach", calendarDateIso = "2026-11-01")
 
@@ -136,7 +159,8 @@ class AchievementTrackingTest {
                     outcome = outcome,
                     starsEarned = 3,
                     onEquipItem = {},
-                    onSelectAvatar = {}
+                    onSelectAvatar = {},
+                    ttsEngine = NoOpTextToSpeechEngine
                 )
             }
         }
@@ -144,6 +168,6 @@ class AchievementTrackingTest {
         compose.waitUntil(10_000) {
             compose.onAllNodesWithText("Prestation: Tid- & Pengamästaren").fetchSemanticsNodes().isNotEmpty()
         }
-        shot("verify_004_prestation_chest")
+        shot("verify_014_prestation_chest")
     }
 }

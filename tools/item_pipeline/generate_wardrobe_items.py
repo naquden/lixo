@@ -21,9 +21,9 @@ feature. Builds `--per-slot` items for each of the 9 EquipmentSlot values, with:
     STAR_UNLOCKABLE_UNCOMMON_CAP) is star-unlockable, assigned one global, unique, widening-gap
     threshold curve from ~31 to 250 stars (see _global_star_unlock_thresholds), interleaved
     round-robin across slots with all COMMON items unlocking before any UNCOMMON item.
-  - 8 RARE/EPIC/LEGENDARY items (one per slot, see STAR_ACHIEVEMENT_REWARDS) are reserved as
-    star-collection achievement rewards (`unlockAchievementId = "ach_stars_<N>"`), matching
-    BalanceConfig.STAR_ACHIEVEMENT_MILESTONES (see doc/plans/004).
+  - 44 achievement reward items (see ACHIEVEMENT_REWARDS) are reserved for the plan-014 achievement
+    ladders (`unlockAchievementId = "ach_<chain>_<target>"`), round-robin across slots starting at
+    SLOTS[i % len(SLOTS)] (see doc/plans/014; the 8 original star-collection ids keep SLOTS[0..7]).
 
 Item ids are content-derived and stable: `item_<slot_id>_<styleKey>_<colorwayKey>`, where each key
 is `slug_key()` of the Swedish display string (lowercase, å/ä/ö -> a/a/o, all non-[a-z0-9] removed),
@@ -37,10 +37,16 @@ Run with --dry-run to print per-slot rarity/style counts without writing the Kot
 This is item/gear data, not curriculum content -- it is unrelated to
 tools/content_pipeline/generate_content.py and seed_campaign_content.json, which this script
 never touches.
+
+Remote wardrobe items (doc/plans/015-remote-wardrobe-items.md): `--remote-legendaries N`
+appends N new LEGENDARY items per slot to tools/item_pipeline/remote_items/remote_wardrobe_items.json
+(the source-of-truth for `tools/item_pipeline/upload_wardrobe_items.py`), bumping its `version`.
+It never writes/touches the bundled `--out` Kotlin file or GeneratedWardrobeCatalog.kt.
 """
 from __future__ import annotations
 
 import argparse
+import json
 import random
 import re
 from collections import Counter
@@ -172,6 +178,22 @@ LEGENDARY_COLORWAYS: Dict[str, Tuple[int, int]] = {
 ALL_COLORWAY_NAMES = list(COLORWAYS.keys())
 ALL_LEGENDARY_COLORWAY_NAMES = list(LEGENDARY_COLORWAYS.keys())
 
+REMOTE_ITEMS_PATH = REPO_ROOT / "tools" / "item_pipeline" / "remote_items" / "remote_wardrobe_items.json"
+
+# Handmade wardrobe items in LixoRepository.buildSeedWardrobeCatalog (Repositories.kt) that are
+# not produced by generate_catalog() below. Must be kept in sync with that function -- see
+# tools/tests/test_pipelines.py:test_handmade_ids_match_repositories_kt.
+HANDMADE_ITEM_IDS = frozenset(
+    {
+        "item_hat_starter_explorer",
+        "item_hand_right_math_sword_1",
+        "item_shoulders_back_sv_cape_1",
+        "item_hat_weekly_hero",
+        "item_armor_shirt_crystal_voice",
+        "item_hand_right_clock_money",
+    }
+)
+
 _TRANSLITERATION = str.maketrans({"å": "a", "ä": "a", "ö": "o", "é": "e", "ü": "u"})
 
 
@@ -187,6 +209,20 @@ def slug_key(display: str) -> str:
     if not key:
         raise ValueError(f"Empty id key for {display!r}")
     return key
+
+
+def item_identity(slot: "SlotDef", style_index: int, colorway_name: str) -> Tuple[str, str, str, str]:
+    """Returns (item_id, name_sv, description_sv, mesh_node_name) for a (slot, style, colorway)
+    combo, using the exact formulas generate_items_for_slot has always used. Output must stay
+    byte-identical for the existing bundled catalog (test_ids_names_rarities_unchanged)."""
+    style_name = slot.styles[style_index]
+    style_key = slug_key(style_name)
+    colorway_key = slug_key(colorway_name)
+    item_id = f"item_{slot.slot_id}_{style_key}_{colorway_key}"
+    name_sv = f"{colorway_name} {style_name}"
+    description_sv = f"En {style_name.lower()} i {colorway_name.lower()} nyans, upplåsbar för alla avatarer i Lixo."
+    mesh_node_name = f"{slot.socket_name}_{style_key}_{colorway_key}"
+    return item_id, name_sv, description_sv, mesh_node_name
 
 
 def _assert_unique_keys() -> None:
@@ -409,13 +445,7 @@ def generate_items_for_slot(
             is_weekly_streak_set_piece = True
             legendary_set_piece_assigned = True
 
-        style_name = slot.styles[style_index]
-        style_key = slug_key(style_name)
-        colorway_key = slug_key(colorway_name)
-        item_id = f"item_{slot.slot_id}_{style_key}_{colorway_key}"
-        name_sv = f"{colorway_name} {style_name}"
-        description_sv = f"En {style_name.lower()} i {colorway_name.lower()} nyans, upplåsbar för alla avatarer i Lixo."
-        mesh_node_name = f"{slot.socket_name}_{style_key}_{colorway_key}"
+        item_id, name_sv, description_sv, mesh_node_name = item_identity(slot, style_index, colorway_name)
 
         # Per-item rng for purely-visual choices (e.g. the EPIC gold/silver accent) -- seeded from
         # a string so it is deterministic across runs regardless of PYTHONHASHSEED, and never
@@ -433,7 +463,7 @@ def generate_items_for_slot(
                 slot=slot,
                 rarity=rarity,
                 style_index=style_index,
-                style_name=style_name,
+                style_name=slot.styles[style_index],
                 colorway_name=colorway_name,
                 primary_color_hex=primary_hex,
                 secondary_color_hex=secondary_hex,
@@ -441,11 +471,11 @@ def generate_items_for_slot(
                 ornament=ornament,
                 scale_multiplier=scale_multiplier,
                 unlock_star_requirement=unlock_star_requirement,
-                # unlock_achievement_id defaults to None here; `_assign_star_achievement_items`
-                # (post-pass, like `_assign_global_star_thresholds`) reserves exactly 8 of these
-                # items -- one per STAR_ACHIEVEMENT_REWARDS milestone -- for the star-collection
-                # achievements (doc/plans/004). The other 4 achievement ids are handwritten and
-                # already tied to a specific handmade or generated-by-id reward item.
+                # unlock_achievement_id defaults to None here; `_assign_achievement_items`
+                # (post-pass, like `_assign_global_star_thresholds`) reserves exactly 44 of these
+                # items -- one per ACHIEVEMENT_REWARDS entry -- for the plan-014 achievement
+                # ladders (doc/plans/014). The other 4 achievement ids are handwritten and
+                # already tied to a specific handmade reward item.
                 unlock_achievement_id=None,
                 is_weekly_streak_set_piece=is_weekly_streak_set_piece,
                 mesh_node_name=mesh_node_name,
@@ -483,46 +513,90 @@ def _assign_global_star_thresholds(catalog: Dict[str, List[GeneratedItem]]) -> N
         item.unlock_star_requirement = threshold
 
 
-# The 8 star-collection achievement reward items (doc/plans/004). Must match
-# BalanceConfig.STAR_ACHIEVEMENT_MILESTONES.
-STAR_ACHIEVEMENT_REWARDS: List[Tuple[int, str]] = [
-    (20, "RARE"),
-    (45, "RARE"),
-    (75, "RARE"),
-    (120, "EPIC"),
-    (175, "EPIC"),
-    (250, "EPIC"),
-    (350, "LEGENDARY"),
-    (480, "LEGENDARY"),
+# The 44 non-handmade achievement ladder tiers (doc/plans/014-achievement-ladders.md), in ladder
+# order, each reserving one generated catalog item. Must match AchievementLadders.kt's
+# ACHIEVEMENT_LADDERS minus HANDMADE_ACHIEVEMENT_IDS (ach_speed_reader_5, ach_pronunciation_master_10,
+# ach_math_clock_money, ach_weekly_streak_7 are handmade and excluded here). The first 8 entries are
+# the pre-existing ach_stars_20..480 rewards and must stay in this exact order/rarity so their items
+# stay byte-identical.
+ACHIEVEMENT_REWARDS: List[Tuple[str, str]] = [
+    ("ach_stars_20", "RARE"),
+    ("ach_stars_45", "RARE"),
+    ("ach_stars_75", "RARE"),
+    ("ach_stars_120", "EPIC"),
+    ("ach_stars_175", "EPIC"),
+    ("ach_stars_250", "EPIC"),
+    ("ach_stars_350", "LEGENDARY"),
+    ("ach_stars_480", "LEGENDARY"),
+    ("ach_read_story_1", "COMMON"),
+    ("ach_read_story_3", "UNCOMMON"),
+    ("ach_read_story_8", "RARE"),
+    ("ach_read_story_20", "EPIC"),
+    ("ach_read_story_50", "LEGENDARY"),
+    ("ach_solve_math_1", "COMMON"),
+    ("ach_solve_math_3", "UNCOMMON"),
+    ("ach_solve_math_8", "RARE"),
+    ("ach_solve_math_20", "EPIC"),
+    ("ach_solve_math_50", "LEGENDARY"),
+    ("ach_stars_5", "COMMON"),
+    ("ach_stars_10", "UNCOMMON"),
+    ("ach_perfect_level_1", "COMMON"),
+    ("ach_perfect_level_5", "UNCOMMON"),
+    ("ach_perfect_level_15", "RARE"),
+    ("ach_perfect_level_40", "EPIC"),
+    ("ach_perfect_level_80", "LEGENDARY"),
+    ("ach_first_try_10", "COMMON"),
+    ("ach_first_try_30", "UNCOMMON"),
+    ("ach_first_try_75", "RARE"),
+    ("ach_first_try_150", "EPIC"),
+    ("ach_first_try_300", "LEGENDARY"),
+    ("ach_streak_day_2", "COMMON"),
+    ("ach_streak_day_3", "UNCOMMON"),
+    ("ach_streak_day_5", "RARE"),
+    ("ach_streak_day_14", "LEGENDARY"),
+    ("ach_streak_day_30", "LEGENDARY"),
+    ("ach_clock_money_3", "COMMON"),
+    ("ach_clock_money_8", "UNCOMMON"),
+    ("ach_clock_money_40", "LEGENDARY"),
+    ("ach_read_fast_1", "UNCOMMON"),
+    ("ach_read_fast_3", "RARE"),
+    ("ach_read_fast_12", "LEGENDARY"),
+    ("ach_read_aloud_1", "UNCOMMON"),
+    ("ach_read_aloud_4", "RARE"),
+    ("ach_read_aloud_20", "LEGENDARY"),
 ]
 
 
-def _assign_star_achievement_items(catalog: Dict[str, List[GeneratedItem]]) -> None:
-    """Reserves one item per STAR_ACHIEVEMENT_REWARDS milestone, each in a different slot, setting
-    its unlock_achievement_id to `ach_stars_<N>`. Picks the first item (in generation order) of
-    the milestone's slot and rarity that isn't already a set piece, star-unlockable, or
-    achievement-gated."""
-    assert len(STAR_ACHIEVEMENT_REWARDS) <= len(SLOTS), (
-        "Need one distinct slot per star achievement reward"
-    )
-    for i, (stars, rarity) in enumerate(STAR_ACHIEVEMENT_REWARDS):
-        slot = SLOTS[i]
-        achievement_id = f"ach_stars_{stars}"
-        candidate = next(
-            (
-                item
-                for item in catalog[slot.slot_id]
-                if item.rarity == rarity
-                and not item.is_weekly_streak_set_piece
-                and not item.is_star_unlockable
-                and item.unlock_star_requirement == 0
-                and item.unlock_achievement_id is None
-            ),
-            None,
-        )
+def _assign_achievement_items(catalog: Dict[str, List[GeneratedItem]]) -> None:
+    """Reserves one item per ACHIEVEMENT_REWARDS entry, setting its unlock_achievement_id. Reward i
+    starts at slot SLOTS[i % len(SLOTS)] (so the first 8 keep SLOTS[0..7] and stay byte-identical);
+    if that slot has no eligible item, tries the next slots in round-robin order. Picks the first
+    item (in generation order) of the chosen slot/rarity that isn't already a set piece,
+    star-unlockable, or achievement-gated."""
+    for i, (achievement_id, rarity) in enumerate(ACHIEVEMENT_REWARDS):
+        candidate = None
+        chosen_slot = None
+        for off in range(len(SLOTS)):
+            slot = SLOTS[(i + off) % len(SLOTS)]
+            found = next(
+                (
+                    item
+                    for item in catalog[slot.slot_id]
+                    if item.rarity == rarity
+                    and not item.is_weekly_streak_set_piece
+                    and not item.is_star_unlockable
+                    and item.unlock_star_requirement == 0
+                    and item.unlock_achievement_id is None
+                ),
+                None,
+            )
+            if found is not None:
+                candidate = found
+                chosen_slot = slot
+                break
         if candidate is None:
             raise RuntimeError(
-                f"No eligible {rarity} item in slot {slot.slot_id} for star achievement {achievement_id}"
+                f"No eligible {rarity} item in any slot for achievement {achievement_id}"
             )
         candidate.unlock_achievement_id = achievement_id
 
@@ -536,8 +610,73 @@ def generate_catalog(per_slot: int = 64, seed: int = 42) -> Dict[str, List[Gener
         slot_rng = random.Random(f"{seed}:{slot.slot_id}")
         catalog[slot.slot_id] = generate_items_for_slot(slot, per_slot, slot_rng, seed=seed)
     _assign_global_star_thresholds(catalog)
-    _assign_star_achievement_items(catalog)
+    _assign_achievement_items(catalog)
     return catalog
+
+
+def bundled_item_ids(seed: int = 42, per_slot: int = 64) -> set:
+    """Every item id in the bundled catalog: generate_catalog()'s ids plus HANDMADE_ITEM_IDS.
+    Used by the remote-item validator to reject any id clash with the bundled catalog."""
+    catalog = generate_catalog(per_slot=per_slot, seed=seed)
+    ids = {item.item_id for items in catalog.values() for item in items}
+    return ids | HANDMADE_ITEM_IDS
+
+
+def remote_item_json(slot: "SlotDef", style_index: int, colorway_name: str, pattern: str) -> Dict[str, object]:
+    """Builds a LEGENDARY remote wardrobe item dict. Keys must exactly equal the Kotlin
+    WardrobeItem property names (doc/plans/015-remote-wardrobe-items.md); this is enforced by
+    test_remote_item_keys_match_kotlin_wardrobe_item."""
+    item_id, name_sv, description_sv, mesh_node_name = item_identity(slot, style_index, colorway_name)
+    primary_hex, secondary_hex = LEGENDARY_COLORWAYS[colorway_name]
+    return {
+        "id": item_id,
+        "nameSv": name_sv,
+        "descriptionSv": description_sv,
+        "slot": slot.enum_name,
+        "rarity": "LEGENDARY",
+        "subjectTheme": slot.subject,
+        "meshAssetPath": "3d_sample.glb",
+        "meshNodeName": mesh_node_name,
+        "scaleMultiplier": 1.15,
+        "unlockStarRequirement": 0,
+        "unlockAchievementId": None,
+        "isWeeklyStreakSetPiece": False,
+        "primaryColorHex": primary_hex,
+        "styleIndex": style_index,
+        "secondaryColorHex": secondary_hex,
+        "pattern": pattern,
+        "ornament": RARITY_ORNAMENT["LEGENDARY"],
+        "retired": False,
+        "minAppVersionCode": 0,
+    }
+
+
+def generate_remote_legendaries(existing: Dict[str, object], per_slot: int, seed: int = 42) -> Dict[str, object]:
+    """Appends `per_slot` new LEGENDARY remote items per slot to `existing` (append-only: existing
+    items are kept untouched and first), bumping the version by 1."""
+    new_version = int(existing.get("version", 0)) + 1
+    existing_items: List[Dict[str, object]] = list(existing.get("items", []))
+    used = bundled_item_ids() | {item["id"] for item in existing_items}
+
+    new_items: List[Dict[str, object]] = []
+    for slot in SLOTS:
+        rng = random.Random(f"{seed}:{slot.slot_id}:remote:{new_version}")
+        candidates = [
+            (s, c)
+            for s in range(len(slot.styles))
+            for c in ALL_LEGENDARY_COLORWAY_NAMES
+            if item_identity(slot, s, c)[0] not in used
+        ]
+        rng.shuffle(candidates)
+        if len(candidates) < per_slot:
+            raise RuntimeError(f"Not enough free (style, colorway) combos for slot {slot.slot_id}")
+        for style_index, colorway_name in candidates[:per_slot]:
+            pattern = rng.choice(NON_NONE_PATTERNS)
+            item = remote_item_json(slot, style_index, colorway_name, pattern)
+            new_items.append(item)
+            used.add(item["id"])
+
+    return {"version": new_version, "items": existing_items + new_items}
 
 
 def _kt_string(value: str) -> str:
@@ -624,7 +763,32 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--seed", type=int, default=42, help="RNG seed for deterministic output (default 42)")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="Output .kt file path")
     parser.add_argument("--dry-run", action="store_true", help="Print per-slot stats; do not write the file")
+    parser.add_argument(
+        "--remote-legendaries",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Append N new LEGENDARY remote items per slot to --remote-out instead of regenerating the bundled catalog",
+    )
+    parser.add_argument("--remote-out", type=Path, default=REMOTE_ITEMS_PATH, help="Path to remote_wardrobe_items.json")
     args = parser.parse_args(argv)
+
+    if args.remote_legendaries is not None:
+        existing: Dict[str, object] = {"version": 0, "items": []}
+        if args.remote_out.exists():
+            existing = json.loads(args.remote_out.read_text(encoding="utf-8"))
+        result = generate_remote_legendaries(existing, per_slot=args.remote_legendaries, seed=args.seed)
+        new_count = len(result["items"]) - len(existing.get("items", []))
+        if args.dry_run:
+            print(
+                f"[DRY RUN] Would write version {result['version']} with {len(result['items'])} items "
+                f"(+{new_count} new) to {args.remote_out}."
+            )
+            return 0
+        args.remote_out.parent.mkdir(parents=True, exist_ok=True)
+        args.remote_out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"Wrote version {result['version']} with {len(result['items'])} items (+{new_count} new) to {args.remote_out}")
+        return 0
 
     catalog = generate_catalog(per_slot=args.per_slot, seed=args.seed)
 

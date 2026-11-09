@@ -215,7 +215,20 @@ data class WardrobeItem(
     val styleIndex: Int = 0,
     val secondaryColorHex: Long = 0xFFFFFFFF,
     val pattern: ItemPattern = ItemPattern.NONE,
-    val ornament: ItemOrnament = ItemOrnament.NONE
+    val ornament: ItemOrnament = ItemOrnament.NONE,
+    /**
+     * Remote-only (doc/plans/015): when true, the item is excluded from every drop pool
+     * (chests, onboarding, gifts, the weekly-streak set piece, the star curve) but stays
+     * renderable and visible in the wardrobe for anyone who already owns it.
+     */
+    val retired: Boolean = false,
+    /**
+     * Remote-only (doc/plans/015): the minimum app version (Android versionCode / iOS
+     * CFBundleVersion) that understands this item. Older app installs skip it entirely
+     * when validating remote wardrobe items, so e.g. a future styleIndex can be added
+     * without breaking old clients.
+     */
+    val minAppVersionCode: Int = 0
 )
 
 /**
@@ -399,7 +412,18 @@ data class DailyActivityRecord(
 )
 
 /**
+ * One action a challenge chain (ladder) tracks. See plan doc/plans/014-achievement-ladders.md.
+ * Order matters: it is the seed order, the pending-reward queue order and the challenge-card tie-break order.
+ */
+@Serializable
+enum class AchievementAction {
+    READ_STORY, SOLVE_MATH, COLLECT_STARS, PERFECT_LEVEL, FIRST_TRY, STREAK_DAY, CLOCK_MONEY, READ_FAST, READ_ALOUD
+}
+
+/**
  * Achievement for unlocking Epic and Legendary items (project.md §2 "Epic/Legendary via prestationer").
+ * As of plan 014 achievements form tiered challenge ladders ("chains"); [action] identifies the chain
+ * and [tier] is the 1-based index of this achievement within its chain (see AchievementLadders.kt).
  */
 @Serializable
 data class Achievement(
@@ -411,7 +435,11 @@ data class Achievement(
     val targetCount: Int,
     val currentCount: Int = 0,
     val isUnlocked: Boolean = false,
-    val rewardItemId: String
+    val rewardItemId: String,
+    val action: AchievementAction? = null,
+    val tier: Int = 0,
+    val shortSv: String = "",
+    val spokenSv: String = ""
 )
 
 /**

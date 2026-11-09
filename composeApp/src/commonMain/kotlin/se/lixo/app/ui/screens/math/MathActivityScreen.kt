@@ -46,12 +46,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
 import kotlinx.coroutines.delay
+import se.lixo.app.domain.content.EnglishChoices
 import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
@@ -88,6 +91,8 @@ import se.lixo.app.ui.theme.TtsIconButton
  * - Choice tiles that select (blue) before confirmation.
  * - Bottom tactile feedback bar (Green = Correct, Red = Growth Mindset hint).
  */
+const val MATH_CHOICE_TAG_PREFIX = "choice_"
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MathActivityScreen(
@@ -100,18 +105,22 @@ fun MathActivityScreen(
     onFinishMathSession: (MathSessionScoreResult, Int) -> LevelCompletionOutcome,
     onEquipItem: (WardrobeItem) -> Unit,
     onSelectAvatar: (AvatarType) -> Unit,
-    onCloseToMap: () -> Unit
+    onCloseToMap: () -> Unit,
+    /** Seeds the shuffled English answer order. Null (default) means a random seed per session; tests pass a fixed value. */
+    choiceSeed: Long? = null
 ) {
     val isEnglishTask = task.type == TaskType.ENGLISH_VOCAB
-    val problems = remember(task) {
+    val problems = remember(task, choiceSeed) {
         if (isEnglishTask) {
-            task.englishItems.map { item ->
+            val random = Random(choiceSeed ?: Random.nextLong())
+            val choiceLists = EnglishChoices.buildForTask(task.englishItems, random)
+            task.englishItems.mapIndexed { idx, item ->
                 se.lixo.app.domain.model.MathProblem(
                     id = item.id,
                     type = MathProblemType.WORD_PROBLEM,
                     promptSv = "Vad betyder ordet \"${item.englishWord}\"?\n(${item.simpleSentenceEn})",
                     correctAnswer = item.swedishTranslation,
-                    choices = listOf(item.swedishTranslation, "sköld", "drake", "stjärna").distinct(),
+                    choices = choiceLists[idx],
                     hintStep1Sv = "\"${item.simpleSentenceEn}\" = \"${item.simpleSentenceSv}\"",
                     hintStep2Sv = "\"${item.englishWord}\" betyder \"${item.swedishTranslation}\""
                 )
@@ -347,6 +356,7 @@ fun MathActivityScreen(
                         }
                         ChoiceCard(
                             text = choice,
+                            modifier = Modifier.testTag(MATH_CHOICE_TAG_PREFIX + index),
                             isCorrect = isCorrectChoice,
                             badgeNumber = "${index + 1}",
                             onClick = {
@@ -521,6 +531,7 @@ fun MathActivityScreen(
                 onEquipItem = onEquipItem,
                 onSelectAvatar = onSelectAvatar,
                 onFinished = { celebrationSequenceFinished = true },
+                ttsEngine = ttsEngine,
                 modifier = Modifier.fillMaxSize()
             )
         }

@@ -33,8 +33,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import se.lixo.app.domain.model.Achievement
 import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.WardrobeItem
+import se.lixo.app.platform.TextToSpeechEngine
+import se.lixo.app.ui.components.challenge.ChallengeEquation
+import se.lixo.app.ui.components.challenge.ChallengeHeroIcon
 import se.lixo.app.ui.feedback.SfxCue
 import se.lixo.app.ui.feedback.rememberLixoHaptics
 import se.lixo.app.ui.theme.LixoButton
@@ -44,6 +48,7 @@ import se.lixo.app.ui.theme.LixoColors
 import se.lixo.app.ui.theme.LixoIcon
 import se.lixo.app.ui.theme.LixoIcons
 import se.lixo.app.ui.theme.LixoStrings
+import se.lixo.app.ui.theme.TtsIconButton
 
 private val popInKeyframes = keyframes<Float> {
     durationMillis = 350
@@ -251,6 +256,75 @@ fun AvatarUnlockedDialog(
                         text = LixoStrings.SHEET_CLOSE_BTN,
                         style = MaterialTheme.typography.labelLarge,
                         color = LixoColors.TextSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * "Ny utmaning!" prompt shown right after an achievement chest/equip prompt when its chain has a
+ * next tier (doc/plans/014). Does not auto-speak; the child taps the speaker.
+ */
+@Composable
+fun NextChallengeDialog(
+    next: Achievement,
+    ttsEngine: TextToSpeechEngine,
+    onClose: () -> Unit
+) {
+    val action = next.action ?: return
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CelebrationScrim)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+        contentAlignment = Alignment.Center
+    ) {
+        LixoCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            cornerRadius = 24.dp,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(24.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = LixoStrings.NEXT_CHALLENGE_TITLE,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = LixoColors.GreenLip
+                )
+                Spacer(Modifier.height(16.dp))
+                ChallengeHeroIcon(action, next.targetCount, next.rarity, false)
+                Spacer(Modifier.height(16.dp))
+                ChallengeEquation(action, next.targetCount, next.rarity)
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = next.shortSv,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = LixoColors.TextPrimary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    TtsIconButton(
+                        textToSpeak = next.spokenSv,
+                        ttsEngine = ttsEngine,
+                        size = 48.dp,
+                        contentDescription = LixoStrings.CHALLENGE_READ_ALOUD_CD
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+                LixoButton(
+                    onClick = onClose,
+                    variant = LixoButtonVariant.PRIMARY,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = LixoStrings.NEXT_CHALLENGE_OK_BTN.uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White
                     )
                 }
             }

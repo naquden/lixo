@@ -11,7 +11,7 @@
     "nameSv": "Kosmisk Kåpa",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_story_50"
   },
   {
     "id": "item_armor_shirt_kapa_kungabla",
@@ -74,7 +74,7 @@
     "nameSv": "Korpsvart Klänningsöverdel",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_perfect_level_5"
   },
   {
     "id": "item_armor_shirt_klanningsoverdel_myllergron",
@@ -298,7 +298,7 @@
     "nameSv": "Glödande Tröja",
     "rarity": "RARE",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_fast_3"
   },
   {
     "id": "item_armor_shirt_troja_isbla",
@@ -354,7 +354,7 @@
     "nameSv": "Lavendellila Tunika med Bälte",
     "rarity": "COMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_streak_day_2"
   },
   {
     "id": "item_armor_shirt_tunikamedbalte_myllergron",
@@ -466,7 +466,7 @@
     "nameSv": "Korallröd Armband",
     "rarity": "EPIC",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_story_20"
   },
   {
     "id": "item_arms_gloves_armband_korpsvart",
@@ -501,7 +501,7 @@
     "nameSv": "Solgyllene Armband",
     "rarity": "COMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_perfect_level_1"
   },
   {
     "id": "item_arms_gloves_handledslindor_glodande",
@@ -620,7 +620,7 @@
     "nameSv": "Gyllene Klor",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_first_try_300"
   },
   {
     "id": "item_arms_gloves_klor_isbla",
@@ -795,7 +795,7 @@
     "nameSv": "Glödande Taggarmskydd",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_fast_1"
   },
   {
     "id": "item_arms_gloves_taggarmskydd_nattsvart",
@@ -991,7 +991,7 @@
     "nameSv": "Myllergrön Fackla",
     "rarity": "EPIC",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_solve_math_20"
   },
   {
     "id": "item_hand_left_fackla_rosenrosa",
@@ -1096,7 +1096,7 @@
     "nameSv": "Kosmisk Kompass",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_aloud_20"
   },
   {
     "id": "item_hand_left_kompass_myllergron",
@@ -1194,7 +1194,7 @@
     "nameSv": "Gyllene Rund Sköld",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_streak_day_30"
   },
   {
     "id": "item_hand_left_rundskold_isbla",
@@ -1306,7 +1306,7 @@
     "nameSv": "Glödande Trolldryck",
     "rarity": "COMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_first_try_10"
   },
   {
     "id": "item_hand_left_trolldryck_gyllene",
@@ -1411,7 +1411,7 @@
     "nameSv": "Kosmisk Magisk Sfär",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_perfect_level_80"
   },
   {
     "id": "item_hand_right_magisksfar_myllergron",
@@ -1572,7 +1572,7 @@
     "nameSv": "Bärnstensgul Stav",
     "rarity": "RARE",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_aloud_4"
   },
   {
     "id": "item_hand_right_stav_djuphavsbla",
@@ -1705,7 +1705,7 @@
     "nameSv": "Kungablå Trollstav",
     "rarity": "RARE",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_solve_math_8"
   },
   {
     "id": "item_hand_right_trollstav_lavendellila",
@@ -1719,7 +1719,7 @@
     "nameSv": "Regnbågs Trollstav",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_streak_day_14"
   },
   {
     "id": "item_hand_right_trollstav_rostbrun",
@@ -1831,7 +1831,7 @@
     "nameSv": "Myllergrön Hög Hatt",
     "rarity": "RARE",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_first_try_75"
   },
   {
     "id": "item_hat_hoghatt_solgyllene",
@@ -1936,7 +1936,7 @@
     "nameSv": "Rosenrosa Huva",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_story_3"
   },
   {
     "id": "item_hat_huva_rostbrun",
@@ -2041,7 +2041,7 @@
     "nameSv": "Myllergrön Krona",
     "rarity": "COMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_stars_5"
   },
   {
     "id": "item_hat_krona_rosenrosa",
@@ -2230,7 +2230,7 @@
     "nameSv": "Rostbrun Trollhatt",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_clock_money_8"
   },
   {
     "id": "item_hat_trollhatt_silverglans",
@@ -2440,7 +2440,7 @@
     "nameSv": "Regnbågs Kilt",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_fast_12"
   },
   {
     "id": "item_pants_kilt_rosenrosa",
@@ -2482,7 +2482,7 @@
     "nameSv": "Korallröd Kjol",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_streak_day_3"
   },
   {
     "id": "item_pants_kjol_korpsvart",
@@ -2503,7 +2503,7 @@
     "nameSv": "Skogsgrön Kjol",
     "rarity": "RARE",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_perfect_level_15"
   },
   {
     "id": "item_pants_kjol_solgyllene",
@@ -2608,7 +2608,7 @@
     "nameSv": "Korpsvart Randiga Leggings",
     "rarity": "COMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_solve_math_1"
   },
   {
     "id": "item_pants_randigaleggings_kungabla",
@@ -2734,7 +2734,7 @@
     "nameSv": "Solgyllene Höga Stövlar",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_aloud_1"
   },
   {
     "id": "item_shoes_hogastovlar_vintervit",
@@ -3000,7 +3000,7 @@
     "nameSv": "Lavendellila Tåspetsskor",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_solve_math_3"
   },
   {
     "id": "item_shoes_taspetsskor_rosenrosa",
@@ -3028,7 +3028,7 @@
     "nameSv": "Bärnstensgul Tofflor",
     "rarity": "RARE",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_streak_day_5"
   },
   {
     "id": "item_shoes_tofflor_djuphavsbla",
@@ -3063,7 +3063,7 @@
     "nameSv": "Myllergrön Tofflor",
     "rarity": "EPIC",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_perfect_level_40"
   },
   {
     "id": "item_shoes_tofflor_silverglans",
@@ -3231,14 +3231,14 @@
     "nameSv": "Regnbågs Cape",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_clock_money_40"
   },
   {
     "id": "item_shoulders_back_cape_rosenrosa",
     "nameSv": "Rosenrosa Cape",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_stars_10"
   },
   {
     "id": "item_shoulders_back_cape_solgyllene",
@@ -3329,7 +3329,7 @@
     "nameSv": "Kungablå Halsduk",
     "rarity": "EPIC",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_first_try_150"
   },
   {
     "id": "item_shoulders_back_halsduk_nattsvart",
@@ -3476,7 +3476,7 @@
     "nameSv": "Korallröd Snäckskal",
     "rarity": "RARE",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_story_8"
   },
   {
     "id": "item_shoulders_back_snackskal_korpsvart",
@@ -3602,7 +3602,7 @@
     "nameSv": "Kungablå Drakssvans",
     "rarity": "COMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_read_story_1"
   },
   {
     "id": "item_tail_drakssvans_lavendellila",
@@ -3644,7 +3644,7 @@
     "nameSv": "Galax Hundsvans",
     "rarity": "LEGENDARY",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_solve_math_50"
   },
   {
     "id": "item_tail_hundsvans_korallrod",
@@ -3882,7 +3882,7 @@
     "nameSv": "Kungablå Rävsvans",
     "rarity": "COMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_clock_money_3"
   },
   {
     "id": "item_tail_ravsvans_lavendellila",
@@ -3896,7 +3896,7 @@
     "nameSv": "Rosenrosa Rävsvans",
     "rarity": "UNCOMMON",
     "unlockStarRequirement": 0,
-    "unlockAchievementId": null
+    "unlockAchievementId": "ach_first_try_30"
   },
   {
     "id": "item_tail_ravsvans_rostbrun",

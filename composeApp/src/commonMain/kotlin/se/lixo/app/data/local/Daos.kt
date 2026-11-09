@@ -52,6 +52,22 @@ interface LixoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertWardrobeItems(items: List<WardrobeItemEntity>)
 
+    @Query("SELECT * FROM wardrobe_items")
+    suspend fun getAllWardrobeItems(): List<WardrobeItemEntity>
+
+    @Query("SELECT * FROM wardrobe_catalog_meta WHERE singletonId = 1 LIMIT 1")
+    suspend fun getWardrobeCatalogMeta(): WardrobeCatalogMetaEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertWardrobeCatalogMeta(meta: WardrobeCatalogMetaEntity)
+
+    // No delete method on purpose: remote wardrobe sync is additions-only (doc/plans/015).
+    @Transaction
+    suspend fun upsertRemoteCatalog(version: Int, appVersionCode: Int, items: List<WardrobeItemEntity>) {
+        upsertWardrobeItems(items)
+        upsertWardrobeCatalogMeta(WardrobeCatalogMetaEntity(version = version, appVersionCode = appVersionCode))
+    }
+
     @Query("SELECT * FROM unlocked_inventory")
     fun observeUnlockedInventory(): Flow<List<UnlockedInventoryEntity>>
 

@@ -70,7 +70,9 @@ fun rarityCollectionCounts(
     allItems: List<WardrobeItem>,
     unlockedItemIds: Set<String>
 ): List<RarityCollectionCount> = Rarity.entries.map { r ->
-    val ofRarity = allItems.filter { it.rarity == r }
+    // Retired items (doc/plans/015) only count once owned, so the collection total never
+    // shows items the player can no longer obtain.
+    val ofRarity = allItems.filter { it.rarity == r && (!it.retired || it.id in unlockedItemIds) }
     RarityCollectionCount(
         rarity = r,
         owned = ofRarity.count { it.id in unlockedItemIds },
