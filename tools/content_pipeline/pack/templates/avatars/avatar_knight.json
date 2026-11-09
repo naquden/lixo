@@ -1,0 +1,12 @@
+{
+  "id": "avatar_knight",
+  "nameKey": "avatar_knight.name",
+  "order": 2,
+  "humanoid": true,
+  "skinHex": "#4A90E2",
+  "defaultTintHex": "#F5A623",
+  "unlock": {"type": "stars", "stars": 30},
+  "body": "standard",
+  "ears": null,
+  "tail": null
+}

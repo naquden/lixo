@@ -43,12 +43,12 @@ import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.ReadingMode
-import se.lixo.app.domain.model.WardrobeItem
+import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.RecognizedSpeechToken
 import se.lixo.app.platform.SpeechRecognitionEngine
 import se.lixo.app.platform.TextToSpeechEngine
-import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
+import se.lixo.app.ui.components.avatar.AvatarViewport
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
 import se.lixo.app.ui.theme.LixoCard
@@ -75,7 +75,7 @@ import se.lixo.app.ui.theme.dashedBorder
 fun ProfileSelectAndTutorialScreen(
     profiles: List<ChildProfile>,
     activeProfile: ChildProfile,
-    catalogById: Map<String, WardrobeItem>,
+    content: ActiveContent,
     sttEngine: SpeechRecognitionEngine,
     ttsEngine: TextToSpeechEngine,
     showSwedishTtsButtons: Boolean,
@@ -163,9 +163,9 @@ fun ProfileSelectAndTutorialScreen(
                                     .background(LixoColors.Surface),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Avatar3DViewport(
+                                AvatarViewport(
+                                    content = content,
                                     appearance = profile.appearance,
-                                    catalogById = catalogById,
                                     modifier = Modifier.size(100.dp),
                                     interactiveRotation = false
                                 )

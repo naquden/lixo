@@ -45,11 +45,12 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import se.lixo.app.data.repository.LixoRepository
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.domain.model.EquipmentSlot
-import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.AndroidPlatformContext
 import se.lixo.app.screenshots.FakeCloudGateway
-import se.lixo.app.ui.components.avatar3d.WardrobeItemPreview
+import se.lixo.app.ui.components.avatar.ItemPreview
 import se.lixo.app.ui.theme.LixoColors
 import se.lixo.app.ui.theme.LixoTheme
 
@@ -61,7 +62,7 @@ private const val SHEET_TAG = "item_sheet"
 
 /**
  * Verifies feature 009 (item catalog screenshots, doc/plans/009-item-catalog-screenshots.md):
- * every item in the real wardrobe catalog renders without crashing in [WardrobeItemPreview],
+ * every item in the real wardrobe catalog renders without crashing in [ItemPreview],
  * grouped per [EquipmentSlot] into fixed-size grid sheets, and each sheet is captured as a PNG
  * for manual visual review.
  */
@@ -96,8 +97,9 @@ class ItemCatalogScreenshotTest {
 
     @Test
     fun screenshotAllItems() {
-        val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = false, profileStore = null)
-        val catalog = repo.wardrobeCatalog.value
+        val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = false, profileStore = null, content = TestContent.repository)
+        val content = repo.content.active.value
+        val catalog = content.items
 
         assertTrue("catalog empty", catalog.size > 500)
         assertEquals("duplicate ids", catalog.size, catalog.map { it.id }.toSet().size)
@@ -115,7 +117,7 @@ class ItemCatalogScreenshotTest {
             LixoTheme {
                 val page = sheets[sheetIndex.intValue]
                 key(sheetIndex.intValue) {
-                    ItemSheet(page.title, page.items)
+                    ItemSheet(content, page.title, page.items)
                 }
             }
         }
@@ -148,7 +150,7 @@ class ItemCatalogScreenshotTest {
         private const val ITEMS_PER_SHEET = COLUMNS * ROWS
         private const val INDEX_FILE = "items_index.txt"
 
-        private fun buildSheets(catalog: List<WardrobeItem>): List<ItemSheetPage> {
+        private fun buildSheets(catalog: List<ContentItem>): List<ItemSheetPage> {
             val bySlot = catalog.groupBy { it.slot }
             return EquipmentSlot.entries.flatMap { slot ->
                 val sorted = bySlot[slot].orEmpty().sortedWith(compareBy({ it.rarity.ordinal }, { it.id }))
@@ -166,14 +168,14 @@ private data class ItemSheetPage(
     val slot: EquipmentSlot,
     val page: Int,
     val pageCount: Int,
-    val items: List<WardrobeItem>
+    val items: List<ContentItem>
 ) {
     val title: String
         get() = "${slot.name} — sida $page/$pageCount (${items.size} föremål)"
 }
 
 @Composable
-private fun ItemSheet(title: String, items: List<WardrobeItem>) {
+private fun ItemSheet(content: ActiveContent, title: String, items: List<ContentItem>) {
     val density = LocalDensity.current
     val w = with(density) { SHEET_WIDTH_PX.toDp() }
     val h = with(density) { SHEET_HEIGHT_PX.toDp() }
@@ -199,7 +201,7 @@ private fun ItemSheet(title: String, items: List<WardrobeItem>) {
                 for (c in 0 until COLUMNS) {
                     val idx = r * COLUMNS + c
                     if (idx < items.size) {
-                        ItemCell(items[idx], Modifier.weight(1f).fillMaxHeight())
+                        ItemCell(content, items[idx], Modifier.weight(1f).fillMaxHeight())
                     } else {
                         Spacer(Modifier.weight(1f))
                     }
@@ -210,7 +212,7 @@ private fun ItemSheet(title: String, items: List<WardrobeItem>) {
 }
 
 @Composable
-private fun ItemCell(item: WardrobeItem, modifier: Modifier = Modifier) {
+private fun ItemCell(content: ActiveContent, item: ContentItem, modifier: Modifier = Modifier) {
     val rarity = LixoColors.rarityColor(item.rarity)
     Column(modifier.padding(2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -223,10 +225,10 @@ private fun ItemCell(item: WardrobeItem, modifier: Modifier = Modifier) {
                 .padding(3.dp),
             contentAlignment = Alignment.Center
         ) {
-            WardrobeItemPreview(item = item, modifier = Modifier.fillMaxSize())
+            ItemPreview(content, item, Modifier.fillMaxSize())
         }
         Text(
-            item.nameSv,
+            content.itemName(item),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 9.sp),
             fontWeight = FontWeight.Medium,
             color = LixoColors.TextPrimary,

@@ -69,8 +69,8 @@ class LevelRewardItemTest {
 
     @Test
     fun syncedStaleRemoteTask_firstClearShowsCuratedLevelChest() {
-        val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val (seedLevels, seedTasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val content = TestContent.active
+        val (seedLevels, seedTasks) = LixoRepository.buildSeedCampaignLevelsAndTasks(content.dropRules.levelRewards)
         val seedLevel2 = seedLevels.first { it.id == "level_2" }
         val seedTask2 = seedTasks.getValue("task_2")
 
@@ -93,12 +93,13 @@ class LevelRewardItemTest {
                 listOf(seedTask2.copy(rewardItemId = "item_hat_2"))
         }
 
-        val repo = LixoRepository(gw, lexiconCache = null, profileStore = null)
+        val repo = LixoRepository(gw, lexiconCache = null, profileStore = null, content = TestContent.repository)
         runBlocking { repo.syncCurriculumFromCloud() }
 
         val task = repo.tasksById.value.getValue("task_2")
         assertNotEquals("item_hat_2", task.rewardItemId)
-        assertTrue(repo.wardrobeCatalog.value.any { it.id == task.rewardItemId })
+        assertEquals(content.levelRewardItemId(2), task.rewardItemId)
+        assertTrue(task.rewardItemId != null && content.itemsById.containsKey(task.rewardItemId))
 
         val level2 = repo.levels.value.first { it.id == "level_2" }
         val profile = ChildProfile(id = "p_verify_002", displayName = "Saga", totalStars = 0)
@@ -114,9 +115,8 @@ class LevelRewardItemTest {
             achievedWpm = 0,
             completedTimedChallenge = false,
             eligibleForRepetitionGift = true,
-            rewardItemIdForTask = task.rewardItemId,
             clearedLevelsCountBeforeRun = 0,
-            allWardrobeItems = repo.wardrobeCatalog.value,
+            content = content,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
             nowEpochMillis = 1000L
@@ -128,6 +128,7 @@ class LevelRewardItemTest {
         compose.setContent {
             LixoTheme {
                 CelebrationSequenceHost(
+                    content = content,
                     outcome = outcome,
                     starsEarned = 3,
                     onEquipItem = {},

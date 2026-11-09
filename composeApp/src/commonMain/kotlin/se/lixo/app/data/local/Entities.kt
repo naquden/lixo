@@ -12,8 +12,9 @@ data class ProfileEntity(
     val ageYears: Int,
     val tutorialCompleted: Boolean,
     val tutorialSkippableByParent: Boolean,
+    /** JSON of [se.lixo.app.domain.content.AvatarAppearance] (022; was domain.model.AvatarAppearance). */
     val appearanceJson: String,
-    val unlockedAvatarsCsv: String,
+    val unlockedAvatarIdsCsv: String,
     val currentLevelOrder: Int,
     val totalStars: Int,
     val currentStreakDays: Int,
@@ -67,34 +68,6 @@ data class TaskEntity(
     val mathProblemsJson: String,
     val englishItemsJson: String,
     val rewardItemId: String?
-)
-
-/**
- * This table holds ONLY remote wardrobe items (`doc/plans/015-remote-wardrobe-items.md`); the
- * bundled catalog never touches Room. Enum columns (`slotId`/`rarityId`/`subjectId`/`pattern`/
- * `ornament`) store the Kotlin enum constant's `.name` (e.g. "HAT", "LEGENDARY"), not its `id`.
- */
-@Entity(tableName = "wardrobe_items")
-data class WardrobeItemEntity(
-    @PrimaryKey val id: String,
-    val nameSv: String,
-    val descriptionSv: String,
-    val slotId: String,
-    val rarityId: String,
-    val subjectId: String,
-    val meshAssetPath: String,
-    val meshNodeName: String,
-    val scaleMultiplier: Float,
-    val unlockStarRequirement: Int,
-    val unlockAchievementId: String?,
-    val isWeeklyStreakSetPiece: Boolean,
-    val primaryColorHex: Long,
-    @ColumnInfo(defaultValue = "0") val styleIndex: Int = 0,
-    @ColumnInfo(defaultValue = "4294967295") val secondaryColorHex: Long = 0xFFFFFFFF,
-    @ColumnInfo(defaultValue = "'NONE'") val pattern: String = "NONE",
-    @ColumnInfo(defaultValue = "'NONE'") val ornament: String = "NONE",
-    @ColumnInfo(defaultValue = "0") val retired: Boolean = false,
-    @ColumnInfo(defaultValue = "0") val minAppVersionCode: Int = 0
 )
 
 /**
@@ -181,17 +154,6 @@ data class LexiconMetaEntity(
     val entryCount: Int
 )
 
-/**
- * The version of the remote wardrobe items currently cached in `wardrobe_items` (`doc/plans/015`).
- * Also stores the app versionCode that validated the cached items (doc/plans/018).
- */
-@Entity(tableName = "wardrobe_catalog_meta")
-data class WardrobeCatalogMetaEntity(
-    @PrimaryKey val singletonId: Int = 1,
-    val version: Int,
-    @ColumnInfo(defaultValue = "0") val appVersionCode: Int = 0
-)
-
 @Entity(tableName = "friends")
 data class FriendEntity(
     @PrimaryKey val userId: String,
@@ -199,6 +161,31 @@ data class FriendEntity(
     val appearanceJson: String,
     val totalStars: Int,
     val addedAtEpochMillis: Long
+)
+
+/**
+ * Content-pack cloud sync (024) metadata: the one cached pack's schema/version/sha256/chunk
+ * count. Kept as a separate singleton row (`id = 0`) rather than folded into `app_settings` so
+ * [ContentPackDao.replace] can delete+reinsert the chunk rows and this row in one transaction.
+ */
+@Entity(tableName = "content_pack_meta")
+data class ContentPackMetaEntity(
+    @PrimaryKey val id: Int = 0,
+    val schema: Int,
+    val version: Int,
+    val sha256: String,
+    val chunkCount: Int
+)
+
+/**
+ * One ~900 KB slice of a cached content pack's JSON (024), keyed by (version, idx) so Room's
+ * 2 MB CursorWindow per row is never at risk and an old version's rows are cleanly replaced.
+ */
+@Entity(tableName = "content_pack_chunks", primaryKeys = ["version", "idx"])
+data class ContentPackChunkEntity(
+    val version: Int,
+    val idx: Int,
+    val data: String
 )
 
 @Entity(tableName = "app_settings")

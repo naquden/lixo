@@ -1,0 +1,22 @@
+{
+  "event_jul_2026.name": "Julspecial 2026",
+  "event_jul_2026.banner": "God Jul!",
+  "item_hat_jul2026_tomteluva.name": "Tomteluva",
+  "item_hat_jul2026_tomteluva.desc": "En mjuk röd tomteluva med vit kant och pompom.",
+  "item_shoulders_back_jul2026_halsduk.name": "Julhalsduk",
+  "item_shoulders_back_jul2026_halsduk.desc": "En varm halsduk i grönt och rött för kalla dagar.",
+  "item_arms_gloves_jul2026_vantar.name": "Julvantar",
+  "item_arms_gloves_jul2026_vantar.desc": "Röda vantar med vit kant som håller fingrarna varma.",
+  "item_armor_shirt_jul2026_jultroja.name": "Jultröja",
+  "item_armor_shirt_jul2026_jultroja.desc": "En mönstrad jultröja med vitt sicksackmönster.",
+  "item_pants_jul2026_tomtebyxor.name": "Tomtebyxor",
+  "item_pants_jul2026_tomtebyxor.desc": "Röda byxor med vit kant, perfekta för julpyssel.",
+  "item_shoes_jul2026_kangor.name": "Julkängor",
+  "item_shoes_jul2026_kangor.desc": "Bruna kängor med fluffig vit kant.",
+  "item_hand_right_jul2026_polkagris.name": "Polkagrisstav",
+  "item_hand_right_jul2026_polkagris.desc": "En randig godisstav att vinka med.",
+  "item_hand_left_jul2026_julklapp.name": "Julklapp",
+  "item_hand_left_jul2026_julklapp.desc": "En fin julklapp med guldigt rosett och band.",
+  "item_tail_jul2026_rensvans.name": "Renens svans",
+  "item_tail_jul2026_rensvans.desc": "En fluffig svans med en vit tofs, precis som en ren."
+}

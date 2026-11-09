@@ -4,9 +4,24 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
+- [ ] 021 — Authoring pipeline: port 72 shapes + 6 avatars to layers, build bundled content_pack.json, stability diff (feature, after 020) → [plan](doc/plans/021-content-pack-authoring-pipeline.md)
+  _Not passed 2026-11-09 (wf_44921b77-24a): pipeline built, BundledPackValidTest green, BundledCatalogRenderTest 2/2 but produced 0/48 avatar style screenshots (only items_01..20.png). Pre-existing pytest failure: `test_item_ids_are_stable_across_per_slot_changes` (tools/tests/test_pipelines.py:364) — per_slot=32 can't fit the 11 LEGENDARY achievement rewards from 2f19e59 (`_assign_achievement_items` raises for ach_read_fast_12); use per_slot ≥ 44. Old-vs-new renderer comparison never done (022 deleted old renderer) → hand-review item sheets or compare against HEAD worktree._
+
 
 ## Done
 
+- [x] 025 — Events/holiday specials: TrustedClock, EventEngine, event drops, themed chest, banner, Jul 2026 sample (feature, after 023 + 024) → [plan](doc/plans/025-content-events.md)  
+  _Verified 2026-11-09 (wf_44921b77-24a): `EventBannerTest` 3/3, `EventChestThemeTest` 2/2 on emulator-5554; screenshots temp/verify/lixo_screenshots/verify_025_*.png. LOW: TrustedClock high-water mark raised from unanchored device time (forward-set clock sticks until first server anchor)._
+- [x] 024 — Cloud sync of content pack: Firestore meta/chunks, sha256, Room cache, hot-swap, upload_pack.py (feature, after 022) → [plan](doc/plans/024-cloud-content-sync.md)  
+  _Verified 2026-11-09 (wf_44921b77-24a): `ContentHotSwapTest` 2/2 on emulator-5554; screenshots temp/verify/lixo_screenshots/024_{before_sync,after_sync,restart_cached}.png. Firestore rules deploy + first upload manual. LOW: rejected pack re-downloaded every sync (remember rejected version/sha); commit published/pack_v1.json so stability diff runs._
+- [x] 023 — Drop rules from content: odds, pity, onboarding, explicit levelRewards, achievementRewards (feature, after 022) → [plan](doc/plans/023-drop-rules-from-content.md)  
+  _Verified 2026-11-09 (wf_44921b77-24a): drop-rule unit tests green; `FlitChestMeterTest` 4/4, `LevelRewardItemTest` 1/1, `RewardPacingTest` 2/2 on emulator-5554._
+- [x] 022 — App runs on the content pack (bundled): drop AvatarType/GeneratedWardrobeCatalog/styleIndex renderers/015 merge, Room reset (feature, after 021) → [plan](doc/plans/022-app-on-content-pack.md)  
+  _Verified 2026-11-09 (wf_44921b77-24a): `WardrobeScreenContentTest` 2/2, `ItemRevealContentTest` 3/3, `ProfilePersistenceTest` 3/3, `AchievementLadderTest` 5/5 on emulator-5554; screenshots temp/verify/lixo_screenshots/022_*.png. Room reset to v1 + destructive fallback → `adb shell pm clear se.lixo.app` on dev devices. Engine tests moved to androidHostTest (no iOS run). LOW: remove destructive fallback before release; drop dead wardrobeItems block from seed_campaign_content.json._
+- [x] 020 — Generic layer renderer for avatars/items + item preview + debug ContentPreviewScreen (feature, after 019) → [plan](doc/plans/020-layer-renderer.md)  
+  _Verified 2026-11-09 (wf_44921b77-24a): LayerTransformTest, ZOrderTest green; `verify/LayerRendererScreenshotTest` 2/2, `ContentPreviewScreenTest` 2/2 on emulator-5554; screenshots temp/verify/lixo_screenshots/verify020/._
+- [x] 019 — Content pack: schema, skeleton contract (Bone/ZBucket), validator, ActiveContent index (feature) → [plan](doc/plans/019-content-pack-schema.md)  
+  _Verified 2026-11-09 (wf_44921b77-24a, emulator-5554 Pixel_10): ContentPackParseTest 5/5, ContentPackValidatorTest 15/15, ContentPathsTest 4/4, ActiveContentIndexTest 4/4; bundled content_pack.json ~590 KB; doc/content/content-pack.md written. No UI._
 - [x] 018 — Review follow-ups from 013–015: wardrobe items skipped by minAppVersionCode never re-fetched after app update (HIGH), owned achievement rewards skip celebration, ladder strip clipped at 360dp, test helper in prod, housekeeping (bug, after 015) → [plan](doc/plans/018-review-followups-013-015.md)  
   _Verified 2026-11-08 (wf_14b957d0-336): `verify/AchievementLadderTest` 5/5 (new `ladderStrip_fitsAt360dp`), `RemoteWardrobeItemTest` 3/3, `ProfilePersistenceTest` 3/3 on emulator-5554 (Pixel_10); screenshot temp/verify018/. v7 schema changed in place (appVersionCode) → `adb shell pm clear se.lixo.app` on dev devices that ran a 015 build. .pyc untracking left for user (`git rm --cached`; .gitignore updated). Known LOW: owned-reward NextChallenge also built for pending achievements from earlier runs; no label-only step for owned final-tier unlocks._
 - [x] 017 — "Läsa själv": "Jag har läst klart" unlocks after a fixed 15 s instead of 0.35 s/word (min 4 s) (feature) → [plan](doc/plans/017-manual-reading-15s-delay.md)  

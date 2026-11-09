@@ -30,16 +30,18 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.domain.model.Rarity
-import se.lixo.app.domain.model.WardrobeItem
-import se.lixo.app.ui.components.avatar3d.WardrobeItemPreview
+import se.lixo.app.ui.components.avatar.ItemPreview
 import se.lixo.app.ui.theme.LixoColors
 import se.lixo.app.ui.theme.LixoStrings
 
 /** Rarity-tinted tile with a live preview of the item's shape, used both in the reveal and the unlock dialog. */
 @Composable
 fun RarityItemTile(
-    item: WardrobeItem,
+    content: ActiveContent,
+    item: ContentItem,
     modifier: Modifier = Modifier,
     tileSize: Dp = 132.dp
 ) {
@@ -65,13 +67,13 @@ fun RarityItemTile(
             .border(3.dp, Color.White, RoundedCornerShape(24.dp)),
         contentAlignment = Alignment.Center
     ) {
-        WardrobeItemPreview(item = item, modifier = Modifier.size(tileSize * 0.72f))
+        ItemPreview(content, item, Modifier.size(tileSize * 0.72f))
     }
 }
 
 /** Item that springs out of the opened chest with an overshoot scale and a small rise. */
 @Composable
-fun ItemRevealTile(item: WardrobeItem, modifier: Modifier = Modifier) {
+fun ItemRevealTile(content: ActiveContent, item: ContentItem, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val riseStartPx = remember(density) { with(density) { 60.dp.toPx() } }
     val scale = remember(item) { Animatable(0f) }
@@ -92,6 +94,7 @@ fun ItemRevealTile(item: WardrobeItem, modifier: Modifier = Modifier) {
     }
 
     RarityItemTile(
+        content = content,
         item = item,
         modifier = modifier.graphicsLayer {
             scaleX = scale.value
@@ -103,7 +106,7 @@ fun ItemRevealTile(item: WardrobeItem, modifier: Modifier = Modifier) {
 
 /** Name + rarity pill shown below the opened chest, so it never overlaps the chest body. */
 @Composable
-fun ItemRevealDetails(item: WardrobeItem, modifier: Modifier = Modifier) {
+fun ItemRevealDetails(content: ActiveContent, item: ContentItem, modifier: Modifier = Modifier) {
     val appear = remember(item) { Animatable(0f) }
     LaunchedEffect(item) { appear.animateTo(1f, spring(dampingRatio = 0.55f)) }
 
@@ -116,7 +119,7 @@ fun ItemRevealDetails(item: WardrobeItem, modifier: Modifier = Modifier) {
         }
     ) {
         Text(
-            text = item.nameSv,
+            text = content.itemName(item),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold,
             color = Color.White

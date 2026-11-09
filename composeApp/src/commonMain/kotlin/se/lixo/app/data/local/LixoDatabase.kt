@@ -5,13 +5,22 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 
+/**
+ * 022 reset the schema to version 1: the whole wardrobe-item table pair and the old
+ * `AvatarType`-keyed CSV columns are gone, and nothing has shipped on this schema yet, so both
+ * builders ([se.lixo.app.platform]) use a destructive fallback (upgrade AND downgrade) instead of
+ * an explicit [LIXO_MIGRATIONS] migration. Add a real migration here once a release ships on v1+.
+ *
+ * 024 added `content_pack_meta`/`content_pack_chunks` to v1 **in place** (same reasoning: nothing
+ * has shipped on v1 yet). A device that already installed a pre-024 v1 build hits Room's
+ * identity-hash check on the first query; `adb shell pm clear se.lixo.app` before verifying.
+ */
 @Database(
     entities = [
         ProfileEntity::class,
         CourseEntity::class,
         LevelEntity::class,
         TaskEntity::class,
-        WardrobeItemEntity::class,
         UnlockedInventoryEntity::class,
         LevelProgressEntity::class,
         DailyActivityEntity::class,
@@ -21,14 +30,16 @@ import androidx.room.RoomDatabaseConstructor
         FriendEntity::class,
         AppSettingsEntity::class,
         LexiconMetaEntity::class,
-        WardrobeCatalogMetaEntity::class
+        ContentPackMetaEntity::class,
+        ContentPackChunkEntity::class
     ],
-    version = 7,
+    version = 1,
     exportSchema = true
 )
 @ConstructedBy(LixoDatabaseConstructor::class)
 abstract class LixoDatabase : RoomDatabase() {
     abstract fun lixoDao(): LixoDao
+    abstract fun contentPackDao(): ContentPackDao
 }
 
 @Suppress("NO_ACTUAL_FOR_EXPECT")

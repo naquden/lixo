@@ -1,0 +1,12 @@
+{
+  "id": "avatar_wizard",
+  "nameKey": "avatar_wizard.name",
+  "order": 4,
+  "humanoid": true,
+  "skinHex": "#4A90E2",
+  "defaultTintHex": "#F5A623",
+  "unlock": {"type": "stars", "stars": 90},
+  "body": "standard",
+  "ears": null,
+  "tail": null
+}

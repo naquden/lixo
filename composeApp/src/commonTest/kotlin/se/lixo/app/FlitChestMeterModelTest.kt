@@ -12,16 +12,21 @@ class FlitChestMeterModelTest {
 
     @Test
     fun chestFillFraction_clampsAndScalesToThreshold() {
-        assertEquals(0f, chestFillFraction(0), 1e-6f)
-        assertEquals(0.5f, chestFillFraction(10), 1e-6f)
-        assertEquals(1f, chestFillFraction(20), 1e-6f)
-        assertEquals(1f, chestFillFraction(25), 1e-6f)
-        assertEquals(0f, chestFillFraction(-3), 1e-6f)
+        assertEquals(0f, chestFillFraction(0, thresholdHalf = 20), 1e-6f)
+        assertEquals(0.5f, chestFillFraction(10, thresholdHalf = 20), 1e-6f)
+        assertEquals(1f, chestFillFraction(20, thresholdHalf = 20), 1e-6f)
+        assertEquals(1f, chestFillFraction(25, thresholdHalf = 20), 1e-6f)
+        assertEquals(0f, chestFillFraction(-3, thresholdHalf = 20), 1e-6f)
+    }
+
+    @Test
+    fun chestFillFraction_customThreshold() {
+        assertEquals(0.5f, chestFillFraction(3, thresholdHalf = 6), 1e-6f)
     }
 
     @Test
     fun chestFillAnimation_plainGain() {
-        val anim = chestFillAnimation(updatedHalfPoints = 6, awardedHalf = 2, chestAwarded = false)
+        val anim = chestFillAnimation(updatedHalfPoints = 6, awardedHalf = 2, chestAwarded = false, thresholdHalf = 20)
         assertEquals(0.2f, anim.from, 1e-6f)
         assertEquals(0.3f, anim.to, 1e-6f)
         assertEquals(false, anim.wrapped)
@@ -29,7 +34,7 @@ class FlitChestMeterModelTest {
 
     @Test
     fun chestFillAnimation_wrappedByChestAwarded() {
-        val anim = chestFillAnimation(updatedHalfPoints = 1, awardedHalf = 2, chestAwarded = true)
+        val anim = chestFillAnimation(updatedHalfPoints = 1, awardedHalf = 2, chestAwarded = true, thresholdHalf = 20)
         assertEquals(0.95f, anim.from, 1e-6f)
         assertEquals(0.05f, anim.to, 1e-6f)
         assertEquals(true, anim.wrapped)
@@ -38,14 +43,14 @@ class FlitChestMeterModelTest {
     @Test
     fun chestFillAnimation_wrappedByArithmeticEvenWithoutChest() {
         // rollChest returned null (empty candidate pool), but the counter still wrapped.
-        val anim = chestFillAnimation(updatedHalfPoints = 1, awardedHalf = 2, chestAwarded = false)
+        val anim = chestFillAnimation(updatedHalfPoints = 1, awardedHalf = 2, chestAwarded = false, thresholdHalf = 20)
         assertEquals(true, anim.wrapped)
         assertEquals(0.95f, anim.from, 1e-6f)
     }
 
     @Test
     fun chestFillAnimation_noGainStaysFlat() {
-        val anim = chestFillAnimation(updatedHalfPoints = 4, awardedHalf = 0, chestAwarded = false)
+        val anim = chestFillAnimation(updatedHalfPoints = 4, awardedHalf = 0, chestAwarded = false, thresholdHalf = 20)
         assertEquals(anim.from, anim.to, 1e-6f)
         assertEquals(0.2f, anim.from, 1e-6f)
         assertEquals(false, anim.wrapped)

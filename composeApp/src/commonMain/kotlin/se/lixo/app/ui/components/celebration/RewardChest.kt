@@ -45,6 +45,8 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
@@ -53,9 +55,17 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ChestTheme
+import se.lixo.app.domain.content.ContentItem
+import se.lixo.app.domain.content.parseContentHex
+import se.lixo.app.domain.model.ItemOrnament
 import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.RewardSource
-import se.lixo.app.domain.model.WardrobeItem
+import se.lixo.app.ui.components.avatar.darken
+import se.lixo.app.ui.components.avatar.drawGem
+import se.lixo.app.ui.components.avatar.drawGlowHalo
+import se.lixo.app.ui.components.avatar.drawSparkle
 import se.lixo.app.ui.feedback.SfxCue
 import se.lixo.app.ui.feedback.rememberLixoHaptics
 import se.lixo.app.ui.theme.LixoColors
@@ -153,16 +163,21 @@ fun RewardChest(
     state: ChestState,
     rarity: Rarity,
     onOpenAnimationFinished: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    chestTheme: ChestTheme? = null
 ) {
     val haptics = rememberLixoHaptics()
     val density = LocalDensity.current
     val spec = remember(rarity) { chestTeaserSpecFor(rarity) }
     val glowColor = if (spec.goldGlow) LixoColors.Gold else LixoColors.rarityColor(rarity)
+    val bodyColor = chestTheme?.bodyHex?.let(::parseContentHex)?.let { Color(it) } ?: Color(0xFF8B5A2B)
+    val plankColor = if (chestTheme != null) darken(bodyColor, 0.75f) else Color(0xFF6B4220)
+    val trimColor = chestTheme?.trimHex?.let(::parseContentHex)?.let { Color(it) } ?: LixoColors.Gold
+    val trimLipColor = if (chestTheme != null) darken(trimColor, 0.8f) else LixoColors.GoldLip
 
     // Each teaser transition only runs its infinite clock when the spec actually uses it; COMMON
     // (and the lower tiers for shake) get a constant state instead, so idle cards don't pay for
-    // an animation invalidation every frame (see WardrobeItemPreview for the same pattern).
+    // an animation invalidation every frame (see ItemPreview for the same pattern).
     val pulse: State<Float> = if (spec.glowAlpha > 0f || spec.ringAlpha > 0f) {
         rememberInfiniteTransition(label = "chestTeaserPulse").animateFloat(
             initialValue = 0f,
@@ -176,7 +191,7 @@ fun RewardChest(
     } else {
         remember { mutableFloatStateOf(0f) }
     }
-    val sparklePhase: State<Float> = if (spec.sparkleCount > 0) {
+    val sparklePhase: State<Float> = if (spec.sparkleCount > 0 || chestTheme?.ornament == ItemOrnament.SPARKLE) {
         rememberInfiniteTransition(label = "chestTeaserSparkle").animateFloat(
             initialValue = 0f,
             targetValue = 1f,
@@ -296,8 +311,7 @@ fun RewardChest(
             )
         }
 
-        val woodColor = Color(0xFF8B5A2B)
-        val plankColor = Color(0xFF6B4220)
+        val woodColor = bodyColor
 
         // Body
         val bodyRect = chestBodyRect(size)
@@ -317,17 +331,38 @@ fun RewardChest(
                 strokeWidth = 2f
             )
         }
-        // Gold vertical bands
+        // Trim vertical bands
         val bandWidth = w * 0.08f
-        drawRect(color = LixoColors.Gold, topLeft = Offset(w * 0.12f, bodyTop), size = androidx.compose.ui.geometry.Size(bandWidth, h - bodyTop))
-        drawRect(color = LixoColors.Gold, topLeft = Offset(w * 0.80f, bodyTop), size = androidx.compose.ui.geometry.Size(bandWidth, h - bodyTop))
+        drawRect(color = trimColor, topLeft = Offset(w * 0.12f, bodyTop), size = androidx.compose.ui.geometry.Size(bandWidth, h - bodyTop))
+        drawRect(color = trimColor, topLeft = Offset(w * 0.80f, bodyTop), size = androidx.compose.ui.geometry.Size(bandWidth, h - bodyTop))
         drawRoundRect(
-            color = LixoColors.GoldLip,
+            color = trimLipColor,
             topLeft = bodyRect.topLeft,
             size = bodyRect.size,
             cornerRadius = CornerRadius(14f, 14f),
             style = Stroke(width = 3f)
         )
+
+        // Themed ornament decoration (025), on top of the body, under the lid.
+        if (chestTheme != null) {
+            when (chestTheme.ornament) {
+                ItemOrnament.GLOW -> drawGlowHalo(Offset(w / 2f, h * 0.6f), w * 0.8f, trimColor)
+                ItemOrnament.TRIM -> drawRoundRect(
+                    color = trimColor,
+                    topLeft = Offset(bodyRect.left + 6f, bodyRect.top + 6f),
+                    size = androidx.compose.ui.geometry.Size(bodyRect.width - 12f, bodyRect.height - 12f),
+                    cornerRadius = CornerRadius(10f, 10f),
+                    style = Stroke(width = 4f)
+                )
+                ItemOrnament.GEM -> drawGem(
+                    androidx.compose.ui.geometry.Rect(w * 0.4f, bodyTop, w * 0.6f, h),
+                    trimColor,
+                    w / 60f
+                )
+                ItemOrnament.SPARKLE -> drawSparkle(bodyRect, Color.White, w / 60f, sparklePhase.value)
+                ItemOrnament.NONE -> Unit
+            }
+        }
 
         // Lid, animated via translate + rotate around the hinge (bottom-left of the lid).
         withTransform({
@@ -337,13 +372,13 @@ fun RewardChest(
             val lidPath = chestLidPath(size, 14f)
             drawPath(path = lidPath, color = woodColor.copy(alpha = lidAlpha.value))
             drawRect(
-                color = LixoColors.Gold.copy(alpha = lidAlpha.value),
+                color = trimColor.copy(alpha = lidAlpha.value),
                 topLeft = Offset(0f, lidBottom - h * 0.07f),
                 size = androidx.compose.ui.geometry.Size(w, h * 0.07f)
             )
             drawPath(
                 path = lidPath,
-                color = LixoColors.GoldLip.copy(alpha = lidAlpha.value),
+                color = trimLipColor.copy(alpha = lidAlpha.value),
                 style = Stroke(width = 3f)
             )
 
@@ -354,7 +389,7 @@ fun RewardChest(
                 val lockLeft = w / 2f - lockW / 2f
                 val lockTop = lidBottom - lockH / 2f
                 drawRoundRect(
-                    color = LixoColors.Gold.copy(alpha = lidAlpha.value),
+                    color = trimColor.copy(alpha = lidAlpha.value),
                     topLeft = Offset(lockLeft, lockTop),
                     size = androidx.compose.ui.geometry.Size(lockW, lockH),
                     cornerRadius = CornerRadius(4f, 4f)
@@ -401,9 +436,11 @@ fun RewardChest(
  */
 @Composable
 fun ChestRevealStage(
-    item: WardrobeItem,
+    content: ActiveContent,
+    item: ContentItem,
     source: RewardSource,
     labelDetailSv: String? = null,
+    chestTheme: ChestTheme? = null,
     onOpened: () -> Unit,
     onFinished: () -> Unit
 ) {
@@ -468,7 +505,7 @@ fun ChestRevealStage(
                         contentAlignment = Alignment.BottomCenter
                     ) {
                         if (chestState == ChestState.OPENED) {
-                            ItemRevealTile(item)
+                            ItemRevealTile(content, item)
                         }
                     }
                     RewardChest(
@@ -478,9 +515,17 @@ fun ChestRevealStage(
                             chestState = ChestState.OPENED
                             onOpened()
                         },
+                        chestTheme = chestTheme,
                         modifier = Modifier
                             .size(180.dp)
                             .testTag(REWARD_CHEST_TAG)
+                            .let {
+                                if (chestTheme != null) {
+                                    it.semantics { contentDescription = LixoStrings.EVENT_CHEST_DESCRIPTION }
+                                } else {
+                                    it
+                                }
+                            }
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
@@ -500,7 +545,7 @@ fun ChestRevealStage(
                                 color = Color.White,
                                 modifier = Modifier.graphicsLayer { translationY = bounce.value }
                             )
-                            ChestState.OPENED -> ItemRevealDetails(item)
+                            ChestState.OPENED -> ItemRevealDetails(content, item)
                             else -> Unit
                         }
                     }

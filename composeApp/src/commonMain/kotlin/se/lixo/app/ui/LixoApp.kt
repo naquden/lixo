@@ -23,8 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -34,13 +37,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import se.lixo.app.data.local.createPlatformContentPackCache
+import se.lixo.app.data.remote.FirebaseSyncService
+import se.lixo.app.data.repository.ContentRepository
 import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.domain.engine.AchievementEngine
+import se.lixo.app.domain.engine.EventEngine
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.engine.RunFacts
+import se.lixo.app.domain.engine.TrustedClock
 import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.DailyActivityRecord
@@ -52,6 +65,8 @@ import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.PlatformFeatureFlags
 import se.lixo.app.platform.createPlatformSpeechRecognitionEngine
 import se.lixo.app.platform.createPlatformTextToSpeechEngine
+import se.lixo.app.platform.createPlatformTrustedClockStore
+import se.lixo.app.ui.screens.debug.ContentPreviewRoute
 import se.lixo.app.ui.screens.map.CampaignMapScreen
 import se.lixo.app.ui.screens.math.MathActivityScreen
 import se.lixo.app.ui.screens.onboarding.FirstProfileSetupScreen
@@ -78,7 +93,35 @@ enum class LixoMainDestination {
     AVATAR_MAP,
     WARDROBE,
     TROPHIES,
-    PARENT_SETTINGS
+    PARENT_SETTINGS,
+    CONTENT_PREVIEW
+}
+
+/**
+ * Loads the bundled content pack and the repository before showing anything else. Used by
+ * `MainActivity`/`MainViewController`. Shows a plain sky-blue frame while loading.
+ */
+@Composable
+fun LixoApp() {
+    val repository by produceState<LixoRepository?>(null) {
+        val gateway = FirebaseSyncService()
+        value = LixoRepository(
+            cloudGateway = gateway,
+            content = ContentRepository.loadInitial(
+                gateway = gateway,
+                cache = createPlatformContentPackCache(),
+                trustedClock = TrustedClock(store = createPlatformTrustedClockStore())
+            )
+        )
+    }
+    val currentRepository = repository
+    if (currentRepository == null) {
+        LixoTheme {
+            Box(Modifier.fillMaxSize().background(LixoColors.SkyBackgroundBottom))
+        }
+    } else {
+        LixoApp(repository = currentRepository)
+    }
 }
 
 /**
@@ -87,7 +130,7 @@ enum class LixoMainDestination {
  */
 @Composable
 fun LixoApp(
-    repository: LixoRepository = remember { LixoRepository() }
+    repository: LixoRepository
 ) {
     val featureFlags = remember { PlatformFeatureFlags() }
     val sttEngine = remember { createPlatformSpeechRecognitionEngine() }
@@ -100,7 +143,7 @@ fun LixoApp(
     val activeProfileId by repository.activeProfileId.collectAsState()
     val levels by repository.levels.collectAsState()
     val tasksById by repository.tasksById.collectAsState()
-    val wardrobeCatalog by repository.wardrobeCatalog.collectAsState()
+    val content by repository.content.active.collectAsState()
     val unlockedItemIds by repository.unlockedItemIds.collectAsState()
     val levelProgressByProfile by repository.levelProgressByProfile.collectAsState()
     val dailyActivityByProfile by repository.dailyActivityByProfile.collectAsState()
@@ -112,10 +155,34 @@ fun LixoApp(
     val incomingEmailLink by EmailLinkAuthDispatcher.incomingLink.collectAsState()
     val profilesLoaded by repository.profilesLoaded.collectAsState()
 
+    val contentSyncScope = rememberCoroutineScope()
+    val trustedClock = repository.content.trustedClock
+
+    // Holiday-special events (025): recomputed on startup sync, on resume, and at local midnight
+    // so a running event appears/disappears without an app restart.
+    var eventClockTick by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(Unit) {
+        launch {
+            repository.content.sync()
+            eventClockTick++
+        }
         repository.loadCachedLexicon()
-        repository.loadCachedWardrobe()
         repository.syncCurriculumFromCloud()
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        contentSyncScope.launch { repository.content.syncIfDue() }
+        eventClockTick++
+    }
+
+    LaunchedEffect(eventClockTick) {
+        delay(EventEngine.millisUntilNextLocalMidnight(trustedClock.now(), TimeZone.currentSystemDefault()))
+        eventClockTick++
+    }
+
+    val activeEvents = remember(content, eventClockTick) {
+        EventEngine.activeEvents(content, trustedClock.now(), TimeZone.currentSystemDefault())
     }
 
     LaunchedEffect(incomingEmailLink) {
@@ -127,7 +194,6 @@ fun LixoApp(
     }
 
     val activeProfile = profiles.find { it.id == activeProfileId } ?: profiles.firstOrNull()
-    val catalogById = remember(wardrobeCatalog) { wardrobeCatalog.associateBy { it.id } }
     val ttsAvailable by ttsEngine.isAvailable.collectAsState()
     val showSwedishTts = featureFlags.isSwedishTtsSupported && ttsAvailable
 
@@ -152,6 +218,8 @@ fun LixoApp(
             currentDestination == LixoMainDestination.MAP_HOME ->
                 currentDestination = LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL
             currentDestination == LixoMainDestination.WARDROBE ->
+                currentDestination = LixoMainDestination.AVATAR_MAP
+            currentDestination == LixoMainDestination.CONTENT_PREVIEW ->
                 currentDestination = LixoMainDestination.AVATAR_MAP
             else -> currentDestination = LixoMainDestination.MAP_HOME
         }
@@ -185,6 +253,9 @@ fun LixoApp(
                 )
             } else if (playingLevel != null && playingTask != null) {
                 // Fullscreen Homework Activity View (Reading, Math, or English)
+                // Freeze the content pack for this run (doc/plans/023): a mid-run hot swap (024)
+                // must not change this run's outcome or celebration.
+                val runContent = remember(playingLevel.id, playingTask.id) { repository.content.active.value }
                 if (playingTask.type == TaskType.READING) {
                     ReadingActivityScreen(
                         level = playingLevel,
@@ -215,9 +286,8 @@ fun LixoApp(
                                 achievedWpm = scoreResult.achievedWpm,
                                 completedTimedChallenge = scoreResult.eligibleForTimedChallengeReward,
                                 eligibleForRepetitionGift = scoreResult.eligibleForGift,
-                                rewardItemIdForTask = playingTask.rewardItemId,
                                 clearedLevelsCountBeforeRun = clearedLevelsCountBeforeRun,
-                                allWardrobeItems = wardrobeCatalog,
+                                content = runContent,
                                 currentlyUnlockedItemIds = unlockedItemIds,
                                 todayActivityBeforeRun = todayRecord,
                                 nowEpochMillis = Clock.System.now().toEpochMilliseconds(),
@@ -229,7 +299,8 @@ fun LixoApp(
                                     achievedWpm = scoreResult.achievedWpm,
                                     referenceWpm = scoreResult.referenceWpm,
                                     pronunciationEligible = scoreResult.eligibleForPronunciationAchievement
-                                )
+                                ),
+                                events = EventEngine.snapshot(runContent, trustedClock.now(), TimeZone.currentSystemDefault())
                             )
                             repository.updateProfile(outcome.updatedProfile)
                             repository.saveLevelProgress(outcome.updatedLevelProgress)
@@ -243,11 +314,13 @@ fun LixoApp(
                             outcome
                         },
                         onEquipItem = { item -> repository.equipItemOnActiveProfile(item.slot, item.id) },
-                        onSelectAvatar = { repository.selectAvatarTypeOnActiveProfile(it) },
-                        onCloseToMap = { activeGameplayLevel = null }
+                        onSelectAvatar = { repository.selectAvatarOnActiveProfile(it) },
+                        onCloseToMap = { activeGameplayLevel = null },
+                        content = runContent
                     )
                 } else {
                     MathActivityScreen(
+                        content = runContent,
                         level = playingLevel,
                         task = playingTask,
                         mathEngine = mathEngine,
@@ -273,9 +346,8 @@ fun LixoApp(
                                 achievedWpm = 0,
                                 completedTimedChallenge = scoreResult.completedTimedChallenge,
                                 eligibleForRepetitionGift = true,
-                                rewardItemIdForTask = playingTask.rewardItemId,
                                 clearedLevelsCountBeforeRun = clearedLevelsCountBeforeRun,
-                                allWardrobeItems = wardrobeCatalog,
+                                content = runContent,
                                 currentlyUnlockedItemIds = unlockedItemIds,
                                 todayActivityBeforeRun = todayRecord,
                                 nowEpochMillis = Clock.System.now().toEpochMilliseconds(),
@@ -285,7 +357,8 @@ fun LixoApp(
                                     levelId = playingLevel.id,
                                     isAiMode = true,
                                     mathFirstTryByType = scoreResult.firstTryCorrectByType
-                                )
+                                ),
+                                events = EventEngine.snapshot(runContent, trustedClock.now(), TimeZone.currentSystemDefault())
                             )
                             repository.updateProfile(outcome.updatedProfile)
                             repository.saveLevelProgress(outcome.updatedLevelProgress)
@@ -299,7 +372,7 @@ fun LixoApp(
                             outcome
                         },
                         onEquipItem = { item -> repository.equipItemOnActiveProfile(item.slot, item.id) },
-                        onSelectAvatar = { repository.selectAvatarTypeOnActiveProfile(it) },
+                        onSelectAvatar = { repository.selectAvatarOnActiveProfile(it) },
                         onCloseToMap = { activeGameplayLevel = null }
                     )
                 }
@@ -307,7 +380,7 @@ fun LixoApp(
                 ProfileSelectAndTutorialScreen(
                     profiles = profiles,
                     activeProfile = activeProfile,
-                    catalogById = catalogById,
+                    content = content,
                     sttEngine = sttEngine,
                     ttsEngine = ttsEngine,
                     showSwedishTtsButtons = showSwedishTts,
@@ -316,12 +389,13 @@ fun LixoApp(
                     startTutorialImmediately = autoStartTutorialForProfileId == activeProfile.id,
                     onTutorialCompleted = { profile ->
                         autoStartTutorialForProfileId = null
-                        repository.unlockWardrobeItem(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID)
+                        val tutorialRewardItemId = content.dropRules.tutorialRewardItemId
+                        repository.unlockWardrobeItem(tutorialRewardItemId)
                         val updated = profile.copy(
                             tutorialCompleted = true,
                             appearance = profile.appearance.copy(
-                                equippedItems = profile.appearance.equippedItems +
-                                    (EquipmentSlot.HAT to BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID)
+                                equipped = profile.appearance.equipped +
+                                    (EquipmentSlot.HAT to tutorialRewardItemId)
                             )
                         )
                         repository.updateProfile(updated)
@@ -346,7 +420,8 @@ fun LixoApp(
                                     icon = LixoIcons.Friends,
                                     label = LixoStrings.NAV_AVATAR,
                                     selected = currentDestination == LixoMainDestination.AVATAR_MAP ||
-                                        currentDestination == LixoMainDestination.WARDROBE,
+                                        currentDestination == LixoMainDestination.WARDROBE ||
+                                        currentDestination == LixoMainDestination.CONTENT_PREVIEW,
                                     onClick = { currentDestination = LixoMainDestination.AVATAR_MAP }
                                 ),
                                 LixoNavItem(
@@ -372,7 +447,7 @@ fun LixoApp(
                                     profile = activeProfile,
                                     levels = levels,
                                     progressByLevelId = levelProgressByProfile[activeProfile.id].orEmpty(),
-                                    catalogById = catalogById,
+                                    content = content,
                                     progressionEngine = progressionEngine,
                                     ttsEngine = ttsEngine,
                                     showSwedishTtsButtons = showSwedishTts,
@@ -381,29 +456,36 @@ fun LixoApp(
                                     onSelectLevel = { activeGameplayLevel = it },
                                     onSwitchProfileClick = {
                                         currentDestination = LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL
-                                    }
+                                    },
+                                    activeEvents = activeEvents,
+                                    unlockedItemIds = unlockedItemIds
                                 )
                             }
                             LixoMainDestination.AVATAR_MAP -> {
                                 AvatarMapScreen(
                                     profile = activeProfile,
                                     friends = friendsByProfile[activeProfile.id].orEmpty(),
-                                    catalogById = catalogById,
+                                    content = content,
                                     ttsEngine = ttsEngine,
                                     showSwedishTtsButtons = showSwedishTts,
                                     onOpenWardrobe = { currentDestination = LixoMainDestination.WARDROBE },
                                     onAddFriendByQuery = { repository.addFriendByQuery(it) },
-                                    onRemoveFriend = { repository.removeFriend(it) }
+                                    onRemoveFriend = { repository.removeFriend(it) },
+                                    onOpenContentPreview = if (featureFlags.isDebugBuild) {
+                                        { currentDestination = LixoMainDestination.CONTENT_PREVIEW }
+                                    } else {
+                                        null
+                                    }
                                 )
                             }
                             LixoMainDestination.WARDROBE -> {
                                 WardrobeScreen(
                                     profile = activeProfile,
-                                    allWardrobeItems = wardrobeCatalog,
+                                    content = content,
                                     unlockedItemIds = unlockedItemIds,
                                     ttsEngine = ttsEngine,
                                     showSwedishTtsButtons = showSwedishTts,
-                                    onSelectAvatarType = { repository.selectAvatarTypeOnActiveProfile(it) },
+                                    onSelectAvatar = { repository.selectAvatarOnActiveProfile(it) },
                                     onEquipSlotItem = { slot, itemId ->
                                         repository.equipItemOnActiveProfile(slot, itemId)
                                     },
@@ -441,6 +523,11 @@ fun LixoApp(
                                     onSwitchToLocalOnly = { repository.enableLocalOnlyMode() },
                                     onDeleteCloudAccount = { repository.deleteCloudAccountAndSwitchToLocalOnly() },
                                     onToggleCrashlyticsConsent = { repository.setCrashlyticsConsent(it) }
+                                )
+                            }
+                            LixoMainDestination.CONTENT_PREVIEW -> {
+                                ContentPreviewRoute(
+                                    onBack = { currentDestination = LixoMainDestination.AVATAR_MAP }
                                 )
                             }
                             LixoMainDestination.PROFILE_SELECT_AND_TUTORIAL -> Unit

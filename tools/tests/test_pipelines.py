@@ -1,14 +1,12 @@
 import copy
+import hashlib
 import json
 import re
-from pathlib import Path
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
-from tools.asset_pipeline.blender_avatar_pipeline import (
-    REQUIRED_AVATAR_SOCKETS,
-    inject_modular_sockets_into_gltf_dict,
-    inspect_glb_file,
-)
 from tools.content_pipeline.upload_content import validate_bundle
 from tools.item_pipeline.generate_wardrobe_items import (
     ACHIEVEMENT_REWARDS,
@@ -17,15 +15,11 @@ from tools.item_pipeline.generate_wardrobe_items import (
     HANDMADE_ITEM_IDS,
     LEGENDARY_COLORWAYS,
     RARITIES,
-    REMOTE_ITEMS_PATH,
     SLOTS,
     bundled_item_ids,
     generate_catalog,
-    generate_remote_legendaries,
-    render_kotlin,
     slug_key,
 )
-from tools.item_pipeline.upload_wardrobe_items import build_writes, validate_remote_items
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -193,23 +187,6 @@ class LixoPipelineAndSpecificationTests(unittest.TestCase):
             "addition", "subtraction", "ten_crossing", "clock", "money", "word_problem",
         })
 
-    def test_3d_sample_glb_binary_inspection(self) -> None:
-        glb_path = self.repo_root / "3d_sample.glb"
-        self.assertTrue(glb_path.exists(), "3d_sample.glb must exist in repo root")
-        info = inspect_glb_file(glb_path)
-        self.assertTrue(info["magicValid"])
-        self.assertEqual(info["gltfVersion"], 2)
-        self.assertEqual(info["totalLengthBytes"], 960816)
-        self.assertEqual(len(info["requiredSockets"]), 9)
-        self.assertEqual(len(info["supportedAvatars"]), 6)
-
-    def test_socket_injection_adds_all_nine_equipment_anchors(self) -> None:
-        dummy_gltf = {"scenes": [{"nodes": [0]}], "nodes": [{"name": "root_mesh"}]}
-        updated = inject_modular_sockets_into_gltf_dict(dummy_gltf)
-        node_names = {n["name"] for n in updated["nodes"]}
-        for socket_name in REQUIRED_AVATAR_SOCKETS:
-            self.assertIn(socket_name, node_names)
-
     def test_swedish_strings_xml_and_firestore_rules_exist(self) -> None:
         strings_xml = (
             self.repo_root
@@ -229,7 +206,7 @@ class LixoPipelineAndSpecificationTests(unittest.TestCase):
         self.assertTrue(rules_file.exists())
         rules_text = rules_file.read_text(encoding="utf-8")
         self.assertIn("public_avatars", rules_text)
-        self.assertIn("match /wardrobe/{docId}", rules_text)
+        self.assertNotIn("match /wardrobe/", rules_text)
 
     def test_firebase_project_id_configured_across_all_configs(self) -> None:
         firebaserc = json.loads((self.repo_root / ".firebaserc").read_text(encoding="utf-8"))
@@ -251,14 +228,12 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
     def test_deterministic_with_fixed_seed(self) -> None:
         catalog_a = generate_catalog(per_slot=64, seed=42)
         catalog_b = generate_catalog(per_slot=64, seed=42)
-        kotlin_a = render_kotlin(catalog_a)
-        kotlin_b = render_kotlin(catalog_b)
-        self.assertEqual(kotlin_a, kotlin_b)
+        self.assertEqual(catalog_a, catalog_b)
 
     def test_different_seed_changes_output(self) -> None:
         catalog_a = generate_catalog(per_slot=64, seed=42)
         catalog_b = generate_catalog(per_slot=64, seed=7)
-        self.assertNotEqual(render_kotlin(catalog_a), render_kotlin(catalog_b))
+        self.assertNotEqual(catalog_a, catalog_b)
 
     def test_per_slot_count_and_full_style_and_rarity_coverage(self) -> None:
         catalog = generate_catalog(per_slot=64, seed=42)
@@ -385,15 +360,20 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
 
     def test_item_ids_are_stable_across_per_slot_changes(self) -> None:
         # Content-derived ids: the same (slot, style, colorway) item keeps its id regardless of
-        # catalog size, so growing/shrinking --per-slot doesn't remap users' unlocked items.
-        small = generate_catalog(per_slot=32, seed=42)
+        # catalog size. per_slot must be >= 44 so every ACHIEVEMENT_REWARDS rarity (11 LEGENDARY)
+        # still has an eligible item; smaller sizes make _assign_achievement_items raise.
         large = generate_catalog(per_slot=64, seed=42)
-        for slot in SLOTS:
-            by_combo_small = {(i.style_name, i.colorway_name): i.item_id for i in small[slot.slot_id]}
-            by_combo_large = {(i.style_name, i.colorway_name): i.item_id for i in large[slot.slot_id]}
-            for combo, item_id in by_combo_small.items():
-                if combo in by_combo_large:
-                    self.assertEqual(item_id, by_combo_large[combo])
+        for other_size in (48, 80):
+            other = generate_catalog(per_slot=other_size, seed=42)
+            shared = 0
+            for slot in SLOTS:
+                by_combo_other = {(i.style_name, i.colorway_name): i.item_id for i in other[slot.slot_id]}
+                by_combo_large = {(i.style_name, i.colorway_name): i.item_id for i in large[slot.slot_id]}
+                for combo, item_id in by_combo_other.items():
+                    if combo in by_combo_large:
+                        shared += 1
+                        self.assertEqual(item_id, by_combo_large[combo], f"{combo} per_slot={other_size}")
+            self.assertGreater(shared, 0, f"per_slot={other_size} shares no combos with 64")
 
     def test_slug_key(self) -> None:
         self.assertEqual(slug_key("Hög Hatt"), "hoghatt")
@@ -497,157 +477,372 @@ class WardrobeItemGeneratorTests(unittest.TestCase):
 
         self.assertEqual(epic_accents, {EPIC_ACCENT_GOLD, EPIC_ACCENT_SILVER})
 
-    def test_rendered_kotlin_has_expected_structure(self) -> None:
-        catalog = generate_catalog(per_slot=16, seed=42)
-        kotlin_source = render_kotlin(catalog)
-        self.assertIn("// GENERATED by tools/item_pipeline/generate_wardrobe_items.py", kotlin_source)
-        self.assertIn("internal val GENERATED_WARDROBE_ITEMS: List<WardrobeItem> =", kotlin_source)
+
+class ContentPackPipelineTests(unittest.TestCase):
+    """doc/plans/021-content-pack-authoring-pipeline.md."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from tools.content_pipeline.pack import build_pack, gen_catalog, validate_pack
+        from tools.content_pipeline.pack.templates.avatars import body as avatar_body
+        from tools.content_pipeline.pack.templates.slots import SLOT_TEMPLATES
+
+        cls.build_pack = build_pack
+        cls.gen_catalog = gen_catalog
+        cls.validate_pack = validate_pack
+        cls.avatar_body = avatar_body
+        cls.slot_templates = SLOT_TEMPLATES
+        cls.pack_dir = REPO_ROOT / "tools" / "content_pipeline" / "pack"
+
+    def test_build_is_deterministic(self) -> None:
+        self.assertEqual(self.build_pack.build(1), self.build_pack.build(1))
+
+    def test_every_template_passes_bounds_and_caps(self) -> None:
+        for slot_id, styles in self.slot_templates.items():
+            for style in styles:
+                layers = style.layers({})
+                self.assertLessEqual(len(layers), 24, f"{slot_id}:{style.key} has too many layers")
+                pattern_clips = sum(1 for l in layers if l.get("patternClip"))
+                self.assertEqual(
+                    pattern_clips, 1, f"{slot_id}:{style.key} must have exactly one patternClip layer"
+                )
+                for layer in layers:
+                    box = self.validate_pack.STANDARD_BONE_BOX[layer["bone"]]
+                    errors = self.validate_pack.layer_errors(layer, box, allowed_roles=None)
+                    self.assertEqual(errors, [], f"{slot_id}:{style.key}: {errors}")
+
+        avatar_parts = list(self.avatar_body.STANDARD_BODY) + list(self.avatar_body.EARS.values()) + [
+            self.avatar_body.DEFAULT_TAIL
+        ]
+        for part in avatar_parts:
+            self.assertLessEqual(len(part["layers"]), 24)
+            for layer in part["layers"]:
+                box = self.validate_pack.STANDARD_BONE_BOX[layer["bone"]]
+                errors = self.validate_pack.layer_errors(
+                    layer, box, allowed_roles=self.validate_pack.AVATAR_PART_ROLES
+                )
+                self.assertEqual(errors, [], f"part {part['part']}: {errors}")
+
+    def test_pack_ids_names_rarities_unchanged(self) -> None:
+        catalog = generate_catalog(per_slot=64, seed=42)
+        committed = json.loads((self.pack_dir / "catalog" / "generated.json").read_text(encoding="utf-8"))
+        committed_by_id = {row["id"]: row for row in committed}
+
+        ids_seen = set()
         for slot in SLOTS:
-            first_item = catalog[slot.slot_id][0]
-            style_key = slug_key(first_item.style_name)
-            colorway_key = slug_key(first_item.colorway_name)
-            self.assertIn(f'id = "item_{slot.slot_id}_{style_key}_{colorway_key}"', kotlin_source)
+            for item in catalog[slot.slot_id]:
+                row = committed_by_id.get(item.item_id)
+                self.assertIsNotNone(row, f"missing committed row for {item.item_id}")
+                self.assertEqual(row["rarity"], item.rarity)
+                ids_seen.add(item.item_id)
+        self.assertEqual(ids_seen, set(committed_by_id))
 
+        strings = json.loads((self.pack_dir / "strings" / "generated.sv.json").read_text(encoding="utf-8"))
+        for slot in SLOTS:
+            for item in catalog[slot.slot_id]:
+                self.assertEqual(strings[f"{item.item_id}.name"], item.name_sv)
 
-def _one_valid_remote_item() -> dict:
-    items = generate_remote_legendaries({"version": 0, "items": []}, per_slot=1, seed=42)["items"]
-    return copy.deepcopy(items[0])
+        drop_rules = json.loads((self.pack_dir / "drop_rules.json").read_text(encoding="utf-8"))
+        recomputed_star_unlocks = {
+            (s["stars"], s["itemId"]) for s in self.gen_catalog._star_unlocks(catalog)
+        }
+        committed_star_unlocks = {(s["stars"], s["itemId"]) for s in drop_rules["starUnlocks"]}
+        self.assertEqual(recomputed_star_unlocks, committed_star_unlocks)
 
+        recomputed_achievements = self.gen_catalog._achievement_rewards(catalog)
+        self.assertEqual(recomputed_achievements, drop_rules["achievementRewards"])
 
-class RemoteWardrobeItemTests(unittest.TestCase):
-    def test_remote_legendaries_deterministic(self) -> None:
-        result_a = generate_remote_legendaries({"version": 0, "items": []}, per_slot=2, seed=42)
-        result_b = generate_remote_legendaries({"version": 0, "items": []}, per_slot=2, seed=42)
-        self.assertEqual(result_a, result_b)
-        self.assertEqual(result_a["version"], 1)
-        self.assertEqual(len(result_a["items"]), 18)
-        for item in result_a["items"]:
-            self.assertEqual(item["rarity"], "LEGENDARY")
-        by_slot: dict = {}
-        for item in result_a["items"]:
-            by_slot.setdefault(item["slot"], 0)
-            by_slot[item["slot"]] += 1
-        for count in by_slot.values():
-            self.assertEqual(count, 2)
+    def test_level_rewards_cover_1_to_160(self) -> None:
+        drop_rules = json.loads((self.pack_dir / "drop_rules.json").read_text(encoding="utf-8"))
+        level_rewards = drop_rules["levelRewards"]
+        levels = sorted(r["level"] for r in level_rewards)
+        self.assertEqual(levels, list(range(1, 161)))
 
-    def test_remote_legendaries_ids_unique_and_not_bundled(self) -> None:
-        result = generate_remote_legendaries({"version": 0, "items": []}, per_slot=2, seed=42)
-        ids = [item["id"] for item in result["items"]]
-        self.assertEqual(len(ids), len(set(ids)))
-        bundled = bundled_item_ids()
-        self.assertTrue(set(ids).isdisjoint(bundled))
-        self.assertEqual(validate_remote_items(result, bundled), [])
+        all_item_ids = {row["id"] for row in json.loads((self.pack_dir / "catalog" / "handmade.json").read_text(encoding="utf-8"))}
+        all_item_ids |= {row["id"] for row in json.loads((self.pack_dir / "catalog" / "generated.json").read_text(encoding="utf-8"))}
+        for r in level_rewards:
+            self.assertIn(r["itemId"], all_item_ids)
 
-    def test_remote_legendaries_append_only(self) -> None:
-        first = generate_remote_legendaries({"version": 0, "items": []}, per_slot=2, seed=42)
-        second = generate_remote_legendaries(first, per_slot=1, seed=42)
-        self.assertEqual(second["version"], 2)
-        self.assertEqual(second["items"][: len(first["items"])], first["items"])
-        old_ids = {item["id"] for item in first["items"]}
-        new_ids = {item["id"] for item in second["items"][len(first["items"]) :]}
-        self.assertTrue(new_ids.isdisjoint(old_ids))
+        catalog = generate_catalog(per_slot=64, seed=42)
+        self.assertEqual(level_rewards, self.gen_catalog.replay_level_rewards(catalog))
 
-    def test_upload_validator_rejects_bad_items(self) -> None:
-        bundled = bundled_item_ids()
+    def test_stability_diff(self) -> None:
+        pack = json.loads(self.build_pack.build(5).decode("utf-8"))
+        baseline = copy.deepcopy(pack)
+        baseline["version"] = 4
 
-        bundled_id_item = _one_valid_remote_item()
-        bundled_id_item["id"] = "item_hat_weekly_hero"
-        errors = validate_remote_items({"version": 1, "items": [bundled_id_item]}, bundled)
-        self.assertTrue(any("item_hat_weekly_hero" in e for e in errors))
+        self.assertEqual(self.validate_pack.stability_errors(pack, baseline), [])
 
-        style_item = _one_valid_remote_item()
-        style_item["styleIndex"] = 9
-        errors = validate_remote_items({"version": 1, "items": [style_item]}, bundled)
-        self.assertTrue(any(style_item["id"] in e for e in errors))
+        removed = copy.deepcopy(pack)
+        removed["items"] = removed["items"][1:]
+        errors = self.validate_pack.stability_errors(removed, baseline)
+        self.assertTrue(any("removed item id" in e for e in errors))
 
-        slot_item = _one_valid_remote_item()
-        slot_item["slot"] = "CAPE"
-        errors = validate_remote_items({"version": 1, "items": [slot_item]}, bundled)
-        self.assertTrue(any(slot_item["id"] in e for e in errors))
+        changed_reward = copy.deepcopy(pack)
+        changed_reward["dropRules"]["levelRewards"][0] = {
+            "level": changed_reward["dropRules"]["levelRewards"][0]["level"],
+            "itemId": "item_hat_starter_explorer"
+            if changed_reward["dropRules"]["levelRewards"][0]["itemId"] != "item_hat_starter_explorer"
+            else pack["items"][-1]["id"],
+        }
+        errors = self.validate_pack.stability_errors(changed_reward, baseline)
+        self.assertTrue(any("levelRewards" in e for e in errors))
 
-        ach_item = _one_valid_remote_item()
-        ach_item["unlockAchievementId"] = "ach_x"
-        errors = validate_remote_items({"version": 1, "items": [ach_item]}, bundled)
-        self.assertTrue(any(ach_item["id"] in e for e in errors))
+        changed_slot = copy.deepcopy(pack)
+        changed_slot["items"][0] = dict(changed_slot["items"][0])
+        changed_slot["items"][0]["slot"] = "tail" if changed_slot["items"][0]["slot"] != "tail" else "hat"
+        errors = self.validate_pack.stability_errors(changed_slot, baseline)
+        self.assertTrue(any("slot changed" in e for e in errors))
 
-        star_item = _one_valid_remote_item()
-        star_item["unlockStarRequirement"] = 5
-        errors = validate_remote_items({"version": 1, "items": [star_item]}, bundled)
-        self.assertTrue(any(star_item["id"] in e for e in errors))
+        same_version = copy.deepcopy(pack)
+        same_version["version"] = baseline["version"]
+        errors = self.validate_pack.stability_errors(same_version, baseline)
+        self.assertTrue(any("not greater than" in e for e in errors))
 
-        set_piece_item = _one_valid_remote_item()
-        set_piece_item["isWeeklyStreakSetPiece"] = True
-        errors = validate_remote_items({"version": 1, "items": [set_piece_item]}, bundled)
-        self.assertTrue(any(set_piece_item["id"] in e for e in errors))
-
-        mesh_item = _one_valid_remote_item()
-        mesh_item["meshAssetPath"] = "x.glb"
-        errors = validate_remote_items({"version": 1, "items": [mesh_item]}, bundled)
-        self.assertTrue(any(mesh_item["id"] in e for e in errors))
-
-        dup_a = _one_valid_remote_item()
-        dup_b = copy.deepcopy(dup_a)
-        errors = validate_remote_items({"version": 1, "items": [dup_a, dup_b]}, bundled)
-        self.assertTrue(any(dup_a["id"] in e for e in errors))
-
-        blank_name_item = _one_valid_remote_item()
-        blank_name_item["nameSv"] = "  "
-        errors = validate_remote_items({"version": 1, "items": [blank_name_item]}, bundled)
-        self.assertTrue(any(blank_name_item["id"] in e for e in errors))
-
-    def test_build_writes_meta_last(self) -> None:
-        base = _one_valid_remote_item()
-        used_ids: set = set()
-        items = []
-        for i in range(450):
-            item = copy.deepcopy(base)
-            item["id"] = f"item_hat_synthetic_{i}"
-            used_ids.add(item["id"])
-            items.append(item)
-        remote = {"version": 3, "items": items}
-        writes = build_writes(remote, "projects/p/databases/d/documents")
-
-        self.assertEqual(len(writes), 4)
-        chunk_writes = writes[:3]
-        meta_write = writes[3]
-
-        self.assertEqual(meta_write["update"]["name"], "projects/p/databases/d/documents/wardrobe/meta")
-        self.assertEqual(meta_write["update"]["fields"]["chunkCount"]["integerValue"], "3")
-        self.assertEqual(meta_write["update"]["fields"]["version"]["integerValue"], "3")
-
-        for i, write in enumerate(chunk_writes):
-            self.assertEqual(write["update"]["name"], f"projects/p/databases/d/documents/wardrobe/chunk_{i}")
-            values = write["update"]["fields"]["items"]["arrayValue"]["values"]
-            for v in values:
-                self.assertIn("stringValue", v)
-                json.loads(v["stringValue"])  # round-trips
-
-    def test_remote_item_keys_match_kotlin_wardrobe_item(self) -> None:
-        models_text = (REPO_ROOT / "composeApp/src/commonMain/kotlin/se/lixo/app/domain/model/Models.kt").read_text(
-            encoding="utf-8"
+    def test_bundled_snapshot_up_to_date(self) -> None:
+        bundled_path = (
+            REPO_ROOT
+            / "composeApp"
+            / "src"
+            / "commonMain"
+            / "composeResources"
+            / "files"
+            / "content_pack.json"
         )
-        match = re.search(r"data class WardrobeItem\(\n(.*?)\n\)", models_text, re.S)
-        self.assertIsNotNone(match)
-        field_names = set(re.findall(r"val (\w+):", match.group(1)))
+        bundled_bytes = bundled_path.read_bytes()
+        bundled = json.loads(bundled_bytes.decode("utf-8"))
+        fresh = self.build_pack.build(bundled["version"], bundled.get("publishedAt", ""))
+        self.assertEqual(bundled_bytes, fresh)
 
-        item = _one_valid_remote_item()
-        self.assertEqual(set(item.keys()), field_names)
+        fixture_path = REPO_ROOT / "tools" / "tests" / "fixtures" / "mini_pack.json"
+        fixture = json.loads(fixture_path.read_bytes().decode("utf-8"))
+        self.assertEqual(fixture, self.build_pack.mini_pack(bundled))
 
-    def test_handmade_ids_match_repositories_kt(self) -> None:
-        repo_text = (
-            REPO_ROOT / "composeApp/src/commonMain/kotlin/se/lixo/app/data/repository/Repositories.kt"
-        ).read_text(encoding="utf-8")
-        start = repo_text.index("fun buildSeedWardrobeCatalog")
-        end = repo_text.index("items.addAll(GENERATED_WARDROBE_ITEMS)", start)
-        section = repo_text[start:end]
-        ids = set(re.findall(r'id = "(item_[a-z0-9_]+)"', section))
-        ids.add("item_hat_starter_explorer")
+    def test_bundled_pack_validates(self) -> None:
+        bundled_path = (
+            REPO_ROOT
+            / "composeApp"
+            / "src"
+            / "commonMain"
+            / "composeResources"
+            / "files"
+            / "content_pack.json"
+        )
+        pack = json.loads(bundled_path.read_text(encoding="utf-8"))
+        self.assertEqual(self.validate_pack.validate(pack), [])
+
+    def test_handmade_json_ids_match(self) -> None:
+        handmade = json.loads((self.pack_dir / "catalog" / "handmade.json").read_text(encoding="utf-8"))
+        ids = {row["id"] for row in handmade}
         self.assertEqual(ids, set(HANDMADE_ITEM_IDS))
 
-    def test_checked_in_remote_file_is_valid(self) -> None:
-        remote = json.loads(REMOTE_ITEMS_PATH.read_text(encoding="utf-8"))
-        errors = validate_remote_items(remote, bundled_item_ids())
-        self.assertEqual(errors, [])
+    def test_jul_2026_event_in_bundled_pack(self) -> None:
+        bundled_path = (
+            REPO_ROOT
+            / "composeApp"
+            / "src"
+            / "commonMain"
+            / "composeResources"
+            / "files"
+            / "content_pack.json"
+        )
+        pack = json.loads(bundled_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(len(pack["events"]), 1)
+        event = pack["events"][0]
+        self.assertEqual(event["id"], "event_jul_2026")
+        self.assertEqual(len(event["itemIds"]), 9)
+
+        items_by_id = {item["id"]: item for item in pack["items"]}
+        for item_id in event["itemIds"]:
+            item = items_by_id[item_id]
+            self.assertEqual(item["pool"], "event")
+            self.assertEqual(item["eventId"], "event_jul_2026")
+
+        sv = pack["strings"]["sv"]
+        self.assertEqual(sv[event["banner"]["titleKey"]], "God Jul!")
+        for item_id in event["itemIds"]:
+            self.assertIn(items_by_id[item_id]["nameKey"], sv)
+
+        self.assertEqual(self.validate_pack.validate(pack), [])
+
+    def test_event_errors_reject_bad_event(self) -> None:
+        pack = json.loads(self.build_pack.build(1).decode("utf-8"))
+        event = next(e for e in pack["events"] if e["id"] == "event_jul_2026")
+        items_by_id = {item["id"]: item for item in pack["items"]}
+
+        bad_window = dict(event)
+        bad_window["endExclusive"] = bad_window["start"]
+        errors = self.validate_pack.event_errors(bad_window, items_by_id)
+        self.assertTrue(any("start must be before endExclusive" in e for e in errors))
+
+        bad_hex = copy.deepcopy(event)
+        bad_hex["banner"]["bgHex"] = "not-a-hex"
+        errors = self.validate_pack.event_errors(bad_hex, items_by_id)
+        self.assertTrue(any("banner.bgHex invalid" in e for e in errors))
+
+        bad_chance = copy.deepcopy(event)
+        bad_chance["dropBoost"]["eventItemChance"] = 1.5
+        errors = self.validate_pack.event_errors(bad_chance, items_by_id)
+        self.assertTrue(any("dropBoost.eventItemChance out of range" in e for e in errors))
+
+
+class UploadPackTests(unittest.TestCase):
+    """doc/plans/024-cloud-content-sync.md: `tools/content_pipeline/pack/upload_pack.py`."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from tools.content_pipeline.pack import upload_pack
+
+        cls.upload_pack = upload_pack
+        cls.bundled_path = (
+            REPO_ROOT
+            / "composeApp"
+            / "src"
+            / "commonMain"
+            / "composeResources"
+            / "files"
+            / "content_pack.json"
+        )
+        cls.bundled_text = cls.bundled_path.read_text(encoding="utf-8")
+
+    def test_split_chunks_round_trips(self) -> None:
+        chunks = self.upload_pack.split_chunks(self.bundled_text)
+        self.assertEqual("".join(chunks), self.bundled_text)
+        for chunk in chunks:
+            self.assertLessEqual(len(chunk.encode("utf-8")), self.upload_pack.CHUNK_MAX_BYTES)
+            # Every chunk must itself be valid UTF-8 (no split multi-byte sequence).
+            self.assertEqual(chunk.encode("utf-8").decode("utf-8"), chunk)
+
+        big = ("åäö🙂abc" * 400_000)
+        self.assertGreater(len(big.encode("utf-8")), 2_000_000)
+        big_chunks = self.upload_pack.split_chunks(big)
+        self.assertEqual("".join(big_chunks), big)
+        for chunk in big_chunks:
+            self.assertLessEqual(len(chunk.encode("utf-8")), self.upload_pack.CHUNK_MAX_BYTES)
+            self.assertEqual(chunk.encode("utf-8").decode("utf-8"), chunk)
+
+    def test_build_pack_writes_puts_meta_last_with_correct_fields(self) -> None:
+        pack_bytes = self.bundled_text.encode("utf-8")
+        writes = self.upload_pack.build_pack_writes(pack_bytes, "projects/p/databases/(default)/documents", "2026-01-01T00:00:00Z")
+
+        pack = json.loads(self.bundled_text)
+        schema = pack["schemaVersion"]
+        version = pack["version"]
+
+        meta_write = writes[-1]
+        self.assertEqual(meta_write["updateMask"]["fieldPaths"], ["packs.`1`"])
+        entry_fields = meta_write["update"]["fields"]["packs"]["mapValue"]["fields"][str(schema)]["mapValue"]["fields"]
+        chunk_writes = writes[:-1]
+        self.assertEqual(entry_fields["chunkCount"]["integerValue"], str(len(chunk_writes)))
+        self.assertEqual(entry_fields["sha256"]["stringValue"], hashlib.sha256(pack_bytes).hexdigest())
+
+        for i, write in enumerate(chunk_writes):
+            expected_name = f"projects/p/databases/(default)/documents/content_chunks/{schema}_{version}_{i}"
+            self.assertEqual(write["update"]["name"], expected_name)
+
+    def test_stability_failure_blocks_upload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            published_dir = Path(tmp) / "published"
+            published_dir.mkdir()
+
+            old_pack = json.loads(self.bundled_text)
+            old_version = old_pack["version"]
+            extra_item = dict(old_pack["items"][0])
+            extra_item["id"] = "item_hat_upload_pack_stability_extra"
+            old_pack["items"] = old_pack["items"] + [extra_item]
+            (published_dir / f"pack_v{old_version}.json").write_text(
+                json.dumps(old_pack, sort_keys=True, separators=(",", ":"), ensure_ascii=False), encoding="utf-8"
+            )
+
+            new_pack = json.loads(self.bundled_text)
+            new_pack["version"] = old_version + 1
+            new_bytes = json.dumps(new_pack, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+            pack_path = Path(tmp) / "content_pack.json"
+            pack_path.write_bytes(new_bytes)
+
+            with mock.patch.object(self.upload_pack, "commit_writes") as commit_mock, mock.patch.object(
+                self.upload_pack, "_load_firebase_cli_access_token", return_value="fake-token"
+            ):
+                code = self.upload_pack.main(
+                    ["--pack", str(pack_path), "--published-dir", str(published_dir)]
+                )
+
+            self.assertEqual(code, 1)
+            commit_mock.assert_not_called()
+            self.assertFalse((published_dir / f"pack_v{old_version + 1}.json").exists())
+
+    def test_success_path_commits_chunks_before_meta_and_prunes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            published_dir = Path(tmp) / "published"
+            published_dir.mkdir()
+
+            old_pack = json.loads(self.bundled_text)
+            # Pre-populate enough published versions (well above the real bundled version, which
+            # may be as low as 1) that pruning actually has something to do -- `build_prune_writes`
+            # only emits deletes beyond `KEEP_VERSIONS`.
+            base_version = 100
+            for v in range(base_version - self.upload_pack.KEEP_VERSIONS - 1, base_version + 1):
+                dated = dict(old_pack)
+                dated["version"] = v
+                (published_dir / f"pack_v{v}.json").write_text(
+                    json.dumps(dated, sort_keys=True, separators=(",", ":"), ensure_ascii=False), encoding="utf-8"
+                )
+            old_version = base_version
+
+            new_pack = json.loads(self.bundled_text)
+            new_pack["version"] = old_version + 1
+            new_bytes = json.dumps(new_pack, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+            pack_path = Path(tmp) / "content_pack.json"
+            pack_path.write_bytes(new_bytes)
+
+            commit_calls: list = []
+
+            def fake_commit(writes, project, database, token=None):
+                commit_calls.append(writes)
+                return len(writes)
+
+            with mock.patch.object(self.upload_pack, "commit_writes", side_effect=fake_commit), mock.patch.object(
+                self.upload_pack, "_load_firebase_cli_access_token", return_value="fake-token"
+            ):
+                code = self.upload_pack.main(
+                    ["--pack", str(pack_path), "--published-dir", str(published_dir)]
+                )
+
+            self.assertEqual(code, 0)
+            self.assertGreaterEqual(len(commit_calls), 2)
+            # Every chunk commit (all but the last two: meta, then prune) precedes the meta commit.
+            meta_call_index = next(
+                i for i, writes in enumerate(commit_calls) if writes and "updateMask" in writes[0]
+            )
+            for i in range(meta_call_index):
+                self.assertNotIn("updateMask", commit_calls[i][0])
+
+            published_file = published_dir / f"pack_v{old_version + 1}.json"
+            self.assertTrue(published_file.exists())
+            self.assertEqual(published_file.read_bytes(), new_bytes)
+
+            prune_calls = [writes for writes in commit_calls if writes and "delete" in writes[0]]
+            self.assertEqual(len(prune_calls), 1)
+
+    def test_build_prune_writes_keeps_last_n_versions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            published_dir = Path(tmp)
+            base_pack = json.loads(self.bundled_text)
+            for v in range(1, 6):
+                pack = dict(base_pack)
+                pack["version"] = v
+                (published_dir / f"pack_v{v}.json").write_text(
+                    json.dumps(pack, sort_keys=True, separators=(",", ":"), ensure_ascii=False), encoding="utf-8"
+                )
+
+            writes = self.upload_pack.build_prune_writes(published_dir, 1, "projects/p/databases/(default)/documents", keep=3)
+            deleted_names = {w["delete"] for w in writes}
+
+            for v in (3, 4, 5):
+                self.assertFalse(any(f"_{v}_" in name for name in deleted_names), f"v{v} should be kept")
+            for v in (1, 2):
+                self.assertTrue(any(f"_{v}_" in name for name in deleted_names), f"v{v} should be pruned")
 
 
 if __name__ == "__main__":

@@ -13,27 +13,25 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import se.lixo.app.data.local.CachedWardrobeVersion
 import se.lixo.app.data.local.LexiconCache
 import se.lixo.app.data.local.ProfileStore
-import se.lixo.app.data.local.WardrobeCatalogCache
 import se.lixo.app.data.local.createPlatformLexiconCache
 import se.lixo.app.data.local.createPlatformProfileStore
-import se.lixo.app.data.local.createPlatformWardrobeCatalogCache
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.remote.SyncMergeEngine
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.AvatarAppearance
+import se.lixo.app.domain.content.ContentItem
+import se.lixo.app.domain.content.LevelReward
 import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
-import se.lixo.app.domain.engine.RemoteWardrobeValidator
 import se.lixo.app.domain.model.ACHIEVEMENT_LADDERS
 import se.lixo.app.domain.model.Achievement
 import se.lixo.app.domain.model.AchievementAction
 import se.lixo.app.domain.model.AddFriendError
 import se.lixo.app.domain.model.AddFriendException
-import se.lixo.app.domain.model.AvatarAppearance
-import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.ChildProfile
@@ -44,16 +42,12 @@ import se.lixo.app.domain.model.EnglishGlosaItem
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
-import se.lixo.app.domain.model.ItemOrnament
-import se.lixo.app.domain.model.ItemPattern
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathErrorLog
 import se.lixo.app.domain.model.MathProblemType
-import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.StruggledWordLog
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
-import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.domain.model.achievementId
 import se.lixo.app.domain.model.requiresAiMode
 import se.lixo.app.platform.PendingEmailLinkStorage
@@ -89,10 +83,16 @@ class LixoRepository(
      */
     private val isDebugBuild: Boolean = PlatformFeatureFlags().isDebugBuild,
     private val profileStore: ProfileStore? = createPlatformProfileStore(),
-    private val wardrobeCache: WardrobeCatalogCache? = createPlatformWardrobeCatalogCache(),
-    private val appVersionCode: Int = PlatformFeatureFlags().appVersionCode
+    val content: ContentRepository
 ) {
     private var lexiconVersion: Int? = null
+
+    /**
+     * The tutorial's curated reward item, from `content.dropRules.tutorialRewardItemId`
+     * (doc/content/content-pack.md § Drop rules). A getter (not an initializer), so it always
+     * reads the live pack and there is no init-order problem with [content], a constructor val.
+     */
+    private val tutorialRewardItemId: String get() = content.active.value.dropRules.tutorialRewardItemId
 
     private val _profiles = MutableStateFlow<List<ChildProfile>>(emptyList())
     val profiles: StateFlow<List<ChildProfile>> = _profiles.asStateFlow()
@@ -108,22 +108,6 @@ class LixoRepository(
 
     private val _tasksById = MutableStateFlow<Map<String, HomeworkTask>>(emptyMap())
     val tasksById: StateFlow<Map<String, HomeworkTask>> = _tasksById.asStateFlow()
-
-    private val _wardrobeCatalog = MutableStateFlow<List<WardrobeItem>>(emptyList())
-    val wardrobeCatalog: StateFlow<List<WardrobeItem>> = _wardrobeCatalog.asStateFlow()
-
-    // Remote wardrobe items (doc/plans/015-remote-wardrobe-items.md). Declared ABOVE init {} on
-    // purpose: init calls seedInitialData(), which reads bundledCatalog via publishWardrobeCatalog().
-    private val bundledCatalog: List<WardrobeItem> = buildSeedWardrobeCatalog()
-    private val bundledItemIds: Set<String> = bundledCatalog.mapTo(HashSet()) { it.id }
-    private var remoteWardrobeItems: Map<String, WardrobeItem> = emptyMap()
-    private var wardrobeVersion: Int? = null
-    private var wardrobeAppVersionCode: Int? = null
-
-    /** Publishes [bundledCatalog] plus the current [remoteWardrobeItems], sorted by id, to [_wardrobeCatalog]. */
-    private fun publishWardrobeCatalog() {
-        _wardrobeCatalog.value = bundledCatalog + remoteWardrobeItems.values.sortedBy { it.id }
-    }
 
     /**
      * Universal Wardrobe (`project.md` §2):
@@ -186,11 +170,10 @@ class LixoRepository(
         tutorialCompleted = true,
         tutorialSkippableByParent = false,
         appearance = AvatarAppearance(
-            avatarType = AvatarType.CAT,
-            primaryTintHex = 0xFFF5A623,
-            equippedItems = mapOf(EquipmentSlot.HAT to BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID)
+            avatarId = content.active.value.defaultAvatar.id,
+            equipped = mapOf(EquipmentSlot.HAT to tutorialRewardItemId)
         ),
-        unlockedAvatars = setOf(AvatarType.CAT),
+        unlockedAvatarIds = content.active.value.defaultAvatarIds,
         currentLevelOrder = 1,
         totalStars = 0,
         currentStreakDays = 0,
@@ -226,10 +209,10 @@ class LixoRepository(
                 val now = Clock.System.now().toEpochMilliseconds()
                 val saga = buildDebugSagaProfile(now)
                 profilesToMerge = persisted + saga
-                persistedUnlocked = persistedUnlocked + BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID
+                persistedUnlocked = persistedUnlocked + tutorialRewardItemId
                 runCatching { store.saveProfile(saga) }
                     .onFailure { println("LixoProfiles: WARN debug saveProfile(saga) failed: $it") }
-                runCatching { store.saveUnlockedItem(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID, "DEBUG_SEED") }
+                runCatching { store.saveUnlockedItem(tutorialRewardItemId, "DEBUG_SEED") }
                     .onFailure { println("LixoProfiles: WARN debug saveUnlockedItem failed: $it") }
             }
 
@@ -262,7 +245,7 @@ class LixoRepository(
                 val now = Clock.System.now().toEpochMilliseconds()
                 val saga = buildDebugSagaProfile(now)
                 _profiles.update { it + saga }
-                _unlockedItemIds.update { it + BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID }
+                _unlockedItemIds.update { it + tutorialRewardItemId }
                 _activeProfileId.value = _activeProfileId.value ?: saga.id
             }
         } finally {
@@ -315,7 +298,7 @@ class LixoRepository(
         if (profileStore == null && isDebugBuild) {
             val saga = buildDebugSagaProfile(now)
             _profiles.value = listOf(saga)
-            _unlockedItemIds.value = setOf(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID)
+            _unlockedItemIds.value = setOf(tutorialRewardItemId)
             _activeProfileId.value = saga.id
         }
 
@@ -331,16 +314,13 @@ class LixoRepository(
             Course("course_en_1", "Engelska Glosresan", Subject.ENGLISH, minGrade = 2, version = 1, updatedAt = seedTimestamp)
         )
 
-        // Seed 579 Wardrobe Items across all 9 slots and 5 rarities (3 handmade + 576 generated)
-        publishWardrobeCatalog()
-
         // Seed 160 Campaign Levels (40 Swedish, 100 Math, 20 English) + Tasks
-        val (generatedLevels, generatedTasks) = buildSeedCampaignLevelsAndTasks(bundledCatalog)
+        val (generatedLevels, generatedTasks) = buildSeedCampaignLevelsAndTasks(content.active.value.dropRules.levelRewards)
         _levels.value = generatedLevels
         _tasksById.value = generatedTasks
 
         // Seed the plan-014 ladders (48 tiered achievements, see AchievementLadders.kt)
-        _achievements.value = buildSeedAchievements()
+        _achievements.value = buildSeedAchievements(content.active.value.dropRules.achievementRewards)
     }
 
     fun recordAppLaunch() {
@@ -379,8 +359,8 @@ class LixoRepository(
             displayName = displayName.trim().ifBlank { "Syskon" },
             ageYears = ageYears.coerceIn(BalanceConfig.PROFILE_MIN_AGE_YEARS, BalanceConfig.PROFILE_MAX_AGE_YEARS),
             tutorialCompleted = false,
-            appearance = AvatarAppearance(avatarType = AvatarType.CAT),
-            unlockedAvatars = setOf(AvatarType.CAT),
+            appearance = AvatarAppearance(avatarId = content.active.value.defaultAvatar.id),
+            unlockedAvatarIds = content.active.value.defaultAvatarIds,
             createdAtEpochMillis = now,
             updatedAtEpochMillis = now
         )
@@ -409,14 +389,14 @@ class LixoRepository(
             list.map { profile ->
                 if (profile.id != activeId) profile
                 else {
-                    val nextEquipped = profile.appearance.equippedItems.toMutableMap()
+                    val nextEquipped = profile.appearance.equipped.toMutableMap()
                     if (itemId == null) {
                         nextEquipped.remove(slot)
-                    } else if (_unlockedItemIds.value.contains(itemId)) {
+                    } else if (_unlockedItemIds.value.contains(itemId) && itemId in content.active.value.itemsById) {
                         nextEquipped[slot] = itemId
                     }
                     profile.copy(
-                        appearance = profile.appearance.copy(equippedItems = nextEquipped),
+                        appearance = profile.appearance.copy(equipped = nextEquipped),
                         updatedAtEpochMillis = now
                     )
                 }
@@ -424,14 +404,14 @@ class LixoRepository(
         }
     }
 
-    fun selectAvatarTypeOnActiveProfile(avatarType: AvatarType) {
+    fun selectAvatarOnActiveProfile(avatarId: String) {
         val activeId = _activeProfileId.value ?: return
         val now = Clock.System.now().toEpochMilliseconds()
         updateProfiles { list ->
             list.map { profile ->
-                if (profile.id != activeId || !profile.unlockedAvatars.contains(avatarType)) profile
+                if (profile.id != activeId || avatarId !in content.active.value.unlockedAvatarIds(profile.unlockedAvatarIds)) profile
                 else profile.copy(
-                    appearance = profile.appearance.copy(avatarType = avatarType),
+                    appearance = profile.appearance.copy(avatarId = avatarId),
                     updatedAtEpochMillis = now
                 )
             }
@@ -439,9 +419,9 @@ class LixoRepository(
     }
 
     fun customizeBaseAppearanceOnActiveProfile(
-        primaryTintHex: Long,
-        eyeExpressionIndex: Int,
-        smileExpressionIndex: Int
+        tintHex: Long?,
+        eyeIndex: Int,
+        smileIndex: Int
     ) {
         val activeId = _activeProfileId.value ?: return
         val now = Clock.System.now().toEpochMilliseconds()
@@ -450,9 +430,9 @@ class LixoRepository(
                 if (profile.id != activeId) profile
                 else profile.copy(
                     appearance = profile.appearance.copy(
-                        primaryTintHex = primaryTintHex,
-                        eyeExpressionIndex = eyeExpressionIndex,
-                        smileExpressionIndex = smileExpressionIndex
+                        tintHex = tintHex,
+                        eyeIndex = eyeIndex,
+                        smileIndex = smileIndex
                     ),
                     updatedAtEpochMillis = now
                 )
@@ -723,80 +703,16 @@ class LixoRepository(
     }
 
     /**
-     * Loads previously cached remote wardrobe items from the Room-backed [wardrobeCache], if any,
-     * into memory. Must run before [syncCurriculumFromCloud], mirroring [loadCachedLexicon].
-     * Re-validates every cached item with [RemoteWardrobeValidator.acceptItems] (an app update may
-     * have added a bundled item that now clashes with a previously-accepted cached id), and lets
-     * any already-synced in-memory item win over the cached one on a merge.
-     */
-    suspend fun loadCachedWardrobe() {
-        val cache = wardrobeCache ?: return
-        val cached: CachedWardrobeVersion?
-        val items: List<WardrobeItem>
-        try {
-            cached = cache.loadVersion()
-            items = cache.loadItems()
-        } catch (_: Throwable) {
-            println("LixoWardrobeSync: WARN failed to load cached wardrobe items")
-            return
-        }
-        val accepted = RemoteWardrobeValidator.acceptItems(items, bundledItemIds, appVersionCode)
-        remoteWardrobeItems = accepted.associateBy { it.id } + remoteWardrobeItems
-        if (wardrobeVersion == null) {
-            wardrobeVersion = cached?.version
-            wardrobeAppVersionCode = cached?.appVersionCode
-        }
-        publishWardrobeCatalog()
-    }
-
-    /**
-     * Downloads new wardrobe items from Firestore (`wardrobe/meta` + `wardrobe/chunk_N`), without
-     * an app release (`doc/plans/015-remote-wardrobe-items.md`). Additions only: a newer upload
-     * that omits a previously-accepted item never removes it; taking an item out of drops is done
-     * server-side with `retired = true` instead. Only ever merges into [remoteWardrobeItems], never
-     * into [bundledCatalog], so [buildLevelRewardPool] (bundled-only, called further down in
-     * [syncCurriculumFromCloud]) and every other bundled-only computation stay unaffected by what
-     * gets published remotely. The items themselves are produced and validated by
-     * `tools/item_pipeline/upload_wardrobe_items.py`, which must mirror [RemoteWardrobeValidator].
-     * Returns true only when a newer wardrobe catalog was actually downloaded and applied.
-     */
-    private suspend fun syncWardrobeFromCloud(): Boolean {
-        val meta = cloudGateway.fetchWardrobeMeta() ?: return false
-        if (meta.chunkCount <= 0) return false
-        // A newer app may accept items an older validator skipped (minAppVersionCode / relaxed
-        // rules), so a cache written by another app versionCode is re-fetched and re-validated.
-        if (meta.version == wardrobeVersion && wardrobeAppVersionCode == appVersionCode) return false
-        val raw = cloudGateway.fetchWardrobeItems(meta.chunkCount)
-        // The gateway's own catch returns an empty list on any partial failure, so don't record
-        // this version on an empty fetch -- the device must retry it on the next launch.
-        if (raw.isEmpty()) return false
-        val accepted = RemoteWardrobeValidator.accept(raw, bundledItemIds, appVersionCode)
-        remoteWardrobeItems = remoteWardrobeItems + accepted.associateBy { it.id }
-        try {
-            wardrobeCache?.upsert(meta.version, appVersionCode, accepted)
-        } catch (t: Throwable) {
-            println("LixoWardrobeSync: WARN failed to cache remote wardrobe items: $t")
-        }
-        wardrobeVersion = meta.version
-        wardrobeAppVersionCode = appVersionCode
-        publishWardrobeCatalog()
-        println("LixoWardrobeSync: v${meta.version} accepted ${accepted.size}/${raw.size} remote items")
-        return accepted.isNotEmpty()
-    }
-
-    /**
-     * Downloads public curriculum content (`courses`, `levels`, `tasks`, `lexicon`, `wardrobe`)
-     * from Firestore using delta version checking (`project.md` §3: "Delta-uppdatering via
-     * versionscheck; endast ändrade nivåer hämtas"). Safe no-op fallback if offline. The lexicon
-     * and wardrobe syncs run independently of courses/levels/tasks so they are never skipped when
-     * courses fail to load.
+     * Downloads public curriculum content (`courses`, `levels`, `tasks`, `lexicon`) from
+     * Firestore using delta version checking (`project.md` §3: "Delta-uppdatering via
+     * versionscheck; endast ändrade nivåer hämtas"). Safe no-op fallback if offline. The content
+     * pack itself is synced separately (024); this only covers courses/levels/tasks/lexicon.
      */
     suspend fun syncCurriculumFromCloud(): Boolean {
         val lexiconUpdated = syncLexiconFromCloud()
-        val wardrobeUpdated = syncWardrobeFromCloud()
 
         val remoteCourses = cloudGateway.fetchRemoteCourses()
-        if (remoteCourses.isEmpty()) return lexiconUpdated || wardrobeUpdated
+        if (remoteCourses.isEmpty()) return lexiconUpdated
 
         val coursesToSync = SyncMergeEngine.selectCoursesNeedingDeltaSync(
             localCourses = _courses.value,
@@ -823,14 +739,12 @@ class LixoRepository(
                 .filter { it.levelId in syncedLevelIds }
 
             if (remoteTasks.isNotEmpty()) {
-                // Bundled-only: remote items (doc/plans/015) must never shift level -> rewardItemId.
-                val levelRewardPool = buildLevelRewardPool(bundledCatalog)
                 _tasksById.update { current ->
                     val next = current.toMutableMap()
                     remoteTasks.forEach { task ->
                         // The app owns wardrobe item ids (doc/plans/002); any remote rewardItemId is ignored.
                         val rewardItemId = current[task.id]?.rewardItemId
-                            ?: mergedLevelsById[task.levelId]?.order?.let { levelRewardItemIdFor(it, levelRewardPool) }
+                            ?: mergedLevelsById[task.levelId]?.order?.let { content.active.value.levelRewardItemId(it) }
                         next[task.id] = task.copy(rewardItemId = rewardItemId)
                     }
                     next
@@ -841,7 +755,7 @@ class LixoRepository(
             _levels.value = mergedLevelsById.values.sortedBy { it.order }
         }
 
-        return coursesToSync.isNotEmpty() || lexiconUpdated || wardrobeUpdated
+        return coursesToSync.isNotEmpty() || lexiconUpdated
     }
 
     companion object {
@@ -874,179 +788,6 @@ class LixoRepository(
             return builder.toString().replace("--", "-").trim('-')
         }
 
-        fun buildSeedWardrobeCatalog(): List<WardrobeItem> {
-            val items = mutableListOf<WardrobeItem>()
-            // 1. Starter item unlocked by Tutorial
-            items.add(
-                WardrobeItem(
-                    id = BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID,
-                    nameSv = "Skogsgläntans Upptäckarhatt",
-                    descriptionSv = "Den första glittrande hatten som Lixo hittade under tutorial-sagan!",
-                    slot = EquipmentSlot.HAT,
-                    rarity = Rarity.COMMON,
-                    subjectTheme = Subject.SWEDISH,
-                    meshAssetPath = "3d_sample.glb",
-                    meshNodeName = "socket_hat_explorer",
-                    unlockStarRequirement = 0,
-                    primaryColorHex = 0xFF2ECC71,
-                    styleIndex = 5, // cap
-                    secondaryColorHex = 0xFFFFFFFF,
-                    pattern = ItemPattern.NONE,
-                    ornament = ItemOrnament.NONE
-                )
-            )
-
-            // 2. Named signature items used in demos/achievements
-            items.add(
-                WardrobeItem(
-                    id = "item_hand_right_math_sword_1",
-                    nameSv = "Siffersvärdet av Kristall",
-                    descriptionSv = "Ett lysande svärd smitt av kloka uträkningar i matematik.",
-                    slot = EquipmentSlot.HAND_RIGHT,
-                    rarity = Rarity.RARE,
-                    subjectTheme = Subject.MATH,
-                    meshAssetPath = "3d_sample.glb",
-                    meshNodeName = "socket_hand_right_sword",
-                    unlockStarRequirement = 6,
-                    primaryColorHex = 0xFF3498DB,
-                    styleIndex = 0, // sword
-                    secondaryColorHex = 0xFFF1C40F,
-                    pattern = ItemPattern.STRIPES,
-                    ornament = ItemOrnament.TRIM
-                )
-            )
-            items.add(
-                WardrobeItem(
-                    id = "item_shoulders_back_sv_cape_1",
-                    nameSv = "Sagoberättarens Stjärnmantel",
-                    descriptionSv = "En mjuk mantel som fladdrar när du läser svenska sagor med inlevelse.",
-                    slot = EquipmentSlot.SHOULDERS_BACK,
-                    rarity = Rarity.EPIC,
-                    subjectTheme = Subject.SWEDISH,
-                    meshAssetPath = "3d_sample.glb",
-                    meshNodeName = "socket_shoulders_cape",
-                    unlockStarRequirement = 15,
-                    unlockAchievementId = "ach_speed_reader_5",
-                    primaryColorHex = 0xFF9B59B6,
-                    styleIndex = 0, // cape
-                    secondaryColorHex = 0xFFF1C40F,
-                    pattern = ItemPattern.STARS,
-                    ornament = ItemOrnament.GEM
-                )
-            )
-
-            // 2b. Achievement reward items (buildSeedAchievements() below points at these by id).
-            // Colors/pattern are picked to avoid colliding with the generated catalog's
-            // (slot, styleIndex, primaryColorHex, pattern) combos for the same styleIndex.
-            items.add(
-                WardrobeItem(
-                    id = "item_hat_weekly_hero",
-                    nameSv = "Veckans Hjältekrona",
-                    descriptionSv = "En gyllene krona som bara de mest trogna veckostreakarna kan bära.",
-                    slot = EquipmentSlot.HAT,
-                    rarity = Rarity.LEGENDARY,
-                    subjectTheme = Subject.ENGLISH,
-                    meshAssetPath = "3d_sample.glb",
-                    meshNodeName = "socket_hat_weekly_hero",
-                    scaleMultiplier = 1.15f,
-                    unlockStarRequirement = 0,
-                    unlockAchievementId = "ach_weekly_streak_7",
-                    isWeeklyStreakSetPiece = true,
-                    primaryColorHex = 0xFFFFD700,
-                    styleIndex = 1, // Krona (crown)
-                    secondaryColorHex = 0xFFFFF8DC,
-                    pattern = ItemPattern.STARS,
-                    ornament = ItemOrnament.SPARKLE
-                )
-            )
-            items.add(
-                WardrobeItem(
-                    id = "item_armor_shirt_crystal_voice",
-                    nameSv = "Kristallklara Rösten",
-                    descriptionSv = "En skimrande kåpa som glödar när uttalet är kristallklart.",
-                    slot = EquipmentSlot.ARMOR_SHIRT,
-                    rarity = Rarity.LEGENDARY,
-                    subjectTheme = Subject.SWEDISH,
-                    meshAssetPath = "3d_sample.glb",
-                    meshNodeName = "socket_armor_shirt_crystal_voice",
-                    scaleMultiplier = 1.15f,
-                    unlockStarRequirement = 0,
-                    unlockAchievementId = "ach_pronunciation_master_10",
-                    primaryColorHex = 0xFF00E0FF,
-                    styleIndex = 2, // Kåpa (cloak)
-                    secondaryColorHex = 0xFFFFFFFF,
-                    pattern = ItemPattern.STARS,
-                    ornament = ItemOrnament.GLOW
-                )
-            )
-            items.add(
-                WardrobeItem(
-                    id = "item_hand_right_clock_money",
-                    nameSv = "Tid- och Pengasfären",
-                    descriptionSv = "En lysande sfär prydd med klocksiffror och blänkande mynt.",
-                    slot = EquipmentSlot.HAND_RIGHT,
-                    rarity = Rarity.EPIC,
-                    subjectTheme = Subject.MATH,
-                    meshAssetPath = "3d_sample.glb",
-                    meshNodeName = "socket_hand_right_clock_money",
-                    unlockStarRequirement = 0,
-                    unlockAchievementId = "ach_math_clock_money",
-                    primaryColorHex = 0xFFFFD700,
-                    styleIndex = 7, // Magisk Sfär (sphere)
-                    secondaryColorHex = 0xFF2C3E50,
-                    pattern = ItemPattern.DOTS,
-                    ornament = ItemOrnament.GEM
-                )
-            )
-
-            // 3. The bulk of the catalog: generated by tools/item_pipeline/generate_wardrobe_items.py
-            items.addAll(GENERATED_WARDROBE_ITEMS)
-            return items
-        }
-
-        /**
-         * Curated, app-owned pool for level `rewardItemId`s (doc/plans/002-level-reward-item-ids.md):
-         * the app, not curriculum content, is the single source of truth for which catalog item a
-         * level rewards. Chest-eligible items (see [ProgressionAndGiftEngine.isChestEligible]),
-         * excluding the tutorial starter hat, are split into items preferred for the onboarding
-         * track ([ProgressionAndGiftEngine.isOnboardingPreferred]) and the rest, each round-robined
-         * across equipment slots so no single slot dominates; preferred items come first so that
-         * orders 1..160 draw from COMMON/UNCOMMON, non-star-curve items whenever possible.
-         * Callers must always pass the bundled catalog, never the merged one with remote items
-         * (doc/plans/015-remote-wardrobe-items.md), or a wardrobe sync would reshuffle which item
-         * a level rewards.
-         */
-        fun buildLevelRewardPool(wardrobeItems: List<WardrobeItem>): List<WardrobeItem> {
-            val eligible = wardrobeItems.filter {
-                ProgressionAndGiftEngine.isChestEligible(it) && it.id != BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID
-            }
-            val (preferred, rest) = eligible.partition { ProgressionAndGiftEngine.isOnboardingPreferred(it) }
-            return roundRobinBySlot(preferred) + roundRobinBySlot(rest)
-        }
-
-        /**
-         * Round-robins [items] across all equipment slots, so a reward pool indexed in order
-         * doesn't over-represent any one slot (doc/plans/002-level-reward-item-ids.md).
-         */
-        private fun roundRobinBySlot(items: List<WardrobeItem>): List<WardrobeItem> {
-            val bySlot = EquipmentSlot.entries.associateWith { slot -> items.filter { it.slot == slot } }
-            val maxPerSlot = bySlot.values.maxOfOrNull { it.size } ?: 0
-            return buildList {
-                for (i in 0 until maxPerSlot) {
-                    for (slot in EquipmentSlot.entries) {
-                        bySlot[slot]?.getOrNull(i)?.let { add(it) }
-                    }
-                }
-            }
-        }
-
-        /**
-         * Looks up the curated `rewardItemId` for a level's [order] in [pool]
-         * (doc/plans/002-level-reward-item-ids.md). Returns null for an invalid order or empty pool.
-         */
-        fun levelRewardItemIdFor(order: Int, pool: List<WardrobeItem>): String? =
-            if (order < 1 || pool.isEmpty()) null else pool[(order - 1) % pool.size].id
-
         /**
          * Builds the 160 campaign levels + tasks. Swedish (40) and English (20) are interleaved
          * across orders 1..100 (order%5==0 -> English, else even -> math slot, else Swedish);
@@ -1054,16 +795,16 @@ class LixoRepository(
          * non-multiple-of-10 orders within 1..100 (n1..n40) plus orders 101..160 (n41..n100).
          */
         fun buildSeedCampaignLevelsAndTasks(
-            wardrobeItems: List<WardrobeItem>
+            levelRewards: List<LevelReward>
         ): Pair<List<CampaignLevel>, Map<String, HomeworkTask>> {
             val levels = mutableListOf<CampaignLevel>()
             val tasks = mutableMapOf<String, HomeworkTask>()
 
             val biomes = MathCurriculum.BIOMES
 
-            // Reward pool for each level's `rewardItemId` (doc/plans/002-level-reward-item-ids.md):
-            // see [buildLevelRewardPool].
-            val levelRewardPool = buildLevelRewardPool(wardrobeItems)
+            // Curated reward item id per campaign level order (doc/plans/002), from the content
+            // pack's dropRules.levelRewards.
+            val levelRewardByOrder = levelRewards.associate { it.level to it.itemId }
 
             // Ordered by difficulty: 40 unique stories, one per Swedish level (no repeats).
             // 1-14 = course_sv_1 (grade 1), 15-27 = course_sv_2 (grade 2), 28-40 = course_sv_3 (grade 3).
@@ -1134,7 +875,7 @@ class LixoRepository(
                 }
                 val levelId = "level_$order"
                 val taskId = "task_$order"
-                val rewardItemId = levelRewardItemIdFor(order, levelRewardPool)
+                val rewardItemId = levelRewardByOrder[order]
                 val refWpm = BalanceConfig.referenceWpmForDifficulty(difficulty)
 
                 val currentStory = if (subject == Subject.SWEDISH) {
@@ -1214,7 +955,7 @@ class LixoRepository(
                 val order = spec.order
                 val levelId = "level_$order"
                 val taskId = "task_$order"
-                val rewardItemId = levelRewardItemIdFor(order, levelRewardPool)
+                val rewardItemId = levelRewardByOrder[order]
 
                 levels.add(
                     CampaignLevel(
@@ -1258,40 +999,39 @@ class LixoRepository(
             480 to "Stjärnlegend (alla stjärnor)"
         )
 
-        /** The 4 handmade legacy tiers keep their original hand-written title/description/reward item. */
-        private val HANDMADE_ACHIEVEMENTS: Map<String, Triple<String, String, String>> = mapOf(
-            "ach_speed_reader_5" to Triple(
-                "Blixtläsaren",
-                "Klara 5 sagor i AI-läge med full 3-stjärnig referenshastighet.",
-                "item_shoulders_back_sv_cape_1"
-            ),
-            "ach_pronunciation_master_10" to Triple(
-                "Kristallklart Uttal",
-                "Läs 10 sagor högt med AI-läsassistenten utan att hoppa över något ord.",
-                "item_armor_shirt_crystal_voice"
-            ),
-            "ach_math_clock_money" to Triple(
-                "Tid- & Pengamästaren",
-                "Lös 15 uppgifter med Klockan och Pengar på första försöket.",
-                "item_hand_right_clock_money"
-            ),
-            "ach_weekly_streak_7" to Triple(
-                "Veckans Hjälte (7-dagars Streak)",
-                "Klara både läsning och matte 7 kalenderdagar i rad för ett legendariskt helset!",
-                "item_hat_weekly_hero"
-            )
+        /** The 4 handmade legacy tiers keep their original hand-written title/description. */
+        private val HANDMADE_ACHIEVEMENTS: Map<String, Pair<String, String>> = mapOf(
+            "ach_speed_reader_5" to (
+                "Blixtläsaren" to
+                    "Klara 5 sagor i AI-läge med full 3-stjärnig referenshastighet."
+                ),
+            "ach_pronunciation_master_10" to (
+                "Kristallklart Uttal" to
+                    "Läs 10 sagor högt med AI-läsassistenten utan att hoppa över något ord."
+                ),
+            "ach_math_clock_money" to (
+                "Tid- & Pengamästaren" to
+                    "Lös 15 uppgifter med Klockan och Pengar på första försöket."
+                ),
+            "ach_weekly_streak_7" to (
+                "Veckans Hjälte (7-dagars Streak)" to
+                    "Klara både läsning och matte 7 kalenderdagar i rad för ett legendariskt helset!"
+                )
         )
+
+        /** Every achievement id the app build knows about (doc/plans/014), from [ACHIEVEMENT_LADDERS]. */
+        fun seedAchievementIds(): Set<String> =
+            ACHIEVEMENT_LADDERS.flatMap { (action, tiers) -> tiers.map { achievementId(action, it) } }.toSet()
 
         /**
          * Seed the plan-014 ladders (48 tiered achievements, see AchievementLadders.kt). All start
          * at 0 progress / locked: progress and unlocks are tracked per-profile
          * ([ChildProfile.achievementProgress] / [ChildProfile.unlockedAchievementIds]), not in this
-         * static list. The 4 handmade legacy tiers ([HANDMADE_ACHIEVEMENT_IDS]) keep their original
-         * title/description/reward item; every other tier gets its copy from [AchievementStrings] and its
-         * reward item from the generated catalog (one generated item reserves each non-handmade id,
-         * see tools/item_pipeline/generate_wardrobe_items.py).
+         * static list. The 4 handmade legacy tiers ([HANDMADE_ACHIEVEMENTS]) keep their original
+         * title/description; every other tier gets its copy from [AchievementStrings]. Reward item
+         * ids come from the content pack's `dropRules.achievementRewards`.
          */
-        fun buildSeedAchievements(): List<Achievement> =
+        fun buildSeedAchievements(achievementRewards: Map<String, String>): List<Achievement> =
             ACHIEVEMENT_LADDERS.flatMap { (action, tiers) ->
                 tiers.mapIndexed { i, tier ->
                     val id = achievementId(action, tier)
@@ -1307,9 +1047,6 @@ class LixoRepository(
                         action == AchievementAction.COLLECT_STARS -> "Samla ${tier.target} stjärnor i kampanjen."
                         else -> AchievementStrings.challengeShortSv(action, tier.target)
                     }
-                    val rewardItemId = handmade?.third
-                        ?: GENERATED_WARDROBE_ITEMS.firstOrNull { it.unlockAchievementId == id }?.id
-                        ?: error("No generated wardrobe item has unlockAchievementId=$id; re-run tools/item_pipeline/generate_wardrobe_items.py")
                     Achievement(
                         id = id,
                         titleSv = titleSv,
@@ -1319,7 +1056,7 @@ class LixoRepository(
                         targetCount = tier.target,
                         currentCount = 0,
                         isUnlocked = false,
-                        rewardItemId = rewardItemId,
+                        rewardItemId = achievementRewards[id].orEmpty(),
                         action = action,
                         tier = tierIndex,
                         shortSv = AchievementStrings.challengeShortSv(action, tier.target),

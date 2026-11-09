@@ -92,7 +92,7 @@ class ProfilePersistenceTest {
             lexiconCache = null,
             isDebugBuild = isDebugBuild,
             profileStore = store,
-            wardrobeCache = null
+            content = TestContent.repository
         )
 
     @Test

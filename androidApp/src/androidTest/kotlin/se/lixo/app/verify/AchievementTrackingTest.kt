@@ -69,7 +69,7 @@ class AchievementTrackingTest {
 
     @Test
     fun trophies_freshProfile_showsZeroProgress() {
-        val definitions = LixoRepository.buildSeedAchievements()
+        val definitions = LixoRepository.buildSeedAchievements(TestContent.active.dropRules.achievementRewards)
         val freshProfile = ChildProfile(id = "p", displayName = "Saga")
         // setContent may only be called once per test; swap the profile via state instead.
         val profileState = androidx.compose.runtime.mutableStateOf(freshProfile)
@@ -110,10 +110,10 @@ class AchievementTrackingTest {
 
     @Test
     fun achievementUnlock_showsPrestationChest() {
-        val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val catalog = TestContent.active.items
+        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(TestContent.active.dropRules.levelRewards)
         val mathLevel = levels.first { it.subject == Subject.MATH }
-        val achievements = LixoRepository.buildSeedAchievements()
+        val achievements = LixoRepository.buildSeedAchievements(TestContent.active.dropRules.achievementRewards)
         // Pre-unlock every tier except ach_math_clock_money/ach_clock_money_40, so this run's
         // extra first-try clock/money answers unlock exactly ach_math_clock_money (13 + 2 = 15)
         // and the celebration shows its "Prestation: ..." chest, not some lower, earlier tier.
@@ -136,9 +136,8 @@ class AchievementTrackingTest {
             achievedWpm = 0,
             completedTimedChallenge = false,
             eligibleForRepetitionGift = true,
-            rewardItemIdForTask = null,
             clearedLevelsCountBeforeRun = 6,
-            allWardrobeItems = catalog,
+            content = TestContent.active,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
             nowEpochMillis = 1000L,
@@ -156,6 +155,7 @@ class AchievementTrackingTest {
         compose.setContent {
             LixoTheme {
                 CelebrationSequenceHost(
+                    content = TestContent.active,
                     outcome = outcome,
                     starsEarned = 3,
                     onEquipItem = {},

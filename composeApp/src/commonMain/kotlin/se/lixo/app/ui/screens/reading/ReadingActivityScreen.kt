@@ -51,12 +51,12 @@ import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.ReadingScoreResult
 import se.lixo.app.domain.engine.StoryWordToken
 import se.lixo.app.domain.engine.spellingDiff
-import se.lixo.app.domain.model.AvatarType
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.DictionaryEntry
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.ReadingMode
-import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.RecognizedSpeechToken
 import se.lixo.app.platform.SpeechRecognitionEngine
 import se.lixo.app.platform.TextToSpeechEngine
@@ -97,8 +97,9 @@ fun ReadingActivityScreen(
     showDebugSimulationControls: Boolean,
     lookupDictionary: (String) -> DictionaryEntry,
     onFinishReadingSession: (ReadingScoreResult, Int) -> LevelCompletionOutcome,
-    onEquipItem: (WardrobeItem) -> Unit,
-    onSelectAvatar: (AvatarType) -> Unit,
+    content: ActiveContent,
+    onEquipItem: (ContentItem) -> Unit,
+    onSelectAvatar: (String) -> Unit,
     onCloseToMap: () -> Unit
 ) {
     val storyText = task.textContent ?: ""
@@ -649,11 +650,13 @@ fun ReadingActivityScreen(
                         cornerContent = {
                             FlitChestMeter(
                                 halfPoints = completion.updatedProfile.chestProgressHalfPoints,
+                                thresholdHalf = content.dropRules.chestCostHalfPoints,
                                 size = 44.dp,
                                 animation = chestFillAnimation(
                                     completion.updatedProfile.chestProgressHalfPoints,
                                     completion.chestPointsAwardedHalf,
-                                    completion.chestOutcome != null
+                                    completion.chestOutcome != null,
+                                    content.dropRules.chestCostHalfPoints
                                 ),
                                 startDelayMillis = chestMeterStartDelayMillis(scoreResult.starsEarned)
                             )
@@ -828,6 +831,7 @@ fun ReadingActivityScreen(
 
         finalOutcome?.let { (s, c) ->
             CelebrationSequenceHost(
+                content = content,
                 outcome = c,
                 starsEarned = s.starsEarned,
                 onEquipItem = onEquipItem,

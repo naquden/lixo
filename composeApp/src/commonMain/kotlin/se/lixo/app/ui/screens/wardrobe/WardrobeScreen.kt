@@ -41,14 +41,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import se.lixo.app.domain.model.AvatarType
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentItem
+import se.lixo.app.domain.content.parseContentHex
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.Rarity
-import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
-import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
-import se.lixo.app.ui.components.avatar3d.WardrobeItemPreview
+import se.lixo.app.ui.components.avatar.AvatarViewport
+import se.lixo.app.ui.components.avatar.ItemPreview
 import se.lixo.app.ui.theme.LixoCard
 import se.lixo.app.ui.theme.LixoCircleIconButton
 import se.lixo.app.ui.theme.LixoColors
@@ -67,7 +68,7 @@ data class RarityCollectionCount(val rarity: Rarity, val owned: Int, val total: 
  * older install) can never push a rarity's owned count above its total.
  */
 fun rarityCollectionCounts(
-    allItems: List<WardrobeItem>,
+    allItems: List<ContentItem>,
     unlockedItemIds: Set<String>
 ): List<RarityCollectionCount> = Rarity.entries.map { r ->
     // Retired items (doc/plans/015) only count once owned, so the collection total never
@@ -126,27 +127,25 @@ private fun RarityCollectionRow(counts: List<RarityCollectionCount>) {
 @Composable
 fun WardrobeScreen(
     profile: ChildProfile,
-    allWardrobeItems: List<WardrobeItem>,
+    content: ActiveContent,
     unlockedItemIds: Set<String>,
     ttsEngine: TextToSpeechEngine,
     showSwedishTtsButtons: Boolean,
-    onSelectAvatarType: (AvatarType) -> Unit,
+    onSelectAvatar: (String) -> Unit,
     onEquipSlotItem: (EquipmentSlot, String?) -> Unit,
     onCustomizeBaseTraits: (Long, Int, Int) -> Unit,
     onBack: () -> Unit
 ) {
     var selectedSlot by remember { mutableStateOf(EquipmentSlot.HAT) }
-    val catalogById = remember(allWardrobeItems) { allWardrobeItems.associateBy { it.id } }
-    val rarityCounts = remember(allWardrobeItems, unlockedItemIds) {
-        rarityCollectionCounts(allWardrobeItems, unlockedItemIds)
+    val rarityCounts = remember(content, unlockedItemIds) {
+        rarityCollectionCounts(content.items, unlockedItemIds)
     }
 
-    val unlockedItemsForSlot = remember(allWardrobeItems, unlockedItemIds, selectedSlot) {
-        allWardrobeItems
+    val unlockedItemsForSlot = remember(content, unlockedItemIds, selectedSlot) {
+        content.items
             .filter { it.slot == selectedSlot && unlockedItemIds.contains(it.id) }
             .sortedWith(
-                compareByDescending<WardrobeItem> { it.rarity.ordinal }
-                    .thenBy { it.styleIndex }
+                compareByDescending<ContentItem> { it.rarity.ordinal }
                     .thenBy { it.id }
             )
     }
@@ -206,9 +205,9 @@ fun WardrobeScreen(
             cornerRadius = 24.dp,
             contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp)
         ) {
-            Avatar3DViewport(
+            AvatarViewport(
+                content = content,
                 appearance = profile.appearance,
-                catalogById = catalogById,
                 modifier = Modifier.fillMaxSize(),
                 interactiveRotation = true
             )
@@ -228,9 +227,12 @@ fun WardrobeScreen(
                 color = LixoColors.TextSecondary
             )
             Spacer(Modifier.width(12.dp))
+            val activeAvatar = remember(content, profile.appearance.avatarId) {
+                content.avatarsById[profile.appearance.avatarId] ?: content.defaultAvatar
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 tintChoices.forEach { hex ->
-                    val isSelected = profile.appearance.primaryTintHex == hex
+                    val isSelected = (profile.appearance.tintHex ?: parseContentHex(activeAvatar.defaultTintHex)) == hex
                     Box(
                         modifier = Modifier
                             .size(32.dp)
@@ -244,8 +246,8 @@ fun WardrobeScreen(
                             .clickable {
                                 onCustomizeBaseTraits(
                                     hex,
-                                    (profile.appearance.eyeExpressionIndex + 1) % 2,
-                                    profile.appearance.smileExpressionIndex
+                                    (profile.appearance.eyeIndex + 1) % 2,
+                                    profile.appearance.smileIndex
                                 )
                             }
                     )
@@ -262,9 +264,9 @@ fun WardrobeScreen(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            AvatarType.entries.forEach { type ->
-                val isUnlocked = profile.unlockedAvatars.contains(type)
-                val isActive = profile.appearance.avatarType == type
+            content.avatarsOrdered.forEach { avatar ->
+                val isUnlocked = avatar.id in content.unlockedAvatarIds(profile.unlockedAvatarIds)
+                val isActive = (content.avatarsById[profile.appearance.avatarId] ?: content.defaultAvatar).id == avatar.id
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(14.dp))
@@ -281,7 +283,7 @@ fun WardrobeScreen(
                             shape = RoundedCornerShape(14.dp)
                         )
                         .clickable(enabled = isUnlocked) {
-                            onSelectAvatarType(type)
+                            onSelectAvatar(avatar.id)
                         }
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
@@ -291,8 +293,8 @@ fun WardrobeScreen(
                             Spacer(Modifier.width(4.dp))
                         }
                         Text(
-                            text = if (isUnlocked) LixoStrings.avatarName(type)
-                            else "${LixoStrings.avatarName(type)} (${type.unlockStarsRequired}⭐)",
+                            text = if (isUnlocked) content.string(avatar.nameKey)
+                            else "${content.string(avatar.nameKey)} (${avatar.unlock.stars}⭐)",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Bold,
                             color = if (isActive) LixoColors.Blue else if (isUnlocked) LixoColors.TextPrimary else LixoColors.TextMuted
@@ -363,7 +365,7 @@ fun WardrobeScreen(
             // could be 60+ per slot) keeps card composition/measurement bounded to what's
             // actually visible, with a stable key per item.id so equip-state recomposition
             // doesn't rebuild unrelated cards.
-            val displayItems: List<WardrobeItem?> = remember(unlockedItemsForSlot) {
+            val displayItems: List<ContentItem?> = remember(unlockedItemsForSlot) {
                 listOf(null) + unlockedItemsForSlot
             }
             LazyHorizontalGrid(
@@ -375,7 +377,7 @@ fun WardrobeScreen(
                 items(displayItems, key = { it?.id ?: "__none__" }) { item ->
                     if (item == null) {
                         // "Ingen" slot-empty card.
-                        val isSlotEmpty = !profile.appearance.equippedItems.containsKey(selectedSlot)
+                        val isSlotEmpty = !profile.appearance.equipped.containsKey(selectedSlot)
                         LixoCard(
                             modifier = Modifier.width(104.dp),
                             selected = isSlotEmpty,
@@ -414,7 +416,7 @@ fun WardrobeScreen(
                             }
                         }
                     } else {
-                        val isEquipped = profile.appearance.equippedItems[selectedSlot] == item.id
+                        val isEquipped = profile.appearance.equipped[selectedSlot] == item.id
                         val rarityColor = LixoColors.rarityColor(item.rarity)
 
                         LixoCard(
@@ -437,7 +439,7 @@ fun WardrobeScreen(
                                     modifier = Modifier.size(64.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    WardrobeItemPreview(item = item, modifier = Modifier.size(64.dp))
+                                    ItemPreview(content, item, Modifier.size(64.dp))
                                     if (isEquipped) {
                                         Box(
                                             modifier = Modifier
@@ -474,7 +476,7 @@ fun WardrobeScreen(
                                 }
                                 Spacer(Modifier.height(3.dp))
                                 Text(
-                                    text = item.nameSv,
+                                    text = content.itemName(item),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Medium,
                                     color = LixoColors.TextSecondary,

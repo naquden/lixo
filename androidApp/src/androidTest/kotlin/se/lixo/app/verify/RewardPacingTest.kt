@@ -67,8 +67,8 @@ class RewardPacingTest {
 
     @Test
     fun firstClear_showsExactlyOneChestLabeledBanbeloning() {
-        val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val catalog = TestContent.active.items
+        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(TestContent.active.dropRules.levelRewards)
         val mathLevel = levels.first { it.subject == Subject.MATH }
         val profile = ChildProfile(id = "p_verify_level", displayName = "Saga", totalStars = 0)
         val today = DailyActivityRecord(profileId = "p_verify_level", calendarDateIso = "2026-11-01")
@@ -83,9 +83,8 @@ class RewardPacingTest {
             achievedWpm = 0,
             completedTimedChallenge = false,
             eligibleForRepetitionGift = true,
-            rewardItemIdForTask = null,
             clearedLevelsCountBeforeRun = 0,
-            allWardrobeItems = catalog,
+            content = TestContent.active,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
             nowEpochMillis = 1000L
@@ -96,6 +95,7 @@ class RewardPacingTest {
         compose.setContent {
             LixoTheme {
                 CelebrationSequenceHost(
+                    content = TestContent.active,
                     outcome = outcome,
                     starsEarned = 3,
                     onEquipItem = {},
@@ -115,8 +115,8 @@ class RewardPacingTest {
 
     @Test
     fun stackedRun_levelThenFlitkista_distinctLabels() {
-        val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val catalog = TestContent.active.items
+        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(TestContent.active.dropRules.levelRewards)
         val mathLevel = levels.first { it.subject == Subject.MATH }
         val profile = ChildProfile(
             id = "p_verify_stack",
@@ -136,9 +136,8 @@ class RewardPacingTest {
             achievedWpm = 0,
             completedTimedChallenge = false,
             eligibleForRepetitionGift = true,
-            rewardItemIdForTask = null,
             clearedLevelsCountBeforeRun = 0,
-            allWardrobeItems = catalog,
+            content = TestContent.active,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
             nowEpochMillis = 1000L
@@ -149,6 +148,7 @@ class RewardPacingTest {
         compose.setContent {
             LixoTheme {
                 CelebrationSequenceHost(
+                    content = TestContent.active,
                     outcome = outcome,
                     starsEarned = 3,
                     onEquipItem = {},

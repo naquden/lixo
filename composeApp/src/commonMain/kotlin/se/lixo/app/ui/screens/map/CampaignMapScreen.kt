@@ -69,9 +69,12 @@ import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.Subject
-import se.lixo.app.domain.model.WardrobeItem
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentEvent
 import se.lixo.app.platform.TextToSpeechEngine
-import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
+import se.lixo.app.ui.components.EventBanner
+import se.lixo.app.ui.components.EventItemsSheet
+import se.lixo.app.ui.components.avatar.AvatarViewport
 import se.lixo.app.ui.components.celebration.FlitChestMeter
 import se.lixo.app.ui.theme.LixoBottomSheet
 import se.lixo.app.ui.theme.LixoButton
@@ -104,17 +107,21 @@ fun CampaignMapScreen(
     profile: ChildProfile,
     levels: List<CampaignLevel>,
     progressByLevelId: Map<String, LevelProgress>,
-    catalogById: Map<String, WardrobeItem>,
+    content: ActiveContent,
     progressionEngine: ProgressionAndGiftEngine,
     ttsEngine: TextToSpeechEngine,
     showSwedishTtsButtons: Boolean,
     selectedSubject: Subject,
     onSelectSubject: (Subject) -> Unit,
     onSelectLevel: (CampaignLevel) -> Unit,
-    onSwitchProfileClick: () -> Unit
+    onSwitchProfileClick: () -> Unit,
+    activeEvents: List<ContentEvent> = emptyList(),
+    unlockedItemIds: Set<String> = emptySet()
 ) {
     var selectedLevelForSheet by remember { mutableStateOf<CampaignLevel?>(null) }
     var showChestInfo by remember { mutableStateOf(false) }
+    var showEventSheet by remember { mutableStateOf(false) }
+    val bannerEvent = activeEvents.firstOrNull { it.banner != null }
 
     val worlds = SubjectWorlds
     val initialPage = worlds.indexOfFirst { it.subject == selectedSubject }.coerceAtLeast(0)
@@ -203,10 +210,20 @@ fun CampaignMapScreen(
                     )
                     FlitChestMeter(
                         halfPoints = profile.chestProgressHalfPoints,
+                        thresholdHalf = content.dropRules.chestCostHalfPoints,
                         size = 32.dp,
                         onClick = { showChestInfo = true }
                     )
                 }
+            }
+
+            bannerEvent?.let { event ->
+                EventBanner(
+                    content = content,
+                    event = event,
+                    onClick = { showEventSheet = true },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                )
             }
 
             // World selector: three tactile 3D "buttons" with a sliding indicator pill.
@@ -289,7 +306,7 @@ fun CampaignMapScreen(
                     progressByLevelId = progressByLevelId,
                     progressionEngine = progressionEngine,
                     profile = profile,
-                    catalogById = catalogById,
+                    content = content,
                     renderAvatar = pagerState.settledPage == page,
                     playPopInAnimation = !alreadyRevealed,
                     pageOffset = pageOffset,
@@ -442,7 +459,11 @@ fun CampaignMapScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                FlitChestMeter(halfPoints = profile.chestProgressHalfPoints, size = 56.dp)
+                FlitChestMeter(
+                    halfPoints = profile.chestProgressHalfPoints,
+                    thresholdHalf = content.dropRules.chestCostHalfPoints,
+                    size = 56.dp
+                )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -471,6 +492,17 @@ fun CampaignMapScreen(
                     color = Color.White
                 )
             }
+        }
+
+        bannerEvent?.let { event ->
+            EventItemsSheet(
+                visible = showEventSheet,
+                content = content,
+                event = event,
+                unlockedItemIds = unlockedItemIds,
+                onDismiss = { showEventSheet = false },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }
@@ -625,7 +657,7 @@ private fun WorldPage(
     progressByLevelId: Map<String, LevelProgress>,
     progressionEngine: ProgressionAndGiftEngine,
     profile: ChildProfile,
-    catalogById: Map<String, WardrobeItem>,
+    content: ActiveContent,
     renderAvatar: Boolean,
     playPopInAnimation: Boolean,
     pageOffset: Float,
@@ -704,9 +736,9 @@ private fun WorldPage(
                             .align(if (waveOffsetDp >= 0.dp) Alignment.CenterStart else Alignment.CenterEnd)
                             .padding(horizontal = 8.dp)
                     ) {
-                        Avatar3DViewport(
+                        AvatarViewport(
+                            content = content,
                             appearance = profile.appearance,
-                            catalogById = catalogById,
                             modifier = Modifier.size(90.dp),
                             interactiveRotation = false
                         )

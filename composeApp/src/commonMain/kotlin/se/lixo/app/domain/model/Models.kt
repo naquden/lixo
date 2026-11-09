@@ -1,25 +1,9 @@
 package se.lixo.app.domain.model
 
 import kotlinx.serialization.Serializable
-
-/**
- * 6 MVP Avatar types as specified in project.md §2 ("Avatartyper (MVP, 6 st)").
- */
-@Serializable
-enum class AvatarType(
-    val id: String,
-    val swedishNameKey: String,
-    val isHumanoid: Boolean,
-    val defaultUnlocked: Boolean,
-    val unlockStarsRequired: Int
-) {
-    CAT("cat", "avatar_cat", isHumanoid = false, defaultUnlocked = true, unlockStarsRequired = 0),
-    DOG("dog", "avatar_dog", isHumanoid = false, defaultUnlocked = false, unlockStarsRequired = 12),
-    KNIGHT("knight", "avatar_knight", isHumanoid = true, defaultUnlocked = false, unlockStarsRequired = 30),
-    PRINCESS("princess", "avatar_princess", isHumanoid = true, defaultUnlocked = false, unlockStarsRequired = 55),
-    WIZARD("wizard", "avatar_wizard", isHumanoid = true, defaultUnlocked = false, unlockStarsRequired = 90),
-    WITCH("witch", "avatar_witch", isHumanoid = true, defaultUnlocked = false, unlockStarsRequired = 135)
-}
+import se.lixo.app.domain.content.AvatarAppearance
+import se.lixo.app.domain.content.ContentItem
+import se.lixo.app.domain.content.DEFAULT_AVATAR_ID
 
 /**
  * 9 MVP Equipment slots as specified in project.md §2 ("Utrustningsplatser (9 slots)").
@@ -50,20 +34,15 @@ enum class Rarity(
     val id: String,
     val swedishNameKey: String,
     val hexColorPrimary: Long,
-    val hexColorAccent: Long,
-    /**
-     * Target percent chance per roll that this rarity is drawn, rarity-first
-     * (see [se.lixo.app.domain.engine.ProgressionAndGiftEngine.rollWeighted]).
-     * If a rarity has no items in the pool, its share is spread proportionally
-     * over the others. This is no longer a per-item weight.
-     */
-    val giftDropWeight: Int
+    val hexColorAccent: Long
 ) {
-    COMMON("common", "rarity_common", 0xFF9E9E9E, 0xFF757575, 40),
-    UNCOMMON("uncommon", "rarity_uncommon", 0xFF2ECC71, 0xFF27AE60, 28),
-    RARE("rare", "rarity_rare", 0xFF3498DB, 0xFF2980B9, 18),
-    EPIC("epic", "rarity_epic", 0xFF9B59B6, 0xFF8E44AD, 10),
-    LEGENDARY("legendary", "rarity_legendary", 0xFFF39C12, 0xFFE67E22, 4)
+    // Target percent chance per roll that this rarity is drawn, rarity-first, now lives in the
+    // content pack's `dropRules.rarityWeights` (doc/content/content-pack.md § Drop rules).
+    COMMON("common", "rarity_common", 0xFF9E9E9E, 0xFF757575),
+    UNCOMMON("uncommon", "rarity_uncommon", 0xFF2ECC71, 0xFF27AE60),
+    RARE("rare", "rarity_rare", 0xFF3498DB, 0xFF2980B9),
+    EPIC("epic", "rarity_epic", 0xFF9B59B6, 0xFF8E44AD),
+    LEGENDARY("legendary", "rarity_legendary", 0xFFF39C12, 0xFFE67E22)
 }
 
 /**
@@ -130,18 +109,6 @@ enum class MathProblemType(val id: String, val swedishNameKey: String) {
 }
 
 /**
- * Customizable base traits for an avatar (project.md §2 "Karaktärsbas & Skapande").
- */
-@Serializable
-data class AvatarAppearance(
-    val avatarType: AvatarType = AvatarType.CAT,
-    val primaryTintHex: Long = 0xFFF5A623,
-    val eyeExpressionIndex: Int = 0,
-    val smileExpressionIndex: Int = 0,
-    val equippedItems: Map<EquipmentSlot, String> = emptyMap() // Slot -> WardrobeItem.id
-)
-
-/**
  * Local child profile. Supports sibling profiles on the same device (project.md §5).
  */
 @Serializable
@@ -153,7 +120,7 @@ data class ChildProfile(
     val tutorialCompleted: Boolean = false,
     val tutorialSkippableByParent: Boolean = false,
     val appearance: AvatarAppearance = AvatarAppearance(),
-    val unlockedAvatars: Set<AvatarType> = setOf(AvatarType.CAT),
+    val unlockedAvatarIds: Set<String> = setOf(DEFAULT_AVATAR_ID),
     val currentLevelOrder: Int = 1,
     val totalStars: Int = 0,
     val currentStreakDays: Int = 0,
@@ -188,48 +155,11 @@ enum class ItemPattern { NONE, STRIPES, DOTS, STARS, ZIGZAG, CHECKER }
 /**
  * Trim/decoration applied to an item, escalating with rarity: COMMON NONE, UNCOMMON TRIM,
  * RARE GEM, EPIC GLOW, LEGENDARY SPARKLE. LEGENDARY additionally always renders the GLOW halo
- * behind the item too, whatever its own ornament value (see Avatar3DController.drawsGlowHalo).
+ * behind the item too, whatever its own ornament value (see the layer renderer's drawsGlowHalo
+ * in se.lixo.app.ui.components.avatar).
  */
 @Serializable
 enum class ItemOrnament { NONE, TRIM, GEM, GLOW, SPARKLE }
-
-/**
- * Universal wardrobe item (project.md §2 "Universal Garderob").
- * Usable by any avatar; no avatar-locked items.
- */
-@Serializable
-data class WardrobeItem(
-    val id: String,
-    val nameSv: String,
-    val descriptionSv: String,
-    val slot: EquipmentSlot,
-    val rarity: Rarity,
-    val subjectTheme: Subject,
-    val meshAssetPath: String = "3d_sample.glb",
-    val meshNodeName: String = "mesh_default",
-    val scaleMultiplier: Float = 1.0f,
-    val unlockStarRequirement: Int = 0,
-    val unlockAchievementId: String? = null,
-    val isWeeklyStreakSetPiece: Boolean = false,
-    val primaryColorHex: Long = 0xFF3498DB,
-    val styleIndex: Int = 0,
-    val secondaryColorHex: Long = 0xFFFFFFFF,
-    val pattern: ItemPattern = ItemPattern.NONE,
-    val ornament: ItemOrnament = ItemOrnament.NONE,
-    /**
-     * Remote-only (doc/plans/015): when true, the item is excluded from every drop pool
-     * (chests, onboarding, gifts, the weekly-streak set piece, the star curve) but stays
-     * renderable and visible in the wardrobe for anyone who already owns it.
-     */
-    val retired: Boolean = false,
-    /**
-     * Remote-only (doc/plans/015): the minimum app version (Android versionCode / iOS
-     * CFBundleVersion) that understands this item. Older app installs skip it entirely
-     * when validating remote wardrobe items, so e.g. a future styleIndex can be added
-     * without breaking old clients.
-     */
-    val minAppVersionCode: Int = 0
-)
 
 /**
  * Source of a single unlocked reward within a run (`project.md` §2 "Belöningskurva"). The
@@ -245,7 +175,7 @@ enum class RewardSource { LEVEL, STARS, FLITKISTA, GIFT, WEEKLY_STREAK, ACHIEVEM
  * extra celebration detail for the reward's label, e.g. the achievement's `titleSv` for ACHIEVEMENT
  * rewards ("Prestation: Blixtläsaren").
  */
-data class UnlockedReward(val item: WardrobeItem, val source: RewardSource, val labelDetailSv: String? = null)
+data class UnlockedReward(val item: ContentItem, val source: RewardSource, val labelDetailSv: String? = null)
 
 /**
  * Firestore / local Course model (`courses/{courseId}`).
@@ -324,7 +254,7 @@ data class HomeworkTask(
     val textContent: String? = null,
     val mathProblems: List<MathProblem> = emptyList(),
     val englishItems: List<EnglishGlosaItem> = emptyList(),
-    /** App-assigned (LixoRepository.levelRewardItemIdFor); curriculum JSON/Firestore must not carry it. Used as the onboarding-track item, see doc/plans/002. */
+    /** Assigned from content.dropRules.levelRewards; curriculum JSON/Firestore must not carry it. Used as the onboarding-track item, see doc/plans/002. */
     val rewardItemId: String? = null
 )
 
@@ -462,17 +392,3 @@ enum class AddFriendError { NOT_FOUND, ALREADY_FRIEND, NETWORK }
 
 class AddFriendException(val reason: AddFriendError) : Exception(reason.name)
 
-/**
- * Complete bundled seed structure for `seed_campaign_content.json`.
- */
-@Serializable
-data class SeedContentBundle(
-    val version: Int,
-    val generatedAtIso: String,
-    val courses: List<Course>,
-    val levels: List<CampaignLevel>,
-    val tasks: List<HomeworkTask>,
-    val wardrobeItems: List<WardrobeItem>,
-    val dictionary: List<DictionaryEntry>,
-    val achievements: List<Achievement>
-)

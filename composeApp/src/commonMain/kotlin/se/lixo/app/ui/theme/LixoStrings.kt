@@ -1,7 +1,6 @@
 package se.lixo.app.ui.theme
 
 import se.lixo.app.domain.model.AchievementStrings
-import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.Rarity
@@ -191,15 +190,6 @@ object LixoStrings {
     const val CRASHLYTICS_ACCEPT_BTN = "Tillåt"
     const val CRASHLYTICS_DECLINE_BTN = "Nej tack"
 
-    fun avatarName(type: AvatarType): String = when (type) {
-        AvatarType.CAT -> "Katt"
-        AvatarType.DOG -> "Hund"
-        AvatarType.KNIGHT -> "Riddare"
-        AvatarType.PRINCESS -> "Prinsessa"
-        AvatarType.WIZARD -> "Trollkarl"
-        AvatarType.WITCH -> "Häxa"
-    }
-
     fun slotName(slot: EquipmentSlot): String = when (slot) {
         EquipmentSlot.HAT -> "Hatt"
         EquipmentSlot.SHOULDERS_BACK -> "Axlar"
@@ -261,4 +251,15 @@ object LixoStrings {
 
     /** Accessibility label for a challenge progress indicator, e.g. "12 av 30". */
     fun challengeProgressA11y(current: Int, target: Int): String = "$current av $target"
+
+    // Events (025)
+    const val EVENT_CHEST_DESCRIPTION = "Högtidskista"
+    const val EVENT_ITEM_OWNED = "Du har den!"
+    const val EVENT_SHEET_SUBTITLE = "Specialföremål som bara finns just nu. Öppna kistor för att hitta dem!"
+
+    // Debug: content preview (020)
+    const val CONTENT_PREVIEW_OPEN_BTN = "Debug: innehållspaket"
+    const val CONTENT_PREVIEW_TITLE = "Innehållspaket"
+    const val CONTENT_PREVIEW_BACK_BTN = "Tillbaka"
+    const val CONTENT_PREVIEW_LOADING = "Laddar innehållspaket…"
 }

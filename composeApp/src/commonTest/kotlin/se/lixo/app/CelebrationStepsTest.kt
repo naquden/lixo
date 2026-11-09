@@ -3,10 +3,11 @@ package se.lixo.app
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import se.lixo.app.domain.content.ContentItem
+import se.lixo.app.domain.content.ContentPalette
 import se.lixo.app.domain.engine.GiftRollOutcome
 import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.model.Achievement
-import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.LevelProgress
@@ -14,20 +15,20 @@ import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.UnlockedReward
-import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.ui.components.celebration.CelebrationStep
 import se.lixo.app.ui.components.celebration.buildCelebrationSteps
 import se.lixo.app.ui.theme.LixoStrings
 
 class CelebrationStepsTest {
 
-    private fun item(id: String) = WardrobeItem(
+    private fun item(id: String) = ContentItem(
         id = id,
-        nameSv = "Item $id",
-        descriptionSv = "Desc $id",
         slot = EquipmentSlot.HAT,
         rarity = Rarity.COMMON,
-        subjectTheme = Subject.SWEDISH
+        subjectTheme = Subject.SWEDISH,
+        nameKey = "$id.name",
+        palette = ContentPalette("#FFFFFF", "#FFFFFF", "#FFFFFF"),
+        layers = emptyList()
     )
 
     private fun achievement(id: String, rewardItemId: String) = Achievement(
@@ -42,7 +43,7 @@ class CelebrationStepsTest {
 
     private fun outcome(
         rewards: List<UnlockedReward> = emptyList(),
-        avatars: Set<AvatarType> = emptySet(),
+        avatars: List<String> = emptyList(),
         gift: GiftRollOutcome? = null,
         nextChallenges: Map<String, Achievement> = emptyMap(),
         ownedRewardNext: List<Achievement> = emptyList()
@@ -58,7 +59,7 @@ class CelebrationStepsTest {
             bestWpm = 40
         ),
         netNewStarsAwarded = 3,
-        newlyUnlockedAvatars = avatars,
+        newlyUnlockedAvatarIds = avatars,
         newlyUnlockedRewards = rewards,
         giftOutcome = gift,
         streakIncrementedToday = false,
@@ -97,7 +98,7 @@ class CelebrationStepsTest {
         val steps = buildCelebrationSteps(
             outcome(
                 rewards = listOf(UnlockedReward(a, RewardSource.LEVEL)),
-                avatars = setOf(AvatarType.KNIGHT, AvatarType.DOG)
+                avatars = listOf("avatar_dog", "avatar_knight")
             )
         )
         assertEquals(
@@ -105,8 +106,8 @@ class CelebrationStepsTest {
                 CelebrationStep.Stars,
                 CelebrationStep.Chest(a, RewardSource.LEVEL),
                 CelebrationStep.EquipPrompt(a),
-                CelebrationStep.AvatarPrompt(AvatarType.DOG),
-                CelebrationStep.AvatarPrompt(AvatarType.KNIGHT)
+                CelebrationStep.AvatarPrompt("avatar_dog"),
+                CelebrationStep.AvatarPrompt("avatar_knight")
             ),
             steps
         )
@@ -269,10 +270,10 @@ class CelebrationStepsTest {
     fun ownedRewardNextChallenge_beforeAvatarPrompts() {
         val next = achievement("ach_read_story_3", "reward_next")
         val steps = buildCelebrationSteps(
-            outcome(ownedRewardNext = listOf(next), avatars = setOf(AvatarType.DOG))
+            outcome(ownedRewardNext = listOf(next), avatars = listOf("avatar_dog"))
         )
         val nextIndex = steps.indexOf(CelebrationStep.NextChallenge(next))
-        val avatarIndex = steps.indexOf(CelebrationStep.AvatarPrompt(AvatarType.DOG))
+        val avatarIndex = steps.indexOf(CelebrationStep.AvatarPrompt("avatar_dog"))
         assertTrue(nextIndex in steps.indices)
         assertTrue(avatarIndex in steps.indices)
         assertTrue(nextIndex < avatarIndex)

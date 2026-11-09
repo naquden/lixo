@@ -1,0 +1,12 @@
+{
+  "id": "avatar_dog",
+  "nameKey": "avatar_dog.name",
+  "order": 1,
+  "humanoid": false,
+  "skinHex": "#4A90E2",
+  "defaultTintHex": "#F5A623",
+  "unlock": {"type": "stars", "stars": 12},
+  "body": "standard",
+  "ears": "dog",
+  "tail": "default"
+}

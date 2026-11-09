@@ -20,9 +20,8 @@ expect class PlatformFeatureFlags() {
 
     /**
      * The installed app's version code: Android `versionCode` / iOS `CFBundleVersion`, or `0`
-     * when unknown (e.g. no Android `Context`, or an unparsable iOS bundle value). Used by
-     * [se.lixo.app.domain.engine.RemoteWardrobeValidator] to skip remote items that need a newer
-     * app build (`doc/plans/015-remote-wardrobe-items.md`).
+     * when unknown (e.g. no Android `Context`, or an unparsable iOS bundle value). Currently
+     * unused by content-pack code; reserved for content-pack version/compatibility sync (024).
      */
     val appVersionCode: Int
 }
@@ -110,6 +109,40 @@ expect fun createPlatformTextToSpeechEngine(): TextToSpeechEngine
  * `null` as "fall back to in-memory state" rather than throwing.
  */
 expect fun createPlatformLixoDatabase(): se.lixo.app.data.local.LixoDatabase?
+
+/**
+ * The server's wall-clock time (1 s precision) read from the HTTP `Date` header of a lightweight
+ * request to [url], or null if offline, unsupported, or the request fails. Used by
+ * `ContentRepository.sync` (024) to feed 025's TrustedClock; GitLive's Firestore SDK exposes no
+ * document read-time, so this HTTP fallback is the only cross-platform source.
+ */
+expect suspend fun fetchHttpServerTimeMillis(url: String): Long?
+
+/**
+ * The debug content-pack preview override written to `<filesDir>/content_pack_preview.json`
+ * (`doc/plans/021-content-pack-authoring-pipeline.md`'s README preview-from-a-file flow), or
+ * null if it doesn't exist / there is no platform `Context` (iOS: always null).
+ */
+expect fun readDebugContentPreviewFile(): String?
+
+/**
+ * A monotonic clock reading in milliseconds, for [se.lixo.app.domain.engine.TrustedClock]:
+ * Android `SystemClock.elapsedRealtime()` (counts across sleep), iOS `NSProcessInfo.systemUptime`
+ * (does not count across sleep, but that only matters when there is an anchor to carry across
+ * one, and this process never anchors on iOS -- see `PlatformIos.kt`).
+ */
+expect fun platformMonotonicMillis(): Long
+
+/**
+ * An opaque id for the current boot, stable across app restarts within the same boot and
+ * different across a reboot, or null when unknown (Android: `Settings.Global.BOOT_COUNT`; iOS:
+ * always null). Only when non-null is a persisted [se.lixo.app.domain.engine.TrustedClockAnchor]
+ * trusted across a process restart.
+ */
+expect fun platformBootId(): String?
+
+/** Builds the platform's [se.lixo.app.domain.engine.TrustedClockStore]. */
+expect fun createPlatformTrustedClockStore(): se.lixo.app.domain.engine.TrustedClockStore
 
 /**
  * Local persistence for the user's email address when initiating Firebase Email Link Authentication.

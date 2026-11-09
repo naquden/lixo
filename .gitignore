@@ -54,4 +54,5 @@ screenshots/
 __pycache__/
 *.pyc
 temp/
+tools/content_pipeline/pack/out/
 

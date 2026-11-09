@@ -1,0 +1,1039 @@
+{
+  "rarityWeights": {
+    "COMMON": 40,
+    "UNCOMMON": 28,
+    "RARE": 18,
+    "EPIC": 10,
+    "LEGENDARY": 4
+  },
+  "chestCostHalfPoints": 20,
+  "progressRunHalfPoints": 2,
+  "replayRunHalfPoints": 1,
+  "pity": {
+    "RARE": 4,
+    "EPIC": 10,
+    "LEGENDARY": 20
+  },
+  "onboarding": {
+    "levels": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      23,
+      26,
+      29,
+      32,
+      35,
+      38
+    ]
+  },
+  "starUnlocks": [
+    {
+      "stars": 6,
+      "itemId": "item_hand_right_math_sword_1"
+    },
+    {
+      "stars": 31,
+      "itemId": "item_hat_riddarhjalm_korpsvart"
+    },
+    {
+      "stars": 33,
+      "itemId": "item_shoulders_back_vingar_nattsvart"
+    },
+    {
+      "stars": 35,
+      "itemId": "item_arms_gloves_taggarmskydd_djuphavsbla"
+    },
+    {
+      "stars": 37,
+      "itemId": "item_armor_shirt_plattrustning_glodande"
+    },
+    {
+      "stars": 39,
+      "itemId": "item_pants_benskenor_rostbrun"
+    },
+    {
+      "stars": 41,
+      "itemId": "item_shoes_taspetsskor_vintervit"
+    },
+    {
+      "stars": 44,
+      "itemId": "item_hand_right_hammare_silverglans"
+    },
+    {
+      "stars": 46,
+      "itemId": "item_hand_left_lykta_vintervit"
+    },
+    {
+      "stars": 48,
+      "itemId": "item_tail_regnbagssvans_skogsgron"
+    },
+    {
+      "stars": 50,
+      "itemId": "item_hat_krona_djuphavsbla"
+    },
+    {
+      "stars": 53,
+      "itemId": "item_shoulders_back_vingar_kungabla"
+    },
+    {
+      "stars": 55,
+      "itemId": "item_arms_gloves_ringar_rostbrun"
+    },
+    {
+      "stars": 57,
+      "itemId": "item_armor_shirt_tunikamedbalte_solgyllene"
+    },
+    {
+      "stars": 60,
+      "itemId": "item_pants_byxor_barnstensgul"
+    },
+    {
+      "stars": 62,
+      "itemId": "item_shoes_stovlar_solgyllene"
+    },
+    {
+      "stars": 64,
+      "itemId": "item_hand_right_pilbage_silverglans"
+    },
+    {
+      "stars": 67,
+      "itemId": "item_hand_left_kiteskold_myllergron"
+    },
+    {
+      "stars": 69,
+      "itemId": "item_tail_sjojungfrufena_glodande"
+    },
+    {
+      "stars": 72,
+      "itemId": "item_hat_hornhjalm_lavendellila"
+    },
+    {
+      "stars": 75,
+      "itemId": "item_shoulders_back_fjadermantel_barnstensgul"
+    },
+    {
+      "stars": 77,
+      "itemId": "item_arms_gloves_pansarhandskar_myllergron"
+    },
+    {
+      "stars": 80,
+      "itemId": "item_armor_shirt_kapa_isbla"
+    },
+    {
+      "stars": 82,
+      "itemId": "item_pants_cargobyxor_lavendellila"
+    },
+    {
+      "stars": 85,
+      "itemId": "item_shoes_sandaler_korpsvart"
+    },
+    {
+      "stars": 88,
+      "itemId": "item_hand_right_magisksfar_nattsvart"
+    },
+    {
+      "stars": 91,
+      "itemId": "item_hand_left_bok_glodande"
+    },
+    {
+      "stars": 93,
+      "itemId": "item_tail_hundsvans_korpsvart"
+    },
+    {
+      "stars": 96,
+      "itemId": "item_hat_huva_nattsvart"
+    },
+    {
+      "stars": 99,
+      "itemId": "item_shoulders_back_ryggsack_rostbrun"
+    },
+    {
+      "stars": 102,
+      "itemId": "item_arms_gloves_pansarhandskar_barnstensgul"
+    },
+    {
+      "stars": 105,
+      "itemId": "item_armor_shirt_ringbrynja_kungabla"
+    },
+    {
+      "stars": 108,
+      "itemId": "item_pants_shorts_silverglans"
+    },
+    {
+      "stars": 111,
+      "itemId": "item_shoes_hogastovlar_glodande"
+    },
+    {
+      "stars": 114,
+      "itemId": "item_hand_right_spjut_djuphavsbla"
+    },
+    {
+      "stars": 117,
+      "itemId": "item_hand_left_rundskold_isbla"
+    },
+    {
+      "stars": 120,
+      "itemId": "item_tail_kometsvans_rosenrosa"
+    },
+    {
+      "stars": 123,
+      "itemId": "item_hat_trollhatt_nattsvart"
+    },
+    {
+      "stars": 126,
+      "itemId": "item_shoulders_back_ballong_rosenrosa"
+    },
+    {
+      "stars": 129,
+      "itemId": "item_arms_gloves_handledslindor_glodande"
+    },
+    {
+      "stars": 132,
+      "itemId": "item_armor_shirt_luvtroja_barnstensgul"
+    },
+    {
+      "stars": 135,
+      "itemId": "item_pants_cargobyxor_korallrod"
+    },
+    {
+      "stars": 139,
+      "itemId": "item_shoes_sneakers_myllergron"
+    },
+    {
+      "stars": 142,
+      "itemId": "item_hand_right_svard_silverglans"
+    },
+    {
+      "stars": 145,
+      "itemId": "item_hand_left_kompass_korpsvart"
+    },
+    {
+      "stars": 149,
+      "itemId": "item_tail_drakssvans_vintervit"
+    },
+    {
+      "stars": 152,
+      "itemId": "item_hat_riddarhjalm_silverglans"
+    },
+    {
+      "stars": 155,
+      "itemId": "item_shoulders_back_snackskal_vintervit"
+    },
+    {
+      "stars": 159,
+      "itemId": "item_arms_gloves_vantar_korallrod"
+    },
+    {
+      "stars": 162,
+      "itemId": "item_armor_shirt_troja_vintervit"
+    },
+    {
+      "stars": 166,
+      "itemId": "item_pants_shorts_rostbrun"
+    },
+    {
+      "stars": 169,
+      "itemId": "item_shoes_raketskor_nattsvart"
+    },
+    {
+      "stars": 173,
+      "itemId": "item_hand_right_magisksfar_skogsgron"
+    },
+    {
+      "stars": 176,
+      "itemId": "item_hand_left_timglas_kungabla"
+    },
+    {
+      "stars": 180,
+      "itemId": "item_tail_regnbagssvans_korpsvart"
+    },
+    {
+      "stars": 184,
+      "itemId": "item_hat_keps_djuphavsbla"
+    },
+    {
+      "stars": 187,
+      "itemId": "item_shoulders_back_ballong_nattsvart"
+    },
+    {
+      "stars": 191,
+      "itemId": "item_arms_gloves_klor_rosenrosa"
+    },
+    {
+      "stars": 195,
+      "itemId": "item_armor_shirt_klanningsoverdel_glodande"
+    },
+    {
+      "stars": 198,
+      "itemId": "item_pants_kilt_silverglans"
+    },
+    {
+      "stars": 202,
+      "itemId": "item_shoes_sandaler_silverglans"
+    },
+    {
+      "stars": 206,
+      "itemId": "item_hand_right_svard_vintervit"
+    },
+    {
+      "stars": 210,
+      "itemId": "item_hand_left_timglas_skogsgron"
+    },
+    {
+      "stars": 214,
+      "itemId": "item_tail_odlesvans_barnstensgul"
+    },
+    {
+      "stars": 218,
+      "itemId": "item_hat_pompomsmossa_korallrod"
+    },
+    {
+      "stars": 222,
+      "itemId": "item_shoulders_back_pilkoger_isbla"
+    },
+    {
+      "stars": 226,
+      "itemId": "item_arms_gloves_handledslindor_myllergron"
+    },
+    {
+      "stars": 230,
+      "itemId": "item_armor_shirt_vast_silverglans"
+    },
+    {
+      "stars": 234,
+      "itemId": "item_pants_randigaleggings_isbla"
+    },
+    {
+      "stars": 238,
+      "itemId": "item_shoes_sneakers_korpsvart"
+    },
+    {
+      "stars": 242,
+      "itemId": "item_hand_right_stav_korpsvart"
+    },
+    {
+      "stars": 246,
+      "itemId": "item_hand_left_trolldryck_djuphavsbla"
+    },
+    {
+      "stars": 250,
+      "itemId": "item_tail_kometsvans_skogsgron"
+    }
+  ],
+  "levelRewards": [
+    {
+      "level": 1,
+      "itemId": "item_hat_hoghatt_korallrod"
+    },
+    {
+      "level": 2,
+      "itemId": "item_shoulders_back_fjadermantel_korpsvart"
+    },
+    {
+      "level": 3,
+      "itemId": "item_arms_gloves_armband_nattsvart"
+    },
+    {
+      "level": 4,
+      "itemId": "item_armor_shirt_vast_myllergron"
+    },
+    {
+      "level": 5,
+      "itemId": "item_pants_benskenor_silverglans"
+    },
+    {
+      "level": 6,
+      "itemId": "item_shoes_sandaler_korallrod"
+    },
+    {
+      "level": 7,
+      "itemId": "item_hand_right_spjut_barnstensgul"
+    },
+    {
+      "level": 8,
+      "itemId": "item_hand_left_bok_solgyllene"
+    },
+    {
+      "level": 9,
+      "itemId": "item_tail_hundsvans_skogsgron"
+    },
+    {
+      "level": 10,
+      "itemId": "item_hat_krona_solgyllene"
+    },
+    {
+      "level": 11,
+      "itemId": "item_shoulders_back_ryggsack_solgyllene"
+    },
+    {
+      "level": 12,
+      "itemId": "item_arms_gloves_ringar_korallrod"
+    },
+    {
+      "level": 13,
+      "itemId": "item_armor_shirt_luvtroja_rosenrosa"
+    },
+    {
+      "level": 14,
+      "itemId": "item_pants_byxor_korallrod"
+    },
+    {
+      "level": 15,
+      "itemId": "item_shoes_sneakers_djuphavsbla"
+    },
+    {
+      "level": 16,
+      "itemId": "item_hand_right_pilbage_vintervit"
+    },
+    {
+      "level": 17,
+      "itemId": "item_hand_left_lykta_rostbrun"
+    },
+    {
+      "level": 18,
+      "itemId": "item_tail_sjojungfrufena_barnstensgul"
+    },
+    {
+      "level": 19,
+      "itemId": "item_hat_trollhatt_silverglans"
+    },
+    {
+      "level": 20,
+      "itemId": "item_shoulders_back_snackskal_silverglans"
+    },
+    {
+      "level": 21,
+      "itemId": "item_arms_gloves_vantar_skogsgron"
+    },
+    {
+      "level": 22,
+      "itemId": "item_armor_shirt_vast_djuphavsbla"
+    },
+    {
+      "level": 23,
+      "itemId": "item_pants_cargobyxor_djuphavsbla"
+    },
+    {
+      "level": 24,
+      "itemId": "item_shoes_stovlar_glodande"
+    },
+    {
+      "level": 25,
+      "itemId": "item_hand_right_yxa_glodande"
+    },
+    {
+      "level": 26,
+      "itemId": "item_hand_left_rundskold_kungabla"
+    },
+    {
+      "level": 27,
+      "itemId": "item_tail_kometsvans_djuphavsbla"
+    },
+    {
+      "level": 28,
+      "itemId": "item_hat_keps_nattsvart"
+    },
+    {
+      "level": 29,
+      "itemId": "item_shoulders_back_vingar_barnstensgul"
+    },
+    {
+      "level": 30,
+      "itemId": "item_arms_gloves_handskar_skogsgron"
+    },
+    {
+      "level": 31,
+      "itemId": "item_armor_shirt_troja_barnstensgul"
+    },
+    {
+      "level": 32,
+      "itemId": "item_pants_randigaleggings_nattsvart"
+    },
+    {
+      "level": 33,
+      "itemId": "item_shoes_tofflor_skogsgron"
+    },
+    {
+      "level": 34,
+      "itemId": "item_hand_right_hammare_barnstensgul"
+    },
+    {
+      "level": 35,
+      "itemId": "item_hand_left_fackla_vintervit"
+    },
+    {
+      "level": 36,
+      "itemId": "item_tail_hundsvans_vintervit"
+    },
+    {
+      "level": 37,
+      "itemId": "item_hat_hoghatt_korpsvart"
+    },
+    {
+      "level": 38,
+      "itemId": "item_shoulders_back_pilkoger_rostbrun"
+    },
+    {
+      "level": 39,
+      "itemId": "item_arms_gloves_vantar_vintervit"
+    },
+    {
+      "level": 40,
+      "itemId": "item_armor_shirt_tunikamedbalte_korpsvart"
+    },
+    {
+      "level": 41,
+      "itemId": "item_pants_benskenor_barnstensgul"
+    },
+    {
+      "level": 42,
+      "itemId": "item_shoes_raketskor_vintervit"
+    },
+    {
+      "level": 43,
+      "itemId": "item_hand_right_pilbage_myllergron"
+    },
+    {
+      "level": 44,
+      "itemId": "item_hand_left_fackla_glodande"
+    },
+    {
+      "level": 45,
+      "itemId": "item_tail_regnbagssvans_myllergron"
+    },
+    {
+      "level": 46,
+      "itemId": "item_hat_trollhatt_rosenrosa"
+    },
+    {
+      "level": 47,
+      "itemId": "item_shoulders_back_fjadermantel_glodande"
+    },
+    {
+      "level": 48,
+      "itemId": "item_arms_gloves_handledslindor_nattsvart"
+    },
+    {
+      "level": 49,
+      "itemId": "item_armor_shirt_luvtroja_nattsvart"
+    },
+    {
+      "level": 50,
+      "itemId": "item_pants_randigaleggings_djuphavsbla"
+    },
+    {
+      "level": 51,
+      "itemId": "item_shoes_tofflor_lavendellila"
+    },
+    {
+      "level": 52,
+      "itemId": "item_hand_right_spjut_nattsvart"
+    },
+    {
+      "level": 53,
+      "itemId": "item_hand_left_timglas_rostbrun"
+    },
+    {
+      "level": 54,
+      "itemId": "item_tail_kattsvans_glodande"
+    },
+    {
+      "level": 55,
+      "itemId": "item_hat_riddarhjalm_nattsvart"
+    },
+    {
+      "level": 56,
+      "itemId": "item_shoulders_back_ballong_kungabla"
+    },
+    {
+      "level": 57,
+      "itemId": "item_arms_gloves_handskar_silverglans"
+    },
+    {
+      "level": 58,
+      "itemId": "item_armor_shirt_ringbrynja_glodande"
+    },
+    {
+      "level": 59,
+      "itemId": "item_pants_shorts_rosenrosa"
+    },
+    {
+      "level": 60,
+      "itemId": "item_shoes_taspetsskor_kungabla"
+    },
+    {
+      "level": 61,
+      "itemId": "item_hand_right_hammare_rosenrosa"
+    },
+    {
+      "level": 62,
+      "itemId": "item_hand_left_rundskold_lavendellila"
+    },
+    {
+      "level": 63,
+      "itemId": "item_tail_kometsvans_korpsvart"
+    },
+    {
+      "level": 64,
+      "itemId": "item_hat_huva_glodande"
+    },
+    {
+      "level": 65,
+      "itemId": "item_shoulders_back_halsduk_isbla"
+    },
+    {
+      "level": 66,
+      "itemId": "item_arms_gloves_klor_lavendellila"
+    },
+    {
+      "level": 67,
+      "itemId": "item_armor_shirt_plattrustning_korpsvart"
+    },
+    {
+      "level": 68,
+      "itemId": "item_pants_benskenor_korpsvart"
+    },
+    {
+      "level": 69,
+      "itemId": "item_shoes_sneakers_korallrod"
+    },
+    {
+      "level": 70,
+      "itemId": "item_hand_right_yxa_solgyllene"
+    },
+    {
+      "level": 71,
+      "itemId": "item_hand_left_kiteskold_glodande"
+    },
+    {
+      "level": 72,
+      "itemId": "item_tail_drakssvans_djuphavsbla"
+    },
+    {
+      "level": 73,
+      "itemId": "item_hat_pompomsmossa_vintervit"
+    },
+    {
+      "level": 74,
+      "itemId": "item_shoulders_back_snackskal_kungabla"
+    },
+    {
+      "level": 75,
+      "itemId": "item_arms_gloves_armband_silverglans"
+    },
+    {
+      "level": 76,
+      "itemId": "item_armor_shirt_plattrustning_rostbrun"
+    },
+    {
+      "level": 77,
+      "itemId": "item_pants_byxor_korpsvart"
+    },
+    {
+      "level": 78,
+      "itemId": "item_shoes_tofflor_kungabla"
+    },
+    {
+      "level": 79,
+      "itemId": "item_hand_right_stav_djuphavsbla"
+    },
+    {
+      "level": 80,
+      "itemId": "item_hand_left_kompass_myllergron"
+    },
+    {
+      "level": 81,
+      "itemId": "item_tail_kattsvans_rostbrun"
+    },
+    {
+      "level": 82,
+      "itemId": "item_hat_huva_rostbrun"
+    },
+    {
+      "level": 83,
+      "itemId": "item_shoulders_back_ballong_rostbrun"
+    },
+    {
+      "level": 84,
+      "itemId": "item_arms_gloves_vantar_isbla"
+    },
+    {
+      "level": 85,
+      "itemId": "item_armor_shirt_ringbrynja_lavendellila"
+    },
+    {
+      "level": 86,
+      "itemId": "item_pants_posigabyxor_silverglans"
+    },
+    {
+      "level": 87,
+      "itemId": "item_shoes_raketskor_barnstensgul"
+    },
+    {
+      "level": 88,
+      "itemId": "item_hand_right_magisksfar_rostbrun"
+    },
+    {
+      "level": 89,
+      "itemId": "item_hand_left_timglas_djuphavsbla"
+    },
+    {
+      "level": 90,
+      "itemId": "item_tail_odlesvans_korpsvart"
+    },
+    {
+      "level": 91,
+      "itemId": "item_hat_trollhatt_korpsvart"
+    },
+    {
+      "level": 92,
+      "itemId": "item_shoulders_back_fjadermantel_djuphavsbla"
+    },
+    {
+      "level": 93,
+      "itemId": "item_arms_gloves_ringar_nattsvart"
+    },
+    {
+      "level": 94,
+      "itemId": "item_armor_shirt_tunikamedbalte_barnstensgul"
+    },
+    {
+      "level": 95,
+      "itemId": "item_pants_cargobyxor_skogsgron"
+    },
+    {
+      "level": 96,
+      "itemId": "item_shoes_hogastovlar_rostbrun"
+    },
+    {
+      "level": 97,
+      "itemId": "item_hand_right_hammare_skogsgron"
+    },
+    {
+      "level": 98,
+      "itemId": "item_hand_left_trolldryck_barnstensgul"
+    },
+    {
+      "level": 99,
+      "itemId": "item_tail_hundsvans_kungabla"
+    },
+    {
+      "level": 100,
+      "itemId": "item_hat_riddarhjalm_djuphavsbla"
+    },
+    {
+      "level": 101,
+      "itemId": "item_shoulders_back_pilkoger_korpsvart"
+    },
+    {
+      "level": 102,
+      "itemId": "item_arms_gloves_pansarhandskar_djuphavsbla"
+    },
+    {
+      "level": 103,
+      "itemId": "item_armor_shirt_klanningsoverdel_vintervit"
+    },
+    {
+      "level": 104,
+      "itemId": "item_pants_randigaleggings_barnstensgul"
+    },
+    {
+      "level": 105,
+      "itemId": "item_shoes_sneakers_vintervit"
+    },
+    {
+      "level": 106,
+      "itemId": "item_hand_right_spjut_vintervit"
+    },
+    {
+      "level": 107,
+      "itemId": "item_hand_left_rundskold_glodande"
+    },
+    {
+      "level": 108,
+      "itemId": "item_tail_kometsvans_silverglans"
+    },
+    {
+      "level": 109,
+      "itemId": "item_hat_keps_rosenrosa"
+    },
+    {
+      "level": 110,
+      "itemId": "item_shoulders_back_ryggsack_vintervit"
+    },
+    {
+      "level": 111,
+      "itemId": "item_arms_gloves_ringar_korpsvart"
+    },
+    {
+      "level": 112,
+      "itemId": "item_armor_shirt_ringbrynja_korallrod"
+    },
+    {
+      "level": 113,
+      "itemId": "item_pants_benskenor_lavendellila"
+    },
+    {
+      "level": 114,
+      "itemId": "item_shoes_raketskor_solgyllene"
+    },
+    {
+      "level": 115,
+      "itemId": "item_hand_right_svard_djuphavsbla"
+    },
+    {
+      "level": 116,
+      "itemId": "item_hand_left_kiteskold_korallrod"
+    },
+    {
+      "level": 117,
+      "itemId": "item_tail_regnbagssvans_kungabla"
+    },
+    {
+      "level": 118,
+      "itemId": "item_hat_krona_korallrod"
+    },
+    {
+      "level": 119,
+      "itemId": "item_shoulders_back_snackskal_korpsvart"
+    },
+    {
+      "level": 120,
+      "itemId": "item_arms_gloves_armband_skogsgron"
+    },
+    {
+      "level": 121,
+      "itemId": "item_armor_shirt_tunikamedbalte_rostbrun"
+    },
+    {
+      "level": 122,
+      "itemId": "item_pants_byxor_lavendellila"
+    },
+    {
+      "level": 123,
+      "itemId": "item_shoes_sneakers_glodande"
+    },
+    {
+      "level": 124,
+      "itemId": "item_hand_right_trollstav_solgyllene"
+    },
+    {
+      "level": 125,
+      "itemId": "item_hand_left_bok_vintervit"
+    },
+    {
+      "level": 126,
+      "itemId": "item_tail_drakssvans_korpsvart"
+    },
+    {
+      "level": 127,
+      "itemId": "item_hat_hoghatt_isbla"
+    },
+    {
+      "level": 128,
+      "itemId": "item_shoulders_back_cape_barnstensgul"
+    },
+    {
+      "level": 129,
+      "itemId": "item_arms_gloves_pansarhandskar_solgyllene"
+    },
+    {
+      "level": 130,
+      "itemId": "item_armor_shirt_kapa_skogsgron"
+    },
+    {
+      "level": 131,
+      "itemId": "item_pants_kilt_rosenrosa"
+    },
+    {
+      "level": 132,
+      "itemId": "item_shoes_sandaler_djuphavsbla"
+    },
+    {
+      "level": 133,
+      "itemId": "item_hand_right_svard_glodande"
+    },
+    {
+      "level": 134,
+      "itemId": "item_hand_left_lykta_silverglans"
+    },
+    {
+      "level": 135,
+      "itemId": "item_tail_regnbagssvans_solgyllene"
+    },
+    {
+      "level": 136,
+      "itemId": "item_hat_krona_barnstensgul"
+    },
+    {
+      "level": 137,
+      "itemId": "item_shoulders_back_halsduk_skogsgron"
+    },
+    {
+      "level": 138,
+      "itemId": "item_arms_gloves_handledslindor_skogsgron"
+    },
+    {
+      "level": 139,
+      "itemId": "item_armor_shirt_luvtroja_vintervit"
+    },
+    {
+      "level": 140,
+      "itemId": "item_pants_randigaleggings_kungabla"
+    },
+    {
+      "level": 141,
+      "itemId": "item_shoes_taspetsskor_korpsvart"
+    },
+    {
+      "level": 142,
+      "itemId": "item_hand_right_spjut_rostbrun"
+    },
+    {
+      "level": 143,
+      "itemId": "item_hand_left_timglas_lavendellila"
+    },
+    {
+      "level": 144,
+      "itemId": "item_tail_hundsvans_silverglans"
+    },
+    {
+      "level": 145,
+      "itemId": "item_hat_huva_barnstensgul"
+    },
+    {
+      "level": 146,
+      "itemId": "item_shoulders_back_halsduk_korallrod"
+    },
+    {
+      "level": 147,
+      "itemId": "item_arms_gloves_taggarmskydd_skogsgron"
+    },
+    {
+      "level": 148,
+      "itemId": "item_armor_shirt_plattrustning_lavendellila"
+    },
+    {
+      "level": 149,
+      "itemId": "item_pants_kilt_skogsgron"
+    },
+    {
+      "level": 150,
+      "itemId": "item_shoes_hogastovlar_rosenrosa"
+    },
+    {
+      "level": 151,
+      "itemId": "item_hand_right_yxa_barnstensgul"
+    },
+    {
+      "level": 152,
+      "itemId": "item_hand_left_kompass_silverglans"
+    },
+    {
+      "level": 153,
+      "itemId": "item_tail_ravsvans_lavendellila"
+    },
+    {
+      "level": 154,
+      "itemId": "item_hat_hornhjalm_djuphavsbla"
+    },
+    {
+      "level": 155,
+      "itemId": "item_shoulders_back_pilkoger_rosenrosa"
+    },
+    {
+      "level": 156,
+      "itemId": "item_arms_gloves_klor_isbla"
+    },
+    {
+      "level": 157,
+      "itemId": "item_armor_shirt_vast_isbla"
+    },
+    {
+      "level": 158,
+      "itemId": "item_pants_shorts_kungabla"
+    },
+    {
+      "level": 159,
+      "itemId": "item_shoes_tofflor_djuphavsbla"
+    },
+    {
+      "level": 160,
+      "itemId": "item_hand_right_magisksfar_rosenrosa"
+    }
+  ],
+  "achievementRewards": {
+    "ach_speed_reader_5": "item_shoulders_back_sv_cape_1",
+    "ach_pronunciation_master_10": "item_armor_shirt_crystal_voice",
+    "ach_math_clock_money": "item_hand_right_clock_money",
+    "ach_weekly_streak_7": "item_hat_weekly_hero",
+    "ach_stars_20": "item_hat_hornhjalm_barnstensgul",
+    "ach_stars_45": "item_shoulders_back_pilkoger_lavendellila",
+    "ach_stars_75": "item_arms_gloves_handskar_isbla",
+    "ach_stars_120": "item_armor_shirt_ringbrynja_skogsgron",
+    "ach_stars_175": "item_pants_posigabyxor_korallrod",
+    "ach_stars_250": "item_shoes_raketskor_isbla",
+    "ach_stars_350": "item_hand_right_yxa_regnbags",
+    "ach_stars_480": "item_hand_left_lykta_regnbags",
+    "ach_read_story_1": "item_tail_drakssvans_kungabla",
+    "ach_read_story_3": "item_hat_huva_rosenrosa",
+    "ach_read_story_8": "item_shoulders_back_snackskal_korallrod",
+    "ach_read_story_20": "item_arms_gloves_armband_korallrod",
+    "ach_read_story_50": "item_armor_shirt_kapa_kosmisk",
+    "ach_solve_math_1": "item_pants_randigaleggings_korpsvart",
+    "ach_solve_math_3": "item_shoes_taspetsskor_lavendellila",
+    "ach_solve_math_8": "item_hand_right_trollstav_kungabla",
+    "ach_solve_math_20": "item_hand_left_fackla_myllergron",
+    "ach_solve_math_50": "item_tail_hundsvans_galax",
+    "ach_stars_5": "item_hat_krona_myllergron",
+    "ach_stars_10": "item_shoulders_back_cape_rosenrosa",
+    "ach_perfect_level_1": "item_arms_gloves_armband_solgyllene",
+    "ach_perfect_level_5": "item_armor_shirt_klanningsoverdel_korpsvart",
+    "ach_perfect_level_15": "item_pants_kjol_skogsgron",
+    "ach_perfect_level_40": "item_shoes_tofflor_myllergron",
+    "ach_perfect_level_80": "item_hand_right_magisksfar_kosmisk",
+    "ach_first_try_10": "item_hand_left_trolldryck_glodande",
+    "ach_first_try_30": "item_tail_ravsvans_rosenrosa",
+    "ach_first_try_75": "item_hat_hoghatt_myllergron",
+    "ach_first_try_150": "item_shoulders_back_halsduk_kungabla",
+    "ach_first_try_300": "item_arms_gloves_klor_gyllene",
+    "ach_streak_day_2": "item_armor_shirt_tunikamedbalte_lavendellila",
+    "ach_streak_day_3": "item_pants_kjol_korallrod",
+    "ach_streak_day_5": "item_shoes_tofflor_barnstensgul",
+    "ach_streak_day_14": "item_hand_right_trollstav_regnbags",
+    "ach_streak_day_30": "item_hand_left_rundskold_gyllene",
+    "ach_clock_money_3": "item_tail_ravsvans_kungabla",
+    "ach_clock_money_8": "item_hat_trollhatt_rostbrun",
+    "ach_clock_money_40": "item_shoulders_back_cape_regnbags",
+    "ach_read_fast_1": "item_arms_gloves_taggarmskydd_glodande",
+    "ach_read_fast_3": "item_armor_shirt_troja_glodande",
+    "ach_read_fast_12": "item_pants_kilt_regnbags",
+    "ach_read_aloud_1": "item_shoes_hogastovlar_solgyllene",
+    "ach_read_aloud_4": "item_hand_right_stav_barnstensgul",
+    "ach_read_aloud_20": "item_hand_left_kompass_kosmisk"
+  },
+  "tutorialRewardItemId": "item_hat_starter_explorer",
+  "weeklyStreakSetPieceItemIds": [
+    "item_hat_weekly_hero",
+    "item_hat_hoghatt_kosmisk",
+    "item_shoulders_back_halsduk_regnbags",
+    "item_arms_gloves_handledslindor_regnbags",
+    "item_armor_shirt_plattrustning_kosmisk",
+    "item_pants_shorts_gyllene",
+    "item_shoes_hogastovlar_galax",
+    "item_hand_right_svard_galax",
+    "item_hand_left_trolldryck_gyllene",
+    "item_tail_odlesvans_regnbags"
+  ]
+}

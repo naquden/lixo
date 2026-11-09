@@ -3,8 +3,7 @@ package se.lixo.app.data.local
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import se.lixo.app.domain.model.AvatarAppearance
-import se.lixo.app.domain.model.AvatarType
+import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.LevelProgress
 
@@ -33,7 +32,7 @@ internal fun ChildProfile.toEntity(): ProfileEntity = ProfileEntity(
     tutorialCompleted = tutorialCompleted,
     tutorialSkippableByParent = tutorialSkippableByParent,
     appearanceJson = profileJson.encodeToString(appearance),
-    unlockedAvatarsCsv = unlockedAvatars.joinToString(",") { it.name },
+    unlockedAvatarIdsCsv = unlockedAvatarIds.joinToString(","),
     currentLevelOrder = currentLevelOrder,
     totalStars = totalStars,
     currentStreakDays = currentStreakDays,
@@ -63,15 +62,8 @@ internal fun ProfileEntity.toDomain(): ChildProfile = ChildProfile(
     appearance = decodeOr("appearance", AvatarAppearance()) {
         profileJson.decodeFromString<AvatarAppearance>(appearanceJson)
     },
-    unlockedAvatars = decodeOr("unlockedAvatars", emptySet()) {
-        unlockedAvatarsCsv.split(",")
-            .filter { it.isNotBlank() }
-            .mapNotNull { name ->
-                runCatching { AvatarType.valueOf(name) }
-                    .onFailure { println("LixoProfiles: WARN profile $id unknown avatar type '$name'") }
-                    .getOrNull()
-            }
-            .toSet()
+    unlockedAvatarIds = decodeOr("unlockedAvatarIds", emptySet()) {
+        unlockedAvatarIdsCsv.split(",").filter { it.isNotBlank() }.toSet()
     },
     currentLevelOrder = currentLevelOrder,
     totalStars = totalStars,

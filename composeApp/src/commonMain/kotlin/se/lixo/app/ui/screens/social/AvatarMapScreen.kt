@@ -56,9 +56,10 @@ import se.lixo.app.domain.model.AddFriendException
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.FriendProfile
-import se.lixo.app.domain.model.WardrobeItem
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.platform.TextToSpeechEngine
-import se.lixo.app.ui.components.avatar3d.Avatar3DViewport
+import se.lixo.app.ui.components.avatar.AvatarViewport
 import se.lixo.app.ui.theme.LixoBottomSheet
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
@@ -79,12 +80,13 @@ import se.lixo.app.ui.theme.TtsIconButton
 fun AvatarMapScreen(
     profile: ChildProfile,
     friends: List<FriendProfile>,
-    catalogById: Map<String, WardrobeItem>,
+    content: ActiveContent,
     ttsEngine: TextToSpeechEngine,
     showSwedishTtsButtons: Boolean,
     onOpenWardrobe: () -> Unit,
     onAddFriendByQuery: suspend (String) -> Result<FriendProfile>,
-    onRemoveFriend: (String) -> Unit
+    onRemoveFriend: (String) -> Unit,
+    onOpenContentPreview: (() -> Unit)? = null
 ) {
     var selectedFriend by remember { mutableStateOf<FriendProfile?>(null) }
     var showAddFriendSheet by remember { mutableStateOf(false) }
@@ -152,7 +154,7 @@ fun AvatarMapScreen(
                     ) {
                         OwnAvatarPodium(
                             profile = profile,
-                            catalogById = catalogById,
+                            content = content,
                             onClick = onOpenWardrobe
                         )
                     }
@@ -175,6 +177,21 @@ fun AvatarMapScreen(
                                 style = MaterialTheme.typography.labelLarge,
                                 color = Color(0xFF4A3800)
                             )
+                        }
+
+                        if (onOpenContentPreview != null) {
+                            Spacer(Modifier.height(8.dp))
+                            LixoButton(
+                                onClick = onOpenContentPreview,
+                                variant = LixoButtonVariant.GHOST,
+                                height = 40.dp
+                            ) {
+                                Text(
+                                    text = LixoStrings.CONTENT_PREVIEW_OPEN_BTN,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = LixoColors.TextSecondary
+                                )
+                            }
                         }
                     }
 
@@ -209,7 +226,7 @@ fun AvatarMapScreen(
                                     val friend = friends[index]
                                     FriendPlot(
                                         friend = friend,
-                                        catalogById = catalogById,
+                                        content = content,
                                         onClick = { selectedFriend = friend }
                                     )
                                 } else {
@@ -227,7 +244,7 @@ fun AvatarMapScreen(
                                     val friend = friends[index]
                                     FriendPlot(
                                         friend = friend,
-                                        catalogById = catalogById,
+                                        content = content,
                                         onClick = { selectedFriend = friend }
                                     )
                                 } else {
@@ -257,9 +274,9 @@ fun AvatarMapScreen(
                         .avatarGround(face = LixoColors.Green, lip = LixoColors.GreenLip),
                     contentAlignment = Alignment.Center
                 ) {
-                    Avatar3DViewport(
+                    AvatarViewport(
+                        content = content,
                         appearance = friend.appearance,
-                        catalogById = catalogById,
                         modifier = Modifier.fillMaxSize(),
                         interactiveRotation = true
                     )
@@ -276,16 +293,16 @@ fun AvatarMapScreen(
                     StatPill(icon = LixoIcons.Star, value = "${friend.totalStars}", tint = LixoColors.GoldLip)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = LixoStrings.avatarName(friend.appearance.avatarType),
+                        text = content.avatarName(friend.appearance.avatarId),
                         style = MaterialTheme.typography.bodyMedium,
                         color = LixoColors.TextSecondary
                     )
                 }
                 Spacer(Modifier.height(20.dp))
 
-                val equippedGear = remember(friend, catalogById) {
+                val equippedGear = remember(friend, content) {
                     EquipmentSlot.entries
-                        .mapNotNull { slot -> friend.appearance.equippedItems[slot]?.let(catalogById::get) }
+                        .mapNotNull { slot -> friend.appearance.equipped[slot]?.let { content.itemsById[it] } }
                         .sortedByDescending { it.rarity.ordinal }
                 }
                 Row(
@@ -303,7 +320,7 @@ fun AvatarMapScreen(
                         Spacer(Modifier.width(8.dp))
                         TtsIconButton(
                             textToSpeak = "${LixoStrings.FRIEND_SHEET_GEAR_TITLE}. " +
-                                equippedGear.joinToString(". ") { it.nameSv },
+                                equippedGear.joinToString(". ") { content.itemName(it) },
                             ttsEngine = ttsEngine
                         )
                     }
@@ -322,7 +339,7 @@ fun AvatarMapScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         equippedGear.forEach { item ->
-                            EquippedGearRow(item = item)
+                            EquippedGearRow(content = content, item = item)
                         }
                     }
                 }
@@ -569,10 +586,9 @@ private fun VillageBackdrop(
 
 /**
  * Draws a podium "lip" + "face" oval pair directly under an avatar's feet so the avatar
- * reads as standing on a tactile base, matching [Avatar3DViewport]'s own shadow/ring geometry
- * (drawn in `Avatar3DController.kt`'s `drawLowPolyAvatarScene`: feet sit at y = 0.842 * side,
- * ring centered around y = 0.88 * side). Drawn with `drawBehind` so it renders under the
- * avatar's own shadow/ring rather than as a separate floating pill.
+ * reads as standing on a tactile base, matching [AvatarViewport]'s own shadow/ring geometry.
+ * Drawn with `drawBehind` so it renders under the avatar's own shadow/ring rather than as a
+ * separate floating pill.
  */
 private fun Modifier.avatarGround(face: Color, lip: Color): Modifier = this.drawBehind {
     val s = size.minDimension
@@ -598,7 +614,7 @@ private fun Modifier.avatarGround(face: Color, lip: Color): Modifier = this.draw
 @Composable
 private fun OwnAvatarPodium(
     profile: ChildProfile,
-    catalogById: Map<String, WardrobeItem>,
+    content: ActiveContent,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -624,9 +640,9 @@ private fun OwnAvatarPodium(
                 .size(190.dp)
                 .avatarGround(face = LixoColors.Blue, lip = LixoColors.BlueLip)
         ) {
-            Avatar3DViewport(
+            AvatarViewport(
+                content = content,
                 appearance = profile.appearance,
-                catalogById = catalogById,
                 modifier = Modifier.fillMaxSize(),
                 interactiveRotation = true
             )
@@ -651,7 +667,7 @@ private fun OwnAvatarPodium(
 @Composable
 private fun FriendPlot(
     friend: FriendProfile,
-    catalogById: Map<String, WardrobeItem>,
+    content: ActiveContent,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -677,9 +693,9 @@ private fun FriendPlot(
                 .size(150.dp)
                 .avatarGround(face = LixoColors.Green, lip = LixoColors.GreenLip)
         ) {
-            Avatar3DViewport(
+            AvatarViewport(
+                content = content,
                 appearance = friend.appearance,
-                catalogById = catalogById,
                 modifier = Modifier.fillMaxSize(),
                 interactiveRotation = false
             )
@@ -704,9 +720,9 @@ private fun FriendPlot(
         Spacer(Modifier.height(4.dp))
         StatPill(icon = LixoIcons.Star, value = "${friend.totalStars}", tint = LixoColors.GoldLip)
 
-        val equippedRarities = remember(friend, catalogById) {
+        val equippedRarities = remember(friend, content) {
             EquipmentSlot.entries.mapNotNull { slot ->
-                friend.appearance.equippedItems[slot]?.let(catalogById::get)?.rarity
+                friend.appearance.equipped[slot]?.let { content.itemsById[it] }?.rarity
             }
         }
         if (equippedRarities.isNotEmpty()) {
@@ -785,7 +801,7 @@ private fun AddFriendPlot(onClick: () -> Unit) {
 
 /** One row in the friend's gear list: a rarity badge, item name and slot, modeled on the wardrobe item card. */
 @Composable
-private fun EquippedGearRow(item: WardrobeItem) {
+private fun EquippedGearRow(content: ActiveContent, item: ContentItem) {
     val rarityColor = LixoColors.rarityColor(item.rarity)
 
     LixoCard(
@@ -810,7 +826,7 @@ private fun EquippedGearRow(item: WardrobeItem) {
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.nameSv,
+                    text = content.itemName(item),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = LixoColors.TextPrimary,

@@ -105,7 +105,7 @@ class TutorialUnreadWordsTest {
                     ProfileSelectAndTutorialScreen(
                         profiles = listOf(profile),
                         activeProfile = profile,
-                        catalogById = emptyMap(),
+                        content = TestContent.active,
                         sttEngine = stt,
                         ttsEngine = remember { createPlatformTextToSpeechEngine() },
                         showSwedishTtsButtons = false,

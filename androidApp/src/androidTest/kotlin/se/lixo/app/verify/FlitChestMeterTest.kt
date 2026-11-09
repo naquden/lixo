@@ -112,7 +112,6 @@ class FlitChestMeterTest {
         val baseProfile = repo.profiles.value.first()
         val profile = baseProfile.copy(chestProgressHalfPoints = 10)
         val progressByLevelId = repo.levelProgressByProfile.value[profile.id].orEmpty()
-        val catalogById = repo.wardrobeCatalog.value.associateBy { it.id }
 
         compose.setContent {
             LixoTheme {
@@ -120,7 +119,7 @@ class FlitChestMeterTest {
                     profile = profile,
                     levels = repo.levels.value,
                     progressByLevelId = progressByLevelId,
-                    catalogById = catalogById,
+                    content = repo.content.active.value,
                     progressionEngine = ProgressionAndGiftEngine(),
                     ttsEngine = createPlatformTextToSpeechEngine(),
                     showSwedishTtsButtons = false,
@@ -157,7 +156,6 @@ class FlitChestMeterTest {
         val repo = DummyData.populatedRepository()
         val profile = repo.profiles.value.first().copy(chestProgressHalfPoints = 10)
         val progressByLevelId = repo.levelProgressByProfile.value[profile.id].orEmpty()
-        val catalogById = repo.wardrobeCatalog.value.associateBy { it.id }
 
         compose.setContent {
             LixoTheme {
@@ -165,7 +163,7 @@ class FlitChestMeterTest {
                     profile = profile,
                     levels = repo.levels.value,
                     progressByLevelId = progressByLevelId,
-                    catalogById = catalogById,
+                    content = repo.content.active.value,
                     progressionEngine = ProgressionAndGiftEngine(),
                     ttsEngine = createPlatformTextToSpeechEngine(),
                     showSwedishTtsButtons = false,
@@ -201,7 +199,11 @@ class FlitChestMeterTest {
         var halfPoints by mutableStateOf(0)
         compose.setContent {
             LixoTheme {
-                FlitChestMeter(halfPoints = halfPoints, size = 32.dp)
+                FlitChestMeter(
+                    halfPoints = halfPoints,
+                    thresholdHalf = TestContent.active.dropRules.chestCostHalfPoints,
+                    size = 32.dp
+                )
             }
         }
 
@@ -241,11 +243,13 @@ class FlitChestMeterTest {
                         cornerContent = {
                             FlitChestMeter(
                                 halfPoints = 14,
+                                thresholdHalf = TestContent.active.dropRules.chestCostHalfPoints,
                                 size = 44.dp,
                                 animation = chestFillAnimation(
                                     updatedHalfPoints = 14,
                                     awardedHalf = 4,
-                                    chestAwarded = false
+                                    chestAwarded = false,
+                                    thresholdHalf = TestContent.active.dropRules.chestCostHalfPoints
                                 )
                             )
                         }

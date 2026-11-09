@@ -1,0 +1,74 @@
+[
+  {
+    "id": "item_hat_starter_explorer",
+    "slot": "HAT",
+    "rarity": "COMMON",
+    "subjectTheme": "SWEDISH",
+    "template": "hat:5",
+    "palette": {"primary": "#2ECC71", "secondary": "#FFFFFF"},
+    "pattern": "NONE",
+    "ornament": "NONE",
+    "scale": 1.0,
+    "pool": "level"
+  },
+  {
+    "id": "item_hand_right_math_sword_1",
+    "slot": "HAND_RIGHT",
+    "rarity": "RARE",
+    "subjectTheme": "MATH",
+    "template": "hand_right:0",
+    "palette": {"primary": "#3498DB", "secondary": "#F1C40F"},
+    "pattern": "STRIPES",
+    "ornament": "TRIM",
+    "scale": 1.0,
+    "pool": "standard"
+  },
+  {
+    "id": "item_shoulders_back_sv_cape_1",
+    "slot": "SHOULDERS_BACK",
+    "rarity": "EPIC",
+    "subjectTheme": "SWEDISH",
+    "template": "shoulders_back:0",
+    "palette": {"primary": "#9B59B6", "secondary": "#F1C40F"},
+    "pattern": "STARS",
+    "ornament": "GEM",
+    "scale": 1.0,
+    "pool": "achievement"
+  },
+  {
+    "id": "item_hat_weekly_hero",
+    "slot": "HAT",
+    "rarity": "LEGENDARY",
+    "subjectTheme": "ENGLISH",
+    "template": "hat:1",
+    "palette": {"primary": "#FFD700", "secondary": "#FFF8DC"},
+    "pattern": "STARS",
+    "ornament": "SPARKLE",
+    "scale": 1.15,
+    "pool": "setpiece"
+  },
+  {
+    "id": "item_armor_shirt_crystal_voice",
+    "slot": "ARMOR_SHIRT",
+    "rarity": "LEGENDARY",
+    "subjectTheme": "SWEDISH",
+    "template": "armor_shirt:2",
+    "palette": {"primary": "#00E0FF", "secondary": "#FFFFFF"},
+    "pattern": "STARS",
+    "ornament": "GLOW",
+    "scale": 1.15,
+    "pool": "achievement"
+  },
+  {
+    "id": "item_hand_right_clock_money",
+    "slot": "HAND_RIGHT",
+    "rarity": "EPIC",
+    "subjectTheme": "MATH",
+    "template": "hand_right:7",
+    "palette": {"primary": "#FFD700", "secondary": "#2C3E50"},
+    "pattern": "DOTS",
+    "ornament": "GEM",
+    "scale": 1.0,
+    "pool": "achievement"
+  }
+]

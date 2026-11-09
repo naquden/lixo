@@ -119,6 +119,7 @@ class ManualReadingDelayTest {
                         // The done button is never clicked in this test (we only verify its
                         // locked/unlocked state), but a valid outcome is returned anyway in
                         // case it ever runs, so it doesn't crash.
+                        content = repo.content.active.value,
                         onFinishReadingSession = { _, _ ->
                             LevelCompletionOutcome(
                                 updatedProfile = repo.profiles.value.first(),
@@ -135,7 +136,7 @@ class ManualReadingDelayTest {
                                     updatedAtEpochMillis = 0L
                                 ),
                                 netNewStarsAwarded = 0,
-                                newlyUnlockedAvatars = emptySet(),
+                                newlyUnlockedAvatarIds = emptyList(),
                                 newlyUnlockedRewards = emptyList(),
                                 giftOutcome = null,
                                 streakIncrementedToday = false

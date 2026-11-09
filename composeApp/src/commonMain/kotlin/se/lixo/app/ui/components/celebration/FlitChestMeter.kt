@@ -47,14 +47,16 @@ private val HoloViolet = Color(0xFFB388FF)
 private val HoloPink = Color(0xFFFF8AD8)
 
 /**
- * Small holographic chest that fills up with gold as `halfPoints` approach the Flitkista
- * threshold. In static mode (no [animation]) it simply reflects [halfPoints]; pass an
- * [animation] to play the fill transition for one level-completion run, including the
- * flash-and-drain sequence when the chest wraps around (overflowed into a new chest).
+ * Small holographic chest that fills up with gold as `halfPoints` approach `thresholdHalf`
+ * (`dropRules.chestCostHalfPoints`, doc/content/content-pack.md § Drop rules). In static mode (no
+ * [animation]) it simply reflects [halfPoints]; pass an [animation] to play the fill transition
+ * for one level-completion run, including the flash-and-drain sequence when the chest wraps
+ * around (overflowed into a new chest).
  */
 @Composable
 fun FlitChestMeter(
     halfPoints: Int,
+    thresholdHalf: Int,
     modifier: Modifier = Modifier,
     size: Dp = 32.dp,
     animation: ChestFillAnimation? = null,
@@ -64,7 +66,7 @@ fun FlitChestMeter(
     val fill = remember(animation) { Animatable(animation?.from ?: 0f) }
     val flash = remember { Animatable(0f) }
     val haptics = rememberLixoHaptics()
-    val fraction = if (animation == null) chestFillFraction(halfPoints) else fill.value
+    val fraction = if (animation == null) chestFillFraction(halfPoints, thresholdHalf) else fill.value
 
     LaunchedEffect(animation) {
         val anim = animation ?: return@LaunchedEffect
@@ -124,7 +126,7 @@ fun FlitChestMeter(
                 }
             )
             .semantics {
-                contentDescription = chestFillLevelDescription(chestFillFraction(halfPoints))
+                contentDescription = chestFillLevelDescription(chestFillFraction(halfPoints, thresholdHalf))
                 if (onClick != null) role = Role.Button
             }
             .graphicsLayer {

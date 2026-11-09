@@ -27,7 +27,7 @@ import org.junit.Test
 import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.Rarity
-import se.lixo.app.domain.model.WardrobeItem
+import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.platform.AndroidPlatformContext
 import se.lixo.app.platform.createPlatformTextToSpeechEngine
 import se.lixo.app.screenshots.FakeCloudGateway
@@ -95,10 +95,10 @@ class WardrobeRarityCountTest {
      * Shared fixture for both wardrobe rarity tests: 2 unlocked COMMON HATs and 1 unlocked
      * LEGENDARY HAT (plus a stale unknown id), rendering the real [WardrobeScreen].
      */
-    private fun setUpWardrobeWithCommonAndLegendary(): Triple<LixoRepository, List<WardrobeItem>, WardrobeItem> {
-        val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = false, profileStore = null)
+    private fun setUpWardrobeWithCommonAndLegendary(): Triple<LixoRepository, List<ContentItem>, ContentItem> {
+        val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = false, profileStore = null, content = TestContent.repository)
         val profile = repo.createProfile("Testa", 7)
-        val catalog = repo.wardrobeCatalog.value
+        val catalog = repo.content.active.value.items
 
         val commons = catalog
             .filter { it.rarity == Rarity.COMMON && it.slot == EquipmentSlot.HAT }
@@ -119,11 +119,11 @@ class WardrobeRarityCountTest {
             LixoTheme {
                 WardrobeScreen(
                     profile = profile,
-                    allWardrobeItems = catalog,
+                    content = repo.content.active.value,
                     unlockedItemIds = repo.unlockedItemIds.collectAsState().value,
                     ttsEngine = remember { createPlatformTextToSpeechEngine() },
                     showSwedishTtsButtons = false,
-                    onSelectAvatarType = {},
+                    onSelectAvatar = {},
                     onEquipSlotItem = { _, _ -> },
                     onCustomizeBaseTraits = { _, _, _ -> },
                     onBack = {}
@@ -152,7 +152,7 @@ class WardrobeRarityCountTest {
         }
         compose.onNodeWithTag(wardrobeRarityCountTag(Rarity.COMMON)).assertTextContains("2/", substring = true)
         compose.onNodeWithTag(wardrobeRarityCountTag(Rarity.LEGENDARY)).assertTextContains("1/", substring = true)
-        compose.onNodeWithText(legendary.nameSv).assertExists()
+        compose.onNodeWithText(TestContent.active.itemName(legendary)).assertExists()
 
         shot("wardrobe_rarity_counts")
     }

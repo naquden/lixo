@@ -45,29 +45,7 @@ interface LixoDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertTasks(tasks: List<TaskEntity>)
 
-    // --- Wardrobe & Universal Inventory ---
-    @Query("SELECT * FROM wardrobe_items ORDER BY unlockStarRequirement ASC")
-    fun observeAllWardrobeItems(): Flow<List<WardrobeItemEntity>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertWardrobeItems(items: List<WardrobeItemEntity>)
-
-    @Query("SELECT * FROM wardrobe_items")
-    suspend fun getAllWardrobeItems(): List<WardrobeItemEntity>
-
-    @Query("SELECT * FROM wardrobe_catalog_meta WHERE singletonId = 1 LIMIT 1")
-    suspend fun getWardrobeCatalogMeta(): WardrobeCatalogMetaEntity?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertWardrobeCatalogMeta(meta: WardrobeCatalogMetaEntity)
-
-    // No delete method on purpose: remote wardrobe sync is additions-only (doc/plans/015).
-    @Transaction
-    suspend fun upsertRemoteCatalog(version: Int, appVersionCode: Int, items: List<WardrobeItemEntity>) {
-        upsertWardrobeItems(items)
-        upsertWardrobeCatalogMeta(WardrobeCatalogMetaEntity(version = version, appVersionCode = appVersionCode))
-    }
-
+    // --- Universal Inventory ---
     @Query("SELECT * FROM unlocked_inventory")
     fun observeUnlockedInventory(): Flow<List<UnlockedInventoryEntity>>
 
@@ -155,4 +133,35 @@ interface LixoDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAppSettings(settings: AppSettingsEntity)
+}
+
+/**
+ * Content-pack cloud sync (024) cache. A separate DAO (rather than folding into [LixoDao]) so
+ * [se.lixo.app.data.local.ContentPackCache] tests can fake it without implementing the whole
+ * (much larger) [LixoDao] interface.
+ */
+@Dao
+interface ContentPackDao {
+
+    @Query("SELECT * FROM content_pack_meta WHERE id = 0 LIMIT 1")
+    suspend fun getMeta(): ContentPackMetaEntity?
+
+    @Query("SELECT * FROM content_pack_chunks WHERE version = :version ORDER BY idx ASC")
+    suspend fun getChunks(version: Int): List<ContentPackChunkEntity>
+
+    @Query("DELETE FROM content_pack_chunks")
+    suspend fun deleteAllChunks()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertChunks(chunks: List<ContentPackChunkEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertMeta(meta: ContentPackMetaEntity)
+
+    @Transaction
+    suspend fun replace(meta: ContentPackMetaEntity, chunks: List<ContentPackChunkEntity>) {
+        deleteAllChunks()
+        insertChunks(chunks)
+        upsertMeta(meta)
+    }
 }

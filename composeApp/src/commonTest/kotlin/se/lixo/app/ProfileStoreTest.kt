@@ -13,9 +13,9 @@ import se.lixo.app.data.local.toEntity
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
-import se.lixo.app.domain.model.AvatarAppearance
-import se.lixo.app.domain.model.AvatarType
-import se.lixo.app.domain.model.BalanceConfig
+import se.lixo.app.data.repository.ContentRepository
+import se.lixo.app.domain.content.AvatarAppearance
+import se.lixo.app.domain.content.SampleContentPack
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.LevelProgress
@@ -66,7 +66,13 @@ class FakeProfileStore : ProfileStore {
 class ProfileStoreTest {
 
     private fun newRepo(store: ProfileStore?, isDebugBuild: Boolean) =
-        LixoRepository(FirebaseSyncService(), lexiconCache = null, isDebugBuild = isDebugBuild, profileStore = store)
+        LixoRepository(
+            FirebaseSyncService(),
+            lexiconCache = null,
+            isDebugBuild = isDebugBuild,
+            profileStore = store,
+            content = ContentRepository(SampleContentPack.activeContent())
+        )
 
     @Test
     fun profiles_persistAcrossRepositoryInstances() = runTest {
@@ -125,7 +131,7 @@ class ProfileStoreTest {
         assertTrue(ids.contains(LixoRepository.DEBUG_SAGA_PROFILE_ID))
         assertTrue(ids.contains("profile_ella"))
         assertEquals("profile_ella", repo.activeProfileId.value)
-        assertTrue(repo.unlockedItemIds.value.contains(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID))
+        assertTrue(repo.unlockedItemIds.value.contains(repo.content.active.value.dropRules.tutorialRewardItemId))
         assertEquals(listOf(LixoRepository.DEBUG_SAGA_PROFILE_ID), store.savedProfileIds)
     }
 
@@ -149,16 +155,16 @@ class ProfileStoreTest {
         val ella = repoA.createProfile("Ella", 7)
         repoA.awaitPendingProfileWrites()
 
-        repoA.unlockWardrobeItem("item_test_hat")
-        repoA.equipItemOnActiveProfile(EquipmentSlot.HAT, "item_test_hat")
+        repoA.unlockWardrobeItem("item_hat_test_cone")
+        repoA.equipItemOnActiveProfile(EquipmentSlot.HAT, "item_hat_test_cone")
         repoA.awaitPendingProfileWrites()
 
         val repoB = newRepo(store, isDebugBuild = false)
         repoB.profilesLoaded.first { it }
 
-        assertTrue(repoB.unlockedItemIds.value.contains("item_test_hat"))
+        assertTrue(repoB.unlockedItemIds.value.contains("item_hat_test_cone"))
         val profile = repoB.profiles.value.single { it.id == ella.id }
-        assertEquals("item_test_hat", profile.appearance.equippedItems[EquipmentSlot.HAT])
+        assertEquals("item_hat_test_cone", profile.appearance.equipped[EquipmentSlot.HAT])
     }
 
     @Test
@@ -190,16 +196,16 @@ class ProfileStoreTest {
             tutorialCompleted = true,
             tutorialSkippableByParent = true,
             appearance = AvatarAppearance(
-                avatarType = AvatarType.DOG,
-                primaryTintHex = 0xFF112233,
-                eyeExpressionIndex = 2,
-                smileExpressionIndex = 1,
-                equippedItems = mapOf(
+                avatarId = "avatar_dog",
+                tintHex = 0xFF112233,
+                eyeIndex = 2,
+                smileIndex = 1,
+                equipped = mapOf(
                     EquipmentSlot.HAT to "item_hat_1",
                     EquipmentSlot.SHOES to "item_shoes_1"
                 )
             ),
-            unlockedAvatars = setOf(AvatarType.CAT, AvatarType.DOG),
+            unlockedAvatarIds = setOf("avatar_cat", "avatar_dog"),
             currentLevelOrder = 12,
             totalStars = 42,
             currentStreakDays = 3,

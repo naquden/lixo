@@ -1,11 +1,14 @@
 package se.lixo.app.ui.components.celebration
 
-import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.ui.theme.LixoStrings
 
-/** Fill fraction (0f..1f) of the Flitkista chest meter for the given half-point counter. */
-fun chestFillFraction(halfPoints: Int): Float {
-    val threshold = BalanceConfig.CHEST_POINTS_THRESHOLD_HALF
+/**
+ * Fill fraction (0f..1f) of the Flitkista chest meter for the given half-point counter.
+ * [thresholdHalf] is the run's `content.dropRules.chestCostHalfPoints`
+ * (doc/content/content-pack.md § Drop rules).
+ */
+fun chestFillFraction(halfPoints: Int, thresholdHalf: Int): Float {
+    val threshold = thresholdHalf.coerceAtLeast(1)
     return halfPoints.coerceIn(0, threshold).toFloat() / threshold
 }
 
@@ -19,14 +22,16 @@ data class ChestFillAnimation(val from: Float, val to: Float, val wrapped: Boole
  * Builds the [ChestFillAnimation] for one run. The engine resets the counter even when
  * `rollChest` returns null because the candidate pool is empty, so the arithmetic (not just
  * `chestAwarded`) is the source of truth for whether the meter wrapped around a full chest.
+ * [thresholdHalf] is the run's `content.dropRules.chestCostHalfPoints`
+ * (doc/content/content-pack.md § Drop rules).
  */
-fun chestFillAnimation(updatedHalfPoints: Int, awardedHalf: Int, chestAwarded: Boolean): ChestFillAnimation {
-    val threshold = BalanceConfig.CHEST_POINTS_THRESHOLD_HALF
+fun chestFillAnimation(updatedHalfPoints: Int, awardedHalf: Int, chestAwarded: Boolean, thresholdHalf: Int): ChestFillAnimation {
+    val threshold = thresholdHalf.coerceAtLeast(1)
     val wrapped = chestAwarded || updatedHalfPoints < awardedHalf
     val previous = updatedHalfPoints - awardedHalf + (if (wrapped) threshold else 0)
     return ChestFillAnimation(
-        from = chestFillFraction(previous),
-        to = chestFillFraction(updatedHalfPoints),
+        from = chestFillFraction(previous, thresholdHalf),
+        to = chestFillFraction(updatedHalfPoints, thresholdHalf),
         wrapped = wrapped
     )
 }

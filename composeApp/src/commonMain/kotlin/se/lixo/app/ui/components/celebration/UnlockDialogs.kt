@@ -33,9 +33,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.domain.model.Achievement
-import se.lixo.app.domain.model.AvatarType
-import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.challenge.ChallengeEquation
 import se.lixo.app.ui.components.challenge.ChallengeHeroIcon
@@ -58,7 +58,8 @@ private val popInKeyframes = keyframes<Float> {
 
 @Composable
 fun ItemUnlockedDialog(
-    item: WardrobeItem,
+    content: ActiveContent,
+    item: ContentItem,
     onEquipNow: () -> Unit,
     onClose: () -> Unit
 ) {
@@ -99,11 +100,11 @@ fun ItemUnlockedDialog(
                 Spacer(Modifier.height(16.dp))
                 Box(modifier = Modifier.size(200.dp), contentAlignment = Alignment.Center) {
                     LightBurst(item.rarity, Modifier.fillMaxSize())
-                    RarityItemTile(item, Modifier.align(Alignment.Center), tileSize = 110.dp)
+                    RarityItemTile(content, item, Modifier.align(Alignment.Center), tileSize = 110.dp)
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = item.nameSv,
+                    text = content.itemName(item),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = LixoColors.TextPrimary
@@ -176,7 +177,8 @@ fun ItemUnlockedDialog(
 
 @Composable
 fun AvatarUnlockedDialog(
-    avatarType: AvatarType,
+    content: ActiveContent,
+    avatarId: String,
     onSwitchNow: () -> Unit,
     onClose: () -> Unit
 ) {
@@ -225,7 +227,7 @@ fun AvatarUnlockedDialog(
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = LixoStrings.avatarName(avatarType),
+                    text = content.avatarName(avatarId),
                     style = MaterialTheme.typography.headlineMedium,
                     color = LixoColors.TextPrimary
                 )

@@ -1,0 +1,22 @@
+{
+  "id": "event_jul_2026",
+  "nameKey": "event_jul_2026.name",
+  "start": "2026-12-01",
+  "endExclusive": "2026-12-27",
+  "tz": "local",
+  "itemIds": [
+    "item_hat_jul2026_tomteluva",
+    "item_shoulders_back_jul2026_halsduk",
+    "item_arms_gloves_jul2026_vantar",
+    "item_armor_shirt_jul2026_jultroja",
+    "item_pants_jul2026_tomtebyxor",
+    "item_shoes_jul2026_kangor",
+    "item_hand_right_jul2026_polkagris",
+    "item_hand_left_jul2026_julklapp",
+    "item_tail_jul2026_rensvans"
+  ],
+  "chestTheme": { "bodyHex": "#C0392B", "trimHex": "#F4C430", "ornament": "SPARKLE" },
+  "banner": { "titleKey": "event_jul_2026.banner", "bgHex": "#B71C1C", "fgHex": "#FFFFFF" },
+  "dropBoost": { "eventItemChance": 0.5, "presentGiftChance": 0.5 },
+  "afterEnd": "retire"
+}

@@ -16,7 +16,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.domain.model.Rarity
 import se.lixo.app.domain.model.RewardSource
 import se.lixo.app.platform.AndroidPlatformContext
@@ -96,7 +95,8 @@ class RarityRevealTest {
     }
 
     private fun runReveal(rarity: Rarity) {
-        val candidates = LixoRepository.buildSeedWardrobeCatalog().filter { it.rarity == rarity }
+        val content = TestContent.active
+        val candidates = content.items.filter { it.rarity == rarity }
         assertTrue("no catalog item found for rarity $rarity", candidates.isNotEmpty())
         val item = candidates.minBy { it.id }
 
@@ -106,6 +106,7 @@ class RarityRevealTest {
         compose.setContent {
             LixoTheme {
                 ChestRevealStage(
+                    content = content,
                     item = item,
                     source = RewardSource.FLITKISTA,
                     onOpened = { opened = true },
@@ -131,7 +132,7 @@ class RarityRevealTest {
 
         assertTrue("open animation did not finish", opened)
         compose.onNodeWithText(LixoStrings.ITEM_UNLOCKED_TITLE).assertExists()
-        compose.onNodeWithText(item.nameSv).assertExists()
+        compose.onNodeWithText(content.itemName(item)).assertExists()
         compose.onNodeWithText(
             "${LixoStrings.rarityName(rarity).uppercase()} · ${LixoStrings.slotName(item.slot)}"
         ).assertExists()

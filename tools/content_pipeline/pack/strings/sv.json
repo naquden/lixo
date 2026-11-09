@@ -1,0 +1,20 @@
+{
+  "avatar_cat.name": "Katt",
+  "avatar_dog.name": "Hund",
+  "avatar_knight.name": "Riddare",
+  "avatar_princess.name": "Prinsessa",
+  "avatar_wizard.name": "Trollkarl",
+  "avatar_witch.name": "Häxa",
+  "item_hat_starter_explorer.name": "Skogsgläntans Upptäckarhatt",
+  "item_hat_starter_explorer.desc": "Den första glittrande hatten som Lixo hittade under tutorial-sagan!",
+  "item_hand_right_math_sword_1.name": "Siffersvärdet av Kristall",
+  "item_hand_right_math_sword_1.desc": "Ett lysande svärd smitt av kloka uträkningar i matematik.",
+  "item_shoulders_back_sv_cape_1.name": "Sagoberättarens Stjärnmantel",
+  "item_shoulders_back_sv_cape_1.desc": "En mjuk mantel som fladdrar när du läser svenska sagor med inlevelse.",
+  "item_hat_weekly_hero.name": "Veckans Hjältekrona",
+  "item_hat_weekly_hero.desc": "En gyllene krona som bara de mest trogna veckostreakarna kan bära.",
+  "item_armor_shirt_crystal_voice.name": "Kristallklara Rösten",
+  "item_armor_shirt_crystal_voice.desc": "En skimrande kåpa som glödar när uttalet är kristallklart.",
+  "item_hand_right_clock_money.name": "Tid- och Pengasfären",
+  "item_hand_right_clock_money.desc": "En lysande sfär prydd med klocksiffror och blänkande mynt."
+}

@@ -52,7 +52,6 @@ kotlin {
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            implementation(libs.sceneview.compose)
             implementation(libs.vosk.android)
         }
         commonMain.dependencies {

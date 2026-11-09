@@ -123,6 +123,7 @@ class HeardWordPopupTest {
                         showDebugSimulationControls = true,
                         lookupDictionary = { repo.lookupDictionaryWord(it) },
                         onFinishReadingSession = { _, _ -> error("not expected") },
+                        content = repo.content.active.value,
                         onEquipItem = {},
                         onSelectAvatar = {},
                         onCloseToMap = {}
@@ -172,6 +173,7 @@ class HeardWordPopupTest {
                         showDebugSimulationControls = true,
                         lookupDictionary = { repo.lookupDictionaryWord(it) },
                         onFinishReadingSession = { _, _ -> error("not expected") },
+                        content = repo.content.active.value,
                         onEquipItem = {},
                         onSelectAvatar = {},
                         onCloseToMap = {}
@@ -214,6 +216,7 @@ class HeardWordPopupTest {
                         showDebugSimulationControls = true,
                         lookupDictionary = { repo.lookupDictionaryWord(it) },
                         onFinishReadingSession = { _, _ -> error("not expected") },
+                        content = repo.content.active.value,
                         onEquipItem = {},
                         onSelectAvatar = {},
                         onCloseToMap = {}
@@ -272,6 +275,7 @@ class HeardWordPopupTest {
                         showDebugSimulationControls = true,
                         lookupDictionary = { repo.lookupDictionaryWord(it) },
                         onFinishReadingSession = { _, _ -> error("not expected") },
+                        content = repo.content.active.value,
                         onEquipItem = {},
                         onSelectAvatar = {},
                         onCloseToMap = {}

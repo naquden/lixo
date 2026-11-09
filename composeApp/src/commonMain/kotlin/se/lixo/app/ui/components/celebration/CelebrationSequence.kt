@@ -19,11 +19,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.model.Achievement
-import se.lixo.app.domain.model.AvatarType
 import se.lixo.app.domain.model.RewardSource
-import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.NoOpTextToSpeechEngine
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.TextToSpeechEngine
@@ -33,9 +33,9 @@ import se.lixo.app.ui.feedback.rememberLixoHaptics
 
 sealed interface CelebrationStep {
     data object Stars : CelebrationStep
-    data class Chest(val item: WardrobeItem, val source: RewardSource, val labelDetailSv: String? = null) : CelebrationStep
-    data class EquipPrompt(val item: WardrobeItem) : CelebrationStep
-    data class AvatarPrompt(val avatarType: AvatarType) : CelebrationStep
+    data class Chest(val item: ContentItem, val source: RewardSource, val labelDetailSv: String? = null) : CelebrationStep
+    data class EquipPrompt(val item: ContentItem) : CelebrationStep
+    data class AvatarPrompt(val avatarId: String) : CelebrationStep
     data class NextChallenge(val next: Achievement) : CelebrationStep
 }
 
@@ -44,9 +44,9 @@ sealed interface CelebrationStep {
  * unlocked reward (in [LevelCompletionOutcome.newlyUnlockedRewards] order, i.e. reward-source
  * order) -- an ACHIEVEMENT reward's equip prompt is followed by a [CelebrationStep.NextChallenge]
  * when [LevelCompletionOutcome.nextChallengeByRewardItemId] has a next tier for it (doc/plans/014)
- * -- then an unlock prompt per newly unlocked avatar (sorted by [AvatarType.unlockStarsRequired]
- * so the order is deterministic). An already-owned achievement reward still yields its
- * NextChallenge, with no chest (doc/plans/018).
+ * -- then an unlock prompt per newly unlocked avatar, in
+ * [LevelCompletionOutcome.newlyUnlockedAvatarIds] order (already sorted by the engine). An
+ * already-owned achievement reward still yields its NextChallenge, with no chest (doc/plans/018).
  */
 fun buildCelebrationSteps(outcome: LevelCompletionOutcome): List<CelebrationStep> {
     val steps = mutableListOf<CelebrationStep>(CelebrationStep.Stars)
@@ -58,8 +58,8 @@ fun buildCelebrationSteps(outcome: LevelCompletionOutcome): List<CelebrationStep
         }
     }
     outcome.ownedRewardNextChallenges.forEach { steps += CelebrationStep.NextChallenge(it) }
-    outcome.newlyUnlockedAvatars.sortedBy { it.unlockStarsRequired }.forEach { avatar ->
-        steps += CelebrationStep.AvatarPrompt(avatar)
+    outcome.newlyUnlockedAvatarIds.forEach { avatarId ->
+        steps += CelebrationStep.AvatarPrompt(avatarId)
     }
     return steps
 }
@@ -72,10 +72,11 @@ fun buildCelebrationSteps(outcome: LevelCompletionOutcome): List<CelebrationStep
  */
 @Composable
 fun CelebrationSequenceHost(
+    content: ActiveContent,
     outcome: LevelCompletionOutcome,
     starsEarned: Int,
-    onEquipItem: (WardrobeItem) -> Unit,
-    onSelectAvatar: (AvatarType) -> Unit,
+    onEquipItem: (ContentItem) -> Unit,
+    onSelectAvatar: (String) -> Unit,
     onFinished: () -> Unit = {},
     ttsEngine: TextToSpeechEngine = NoOpTextToSpeechEngine,
     modifier: Modifier = Modifier
@@ -125,9 +126,11 @@ fun CelebrationSequenceHost(
                 is CelebrationStep.Chest -> {
                     val i = index
                     ChestRevealStage(
+                        content = content,
                         item = step.item,
                         source = step.source,
                         labelDetailSv = step.labelDetailSv,
+                        chestTheme = outcome.chestTheme,
                         onOpened = {
                             confetti.burst(
                                 Offset(hostSize.width / 2f, hostSize.height / 2f),
@@ -143,6 +146,7 @@ fun CelebrationSequenceHost(
                 is CelebrationStep.EquipPrompt -> {
                     val i = index
                     ItemUnlockedDialog(
+                        content = content,
                         item = step.item,
                         onEquipNow = { onEquipItem(step.item) },
                         onClose = { advance(i) }
@@ -152,8 +156,9 @@ fun CelebrationSequenceHost(
                 is CelebrationStep.AvatarPrompt -> {
                     val i = index
                     AvatarUnlockedDialog(
-                        avatarType = step.avatarType,
-                        onSwitchNow = { onSelectAvatar(step.avatarType) },
+                        content = content,
+                        avatarId = step.avatarId,
+                        onSwitchNow = { onSelectAvatar(step.avatarId) },
                         onClose = { advance(i) }
                     )
                 }

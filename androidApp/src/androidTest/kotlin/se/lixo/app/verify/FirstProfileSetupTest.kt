@@ -21,7 +21,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import se.lixo.app.data.repository.LixoRepository
-import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.platform.AndroidPlatformContext
 import se.lixo.app.screenshots.FakeCloudGateway
 import se.lixo.app.ui.LixoApp
@@ -67,7 +66,7 @@ class FirstProfileSetupTest {
 
     @Test
     fun releaseRepo_showsSetupScreen_createProfileStartsTutorial() {
-        val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = false, profileStore = null)
+        val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = false, profileStore = null, content = TestContent.repository)
         compose.setContent { LixoApp(repository = repo) }
 
         compose.onNodeWithText(LixoStrings.FIRST_PROFILE_TITLE).assertExists()
@@ -106,7 +105,7 @@ class FirstProfileSetupTest {
 
     @Test
     fun debugRepo_seedsSaga_skipsSetupScreen() {
-        val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = true, profileStore = null)
+        val repo = LixoRepository(FakeCloudGateway(), lexiconCache = null, isDebugBuild = true, profileStore = null, content = TestContent.repository)
         compose.setContent { LixoApp(repository = repo) }
 
         compose.onNodeWithText(LixoStrings.PROFILE_SELECT_TITLE).assertExists()
@@ -114,7 +113,7 @@ class FirstProfileSetupTest {
         compose.onNodeWithText(LixoStrings.FIRST_PROFILE_TITLE).assertDoesNotExist()
 
         assertTrue(repo.profiles.value.single().tutorialCompleted)
-        assertTrue(repo.unlockedItemIds.value.contains(BalanceConfig.TUTORIAL_FIRST_REWARD_ITEM_ID))
+        assertTrue(repo.unlockedItemIds.value.contains(repo.content.active.value.dropRules.tutorialRewardItemId))
         shot("006_04_debug_saga")
     }
 }

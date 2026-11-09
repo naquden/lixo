@@ -23,6 +23,8 @@ import platform.Foundation.NSUserDefaults
 import platform.Foundation.NSUserDomainMask
 import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
+import se.lixo.app.domain.engine.TrustedClockAnchor
+import se.lixo.app.domain.engine.TrustedClockStore
 
 /**
  * iOS implementation of PlatformFeatureFlags with graceful degradation support
@@ -127,6 +129,12 @@ actual fun createPlatformSpeechRecognitionEngine(): SpeechRecognitionEngine =
 actual fun createPlatformTextToSpeechEngine(): TextToSpeechEngine =
     IosTextToSpeechEngine()
 
+actual fun readDebugContentPreviewFile(): String? = null
+
+// iOS: not implemented yet, so no server time (024's ContentRepository.sync treats this as
+// "unavailable" and simply records a null lastServerTimeMillis).
+actual suspend fun fetchHttpServerTimeMillis(url: String): Long? = null
+
 private var cachedLixoDatabase: LixoDatabase? = null
 
 @OptIn(ExperimentalForeignApi::class)
@@ -143,14 +151,78 @@ actual fun createPlatformLixoDatabase(): LixoDatabase? {
         Room.databaseBuilder<LixoDatabase>(name = "$dir/lixo.db")
             .setDriver(BundledSQLiteDriver())
             .setQueryCoroutineContext(Dispatchers.IO)
-            // Every LixoDatabase version bump needs a Migration in LIXO_MIGRATIONS (no destructive fallback).
+            // 022 reset the schema to v1 with no explicit migration yet (see LIXO_MIGRATIONS'
+            // KDoc). Existing installs are at v7, so opening at v1 is a DOWNGRADE: both the
+            // upgrade and downgrade destructive fallbacks are required.
             .addMigrations(*LIXO_MIGRATIONS)
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
             .also { cachedLixoDatabase = it }
     } catch (_: Throwable) {
         null
     }
 }
+
+actual fun platformMonotonicMillis(): Long =
+    (platform.Foundation.NSProcessInfo.processInfo.systemUptime * 1000.0).toLong()
+
+// iOS has no stable boot-id API; a persisted TrustedClockAnchor is therefore never trusted
+// across a process restart (see TrustedClock.now()).
+actual fun platformBootId(): String? = null
+
+/**
+ * iOS implementation of [TrustedClockStore] backed by `NSUserDefaults.standardUserDefaults`
+ * (same pattern as [PendingEmailLinkStorage]).
+ */
+private class IosTrustedClockStore : TrustedClockStore {
+    companion object {
+        private const val KEY_ANCHOR_SERVER_MILLIS = "lixo_trusted_clock_anchor_server_millis"
+        private const val KEY_ANCHOR_MONOTONIC_MILLIS = "lixo_trusted_clock_anchor_monotonic_millis"
+        private const val KEY_ANCHOR_BOOT_ID = "lixo_trusted_clock_anchor_boot_id"
+        private const val KEY_LAST_TRUSTED_MILLIS = "lixo_trusted_clock_last_trusted_millis"
+    }
+
+    override fun loadAnchor(): TrustedClockAnchor? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        if (defaults.objectForKey(KEY_ANCHOR_SERVER_MILLIS) == null ||
+            defaults.objectForKey(KEY_ANCHOR_MONOTONIC_MILLIS) == null
+        ) {
+            return null
+        }
+        return TrustedClockAnchor(
+            serverMillis = defaults.integerForKey(KEY_ANCHOR_SERVER_MILLIS),
+            monotonicMillis = defaults.integerForKey(KEY_ANCHOR_MONOTONIC_MILLIS),
+            bootId = defaults.stringForKey(KEY_ANCHOR_BOOT_ID)
+        )
+    }
+
+    override fun saveAnchor(anchor: TrustedClockAnchor) {
+        val defaults = NSUserDefaults.standardUserDefaults
+        defaults.setInteger(anchor.serverMillis, forKey = KEY_ANCHOR_SERVER_MILLIS)
+        defaults.setInteger(anchor.monotonicMillis, forKey = KEY_ANCHOR_MONOTONIC_MILLIS)
+        if (anchor.bootId != null) {
+            defaults.setObject(anchor.bootId, forKey = KEY_ANCHOR_BOOT_ID)
+        } else {
+            defaults.removeObjectForKey(KEY_ANCHOR_BOOT_ID)
+        }
+    }
+
+    override fun loadLastTrustedMillis(): Long? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        return if (defaults.objectForKey(KEY_LAST_TRUSTED_MILLIS) == null) {
+            null
+        } else {
+            defaults.integerForKey(KEY_LAST_TRUSTED_MILLIS)
+        }
+    }
+
+    override fun saveLastTrustedMillis(millis: Long) {
+        NSUserDefaults.standardUserDefaults.setInteger(millis, forKey = KEY_LAST_TRUSTED_MILLIS)
+    }
+}
+
+actual fun createPlatformTrustedClockStore(): TrustedClockStore = IosTrustedClockStore()
 
 /**
  * iOS implementation of [PendingEmailLinkStorage] backed by `NSUserDefaults.standardUserDefaults`

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the Kotlin wardrobe catalog (GeneratedWardrobeCatalog.kt).
+"""Item/gear catalog source for the content pack pipeline.
 
 Deterministic (given the same --seed), stdlib-only generator for the "wardrobe item variety"
 feature. Builds `--per-slot` items for each of the 9 EquipmentSlot values, with:
@@ -32,16 +32,16 @@ e.g. "Krona" + "Gyllene" -> `item_hat_krona_gyllene`. meshNodeName uses the same
 Ids are persisted in user inventories/Firestore -- never rename existing colorway/style keys
 (i.e. their Swedish display strings in SLOTS/COLORWAYS/LEGENDARY_COLORWAYS); only append.
 
-Run with --dry-run to print per-slot rarity/style counts without writing the Kotlin file.
+Running this module directly prints per-slot rarity/style counts.
 
 This is item/gear data, not curriculum content -- it is unrelated to
 tools/content_pipeline/generate_content.py and seed_campaign_content.json, which this script
 never touches.
 
-Remote wardrobe items (doc/plans/015-remote-wardrobe-items.md): `--remote-legendaries N`
-appends N new LEGENDARY items per slot to tools/item_pipeline/remote_items/remote_wardrobe_items.json
-(the source-of-truth for `tools/item_pipeline/upload_wardrobe_items.py`), bumping its `version`.
-It never writes/touches the bundled `--out` Kotlin file or GeneratedWardrobeCatalog.kt.
+This module no longer emits Kotlin (022): `generate_catalog()` is the item source for
+`tools/content_pipeline/pack/gen_catalog.py`, which builds the bundled content pack. Importable
+symbols other modules rely on: GeneratedItem, generate_catalog, SLOTS, ACHIEVEMENT_REWARDS,
+HANDMADE_ITEM_IDS, bundled_item_ids.
 """
 from __future__ import annotations
 
@@ -55,19 +55,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUT = (
-    REPO_ROOT
-    / "composeApp"
-    / "src"
-    / "commonMain"
-    / "kotlin"
-    / "se"
-    / "lixo"
-    / "app"
-    / "data"
-    / "repository"
-    / "GeneratedWardrobeCatalog.kt"
-)
 
 RARITIES: List[str] = ["COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY"]
 RARITY_SPLIT: Dict[str, float] = {
@@ -177,8 +164,6 @@ LEGENDARY_COLORWAYS: Dict[str, Tuple[int, int]] = {
 
 ALL_COLORWAY_NAMES = list(COLORWAYS.keys())
 ALL_LEGENDARY_COLORWAY_NAMES = list(LEGENDARY_COLORWAYS.keys())
-
-REMOTE_ITEMS_PATH = REPO_ROOT / "tools" / "item_pipeline" / "remote_items" / "remote_wardrobe_items.json"
 
 # Handmade wardrobe items in LixoRepository.buildSeedWardrobeCatalog (Repositories.kt) that are
 # not produced by generate_catalog() below. Must be kept in sync with that function -- see
@@ -341,8 +326,8 @@ def _rarity_visuals(
 STAR_UNLOCKABLE_COMMON_CAP = 6
 STAR_UNLOCKABLE_UNCOMMON_CAP = 2
 
-# The onboarding reward track (BalanceConfig.ONBOARDING_REWARD_LEVELS) covers early levels, so the
-# star curve only needs to start once that track has mostly run its course (`doc/plans/
+# The onboarding reward track (the content pack's dropRules.onboarding.levels) covers early
+# levels, so the star curve only needs to start once that track has mostly run its course (`doc/plans/
 # 001-reward-pacing-early-chests.md`). It starts just after the KNIGHT avatar unlock at 30 stars,
 # so the two moments never coincide.
 STAR_CURVE_FIRST = 31
@@ -622,131 +607,6 @@ def bundled_item_ids(seed: int = 42, per_slot: int = 64) -> set:
     return ids | HANDMADE_ITEM_IDS
 
 
-def remote_item_json(slot: "SlotDef", style_index: int, colorway_name: str, pattern: str) -> Dict[str, object]:
-    """Builds a LEGENDARY remote wardrobe item dict. Keys must exactly equal the Kotlin
-    WardrobeItem property names (doc/plans/015-remote-wardrobe-items.md); this is enforced by
-    test_remote_item_keys_match_kotlin_wardrobe_item."""
-    item_id, name_sv, description_sv, mesh_node_name = item_identity(slot, style_index, colorway_name)
-    primary_hex, secondary_hex = LEGENDARY_COLORWAYS[colorway_name]
-    return {
-        "id": item_id,
-        "nameSv": name_sv,
-        "descriptionSv": description_sv,
-        "slot": slot.enum_name,
-        "rarity": "LEGENDARY",
-        "subjectTheme": slot.subject,
-        "meshAssetPath": "3d_sample.glb",
-        "meshNodeName": mesh_node_name,
-        "scaleMultiplier": 1.15,
-        "unlockStarRequirement": 0,
-        "unlockAchievementId": None,
-        "isWeeklyStreakSetPiece": False,
-        "primaryColorHex": primary_hex,
-        "styleIndex": style_index,
-        "secondaryColorHex": secondary_hex,
-        "pattern": pattern,
-        "ornament": RARITY_ORNAMENT["LEGENDARY"],
-        "retired": False,
-        "minAppVersionCode": 0,
-    }
-
-
-def generate_remote_legendaries(existing: Dict[str, object], per_slot: int, seed: int = 42) -> Dict[str, object]:
-    """Appends `per_slot` new LEGENDARY remote items per slot to `existing` (append-only: existing
-    items are kept untouched and first), bumping the version by 1."""
-    new_version = int(existing.get("version", 0)) + 1
-    existing_items: List[Dict[str, object]] = list(existing.get("items", []))
-    used = bundled_item_ids() | {item["id"] for item in existing_items}
-
-    new_items: List[Dict[str, object]] = []
-    for slot in SLOTS:
-        rng = random.Random(f"{seed}:{slot.slot_id}:remote:{new_version}")
-        candidates = [
-            (s, c)
-            for s in range(len(slot.styles))
-            for c in ALL_LEGENDARY_COLORWAY_NAMES
-            if item_identity(slot, s, c)[0] not in used
-        ]
-        rng.shuffle(candidates)
-        if len(candidates) < per_slot:
-            raise RuntimeError(f"Not enough free (style, colorway) combos for slot {slot.slot_id}")
-        for style_index, colorway_name in candidates[:per_slot]:
-            pattern = rng.choice(NON_NONE_PATTERNS)
-            item = remote_item_json(slot, style_index, colorway_name, pattern)
-            new_items.append(item)
-            used.add(item["id"])
-
-    return {"version": new_version, "items": existing_items + new_items}
-
-
-def _kt_string(value: str) -> str:
-    escaped = value.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
-    return f'"{escaped}"'
-
-
-def _kt_hex(value: int) -> str:
-    return f"0x{value:08X}"
-
-
-def _kt_item_literal(item: GeneratedItem) -> str:
-    return (
-        "        WardrobeItem(\n"
-        f"            id = {_kt_string(item.item_id)},\n"
-        f"            nameSv = {_kt_string(item.name_sv)},\n"
-        f"            descriptionSv = {_kt_string(item.description_sv)},\n"
-        f"            slot = EquipmentSlot.{item.slot.enum_name},\n"
-        f"            rarity = Rarity.{item.rarity},\n"
-        f"            subjectTheme = Subject.{item.slot.subject},\n"
-        "            meshAssetPath = \"3d_sample.glb\",\n"
-        f"            meshNodeName = {_kt_string(item.mesh_node_name)},\n"
-        f"            scaleMultiplier = {item.scale_multiplier}f,\n"
-        f"            unlockStarRequirement = {item.unlock_star_requirement},\n"
-        f"            unlockAchievementId = {('null' if item.unlock_achievement_id is None else _kt_string(item.unlock_achievement_id))},\n"
-        f"            isWeeklyStreakSetPiece = {str(item.is_weekly_streak_set_piece).lower()},\n"
-        f"            primaryColorHex = {_kt_hex(item.primary_color_hex)},\n"
-        f"            styleIndex = {item.style_index},\n"
-        f"            secondaryColorHex = {_kt_hex(item.secondary_color_hex)},\n"
-        f"            pattern = ItemPattern.{item.pattern},\n"
-        f"            ornament = ItemOrnament.{item.ornament}\n"
-        "        )"
-    )
-
-
-def _slot_function_name(slot: SlotDef) -> str:
-    # e.g. "hat" -> "hatItems", "shoulders_back" -> "shouldersBackItems"
-    parts = slot.slot_id.split("_")
-    camel = parts[0] + "".join(p.capitalize() for p in parts[1:])
-    return f"{camel}Items"
-
-
-def render_kotlin(catalog: Dict[str, List[GeneratedItem]]) -> str:
-    lines: List[str] = []
-    lines.append("// GENERATED by tools/item_pipeline/generate_wardrobe_items.py — do not edit")
-    lines.append("package se.lixo.app.data.repository")
-    lines.append("")
-    lines.append("import se.lixo.app.domain.model.EquipmentSlot")
-    lines.append("import se.lixo.app.domain.model.ItemOrnament")
-    lines.append("import se.lixo.app.domain.model.ItemPattern")
-    lines.append("import se.lixo.app.domain.model.Rarity")
-    lines.append("import se.lixo.app.domain.model.Subject")
-    lines.append("import se.lixo.app.domain.model.WardrobeItem")
-    lines.append("")
-
-    for slot in SLOTS:
-        fn_name = _slot_function_name(slot)
-        lines.append(f"private fun {fn_name}(): List<WardrobeItem> = listOf(")
-        item_literals = [_kt_item_literal(item) for item in catalog[slot.slot_id]]
-        lines.append(",\n".join(item_literals))
-        lines.append(")")
-        lines.append("")
-
-    lines.append("internal val GENERATED_WARDROBE_ITEMS: List<WardrobeItem> =")
-    fn_calls = " +\n    ".join(f"{_slot_function_name(slot)}()" for slot in SLOTS)
-    lines.append(f"    {fn_calls}")
-    lines.append("")
-    return "\n".join(lines)
-
-
 def _print_dry_run_stats(catalog: Dict[str, List[GeneratedItem]]) -> None:
     for slot in SLOTS:
         items = catalog[slot.slot_id]
@@ -761,46 +621,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--per-slot", type=int, default=64, help="Items to generate per slot (default 64)")
     parser.add_argument("--seed", type=int, default=42, help="RNG seed for deterministic output (default 42)")
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="Output .kt file path")
-    parser.add_argument("--dry-run", action="store_true", help="Print per-slot stats; do not write the file")
-    parser.add_argument(
-        "--remote-legendaries",
-        type=int,
-        default=None,
-        metavar="N",
-        help="Append N new LEGENDARY remote items per slot to --remote-out instead of regenerating the bundled catalog",
-    )
-    parser.add_argument("--remote-out", type=Path, default=REMOTE_ITEMS_PATH, help="Path to remote_wardrobe_items.json")
     args = parser.parse_args(argv)
 
-    if args.remote_legendaries is not None:
-        existing: Dict[str, object] = {"version": 0, "items": []}
-        if args.remote_out.exists():
-            existing = json.loads(args.remote_out.read_text(encoding="utf-8"))
-        result = generate_remote_legendaries(existing, per_slot=args.remote_legendaries, seed=args.seed)
-        new_count = len(result["items"]) - len(existing.get("items", []))
-        if args.dry_run:
-            print(
-                f"[DRY RUN] Would write version {result['version']} with {len(result['items'])} items "
-                f"(+{new_count} new) to {args.remote_out}."
-            )
-            return 0
-        args.remote_out.parent.mkdir(parents=True, exist_ok=True)
-        args.remote_out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"Wrote version {result['version']} with {len(result['items'])} items (+{new_count} new) to {args.remote_out}")
-        return 0
-
     catalog = generate_catalog(per_slot=args.per_slot, seed=args.seed)
-
-    if args.dry_run:
-        _print_dry_run_stats(catalog)
-        return 0
-
-    kotlin_source = render_kotlin(catalog)
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(kotlin_source, encoding="utf-8")
-    total = sum(len(v) for v in catalog.values())
-    print(f"Wrote {total} items ({args.per_slot} per slot x {len(SLOTS)} slots) to {args.out}")
+    _print_dry_run_stats(catalog)
     return 0
 
 

@@ -10,14 +10,16 @@ import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
 import se.lixo.app.domain.model.AddFriendError
 import se.lixo.app.domain.model.AddFriendException
-import se.lixo.app.domain.model.AvatarAppearance
-import se.lixo.app.domain.model.AvatarType
+import se.lixo.app.domain.content.AvatarAppearance
+import se.lixo.app.domain.content.DEFAULT_AVATAR_ID
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.Course
 import se.lixo.app.domain.model.DictionaryEntry
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
+import se.lixo.app.domain.content.SUPPORTED_SCHEMA_VERSION
+import se.lixo.app.platform.fetchHttpServerTimeMillis
 
 const val LIXO_FIREBASE_PROJECT_ID = "lixo-fd45d"
 const val LIXO_FIREBASE_HOSTING_DOMAIN = "lixo-fd45d.firebaseapp.com"
@@ -25,6 +27,10 @@ const val LIXO_EMAIL_LINK_CONTINUE_URL = "https://lixo-fd45d.firebaseapp.com/fin
 const val LIXO_ANDROID_PACKAGE_NAME = "se.lixo.app"
 const val LIXO_ANDROID_MIN_VERSION = "26"
 const val LIXO_IOS_BUNDLE_ID = "se.lixo.app"
+
+/** REST fallback URL used by [fetchHttpServerTimeMillis] to read the HTTP `Date` header (024/025). */
+const val LIXO_FIRESTORE_CONTENT_META_REST_URL =
+    "https://firestore.googleapis.com/v1/projects/$LIXO_FIREBASE_PROJECT_ID/databases/(default)/documents/content/meta"
 
 /**
  * Deterministic merge engine implementing project.md §3 ("När molnsynk används"):
@@ -116,15 +122,18 @@ interface CloudSyncGateway {
     suspend fun fetchTasksForCourse(courseId: String): List<HomeworkTask>
     suspend fun fetchLexiconMeta(): LexiconMeta?
     suspend fun fetchLexiconEntries(chunkCount: Int): List<DictionaryEntry>
-    suspend fun fetchWardrobeMeta(): WardrobeMeta?
 
     /**
-     * Each item is returned as a compact JSON-encoded string, not a [kotlinx.serialization.json.JsonElement]:
-     * GitLive's `DocumentSnapshot.data<T>()` decodes through its own `FirebaseDecoder`, which can't decode
-     * `JsonElement` (that needs the `Json` format specifically), so a `List<JsonElement>` would throw on
-     * every call and the catch below would silently turn every sync into an empty list.
+     * The cloud content-pack meta entry for [SUPPORTED_SCHEMA_VERSION] (024), or null if there
+     * is none / the read fails. Public read, works in Local-Only mode, never throws.
      */
-    suspend fun fetchWardrobeItems(chunkCount: Int): List<String>
+    suspend fun fetchContentMeta(): ContentMetaResult?
+
+    /**
+     * The `content_chunks/{schema}_{version}_{i}` documents for `i in 0 until count`, in order,
+     * or null if any is missing or the read fails. Public read, works in Local-Only mode.
+     */
+    suspend fun fetchContentChunks(schema: Int, version: Int, count: Int): List<String>?
 
     fun buildEmailLinkActionCodeSettings(): ActionCodeSettings
     suspend fun sendSignInLinkToEmail(email: String): Result<Unit>
@@ -144,14 +153,28 @@ data class LexiconMeta(val version: Int, val chunkCount: Int)
 @Serializable
 private data class LexiconChunkDoc(val entries: List<DictionaryEntry>)
 
+/** One schema's entry inside `content/meta`'s `packs` map (024). */
 @Serializable
-data class WardrobeMeta(val version: Int, val chunkCount: Int)
+data class ContentMetaEntry(
+    val version: Int,
+    val chunkCount: Int,
+    val sha256: String,
+    val bytes: Long = 0,
+    val publishedAt: String = ""
+)
 
-// Each entry is a compact JSON-encoded WardrobeItem string, not a structured field: GitLive
-// decodes via its own FirebaseDecoder, which cannot decode kotlinx.serialization.json.JsonElement,
-// and a typed doc would fail the whole chunk's decode on a single bad item/enum value.
+/** [entry] for [schemaVersion], plus the best-effort server wall-clock time (025's TrustedClock). */
+data class ContentMetaResult(
+    val schemaVersion: Int,
+    val entry: ContentMetaEntry,
+    val serverTimeMillis: Long?
+)
+
 @Serializable
-private data class WardrobeChunkDoc(val items: List<String> = emptyList())
+private data class ContentMetaDoc(val packs: Map<String, ContentMetaEntry> = emptyMap())
+
+@Serializable
+private data class ContentChunkDoc(val data: String)
 
 @Serializable
 private data class FirestorePublicAvatarDoc(
@@ -175,9 +198,9 @@ class FirebaseSyncService(
             userId = "friend_demo_1",
             username = "stjarn_riddare_99",
             appearance = AvatarAppearance(
-                avatarType = AvatarType.KNIGHT,
-                primaryTintHex = 0xFF3498DB,
-                equippedItems = mapOf(
+                avatarId = "avatar_knight",
+                tintHex = 0xFF3498DB,
+                equipped = mapOf(
                     EquipmentSlot.HAT to "item_hat_starter_explorer",
                     EquipmentSlot.HAND_RIGHT to "item_hand_right_math_sword_1"
                 )
@@ -189,9 +212,9 @@ class FirebaseSyncService(
             userId = "friend_demo_2",
             username = "magisk_katt_07",
             appearance = AvatarAppearance(
-                avatarType = AvatarType.WIZARD,
-                primaryTintHex = 0xFF9B59B6,
-                equippedItems = mapOf(
+                avatarId = "avatar_wizard",
+                tintHex = 0xFF9B59B6,
+                equipped = mapOf(
                     EquipmentSlot.SHOULDERS_BACK to "item_shoulders_back_sv_cape_1"
                 )
             ),
@@ -213,7 +236,7 @@ class FirebaseSyncService(
     }
 
     override suspend fun fetchRemoteCourses(): List<Course> {
-        // Static curriculum (`courses`, `levels`, `tasks`, `lexicon`, `wardrobe`) is public
+        // Static curriculum (`courses`, `levels`, `tasks`, `lexicon`) is public
         // read-only in Firestore with zero PII uploaded, so it can be downloaded even when user
         // account is in Local-Only mode.
         return try {
@@ -265,23 +288,27 @@ class FirebaseSyncService(
         }
     }
 
-    override suspend fun fetchWardrobeMeta(): WardrobeMeta? {
+    override suspend fun fetchContentMeta(): ContentMetaResult? {
         return try {
-            val snap = Firebase.firestore.collection("wardrobe").document("meta").get()
-            if (snap.exists) snap.data<WardrobeMeta>() else null
+            val snap = Firebase.firestore.collection("content").document("meta").get()
+            if (!snap.exists) return null
+            val entry = snap.data<ContentMetaDoc>().packs[SUPPORTED_SCHEMA_VERSION.toString()] ?: return null
+            val serverTime = fetchHttpServerTimeMillis(LIXO_FIRESTORE_CONTENT_META_REST_URL)
+            ContentMetaResult(SUPPORTED_SCHEMA_VERSION, entry, serverTime)
         } catch (_: Throwable) {
             null
         }
     }
 
-    override suspend fun fetchWardrobeItems(chunkCount: Int): List<String> {
+    override suspend fun fetchContentChunks(schema: Int, version: Int, count: Int): List<String>? {
         return try {
-            (0 until chunkCount).flatMap { i ->
-                Firebase.firestore.collection("wardrobe").document("chunk_$i").get()
-                    .data<WardrobeChunkDoc>().items
+            (0 until count).map { i ->
+                val snap = Firebase.firestore.collection("content_chunks").document("${schema}_${version}_$i").get()
+                if (!snap.exists) return null
+                snap.data<ContentChunkDoc>().data
             }
         } catch (_: Throwable) {
-            emptyList()
+            null
         }
     }
 
@@ -405,17 +432,21 @@ class FirebaseSyncService(
             .lowercase()
         if (cleaned.isEmpty()) return Result.success(null)
 
-        // Support QR payload format `lixo://friend/<username>:<avatarType>:<stars>`
+        // Support QR payload format `lixo://friend/<username>:<avatarId>:<stars>`
         if (cleaned.contains(":")) {
             val parts = cleaned.split(":")
             val username = parts.getOrNull(0) ?: return Result.success(null)
-            val avatarId = parts.getOrNull(1) ?: "cat"
+            val raw = parts.getOrNull(1).orEmpty()
+            val avatarId = when {
+                raw.isBlank() -> DEFAULT_AVATAR_ID
+                raw.startsWith("avatar_") -> raw
+                else -> "avatar_$raw"
+            }
             val stars = parts.getOrNull(2)?.toIntOrNull() ?: 15
-            val avatarType = AvatarType.entries.find { it.id == avatarId } ?: AvatarType.CAT
             val parsed = FriendProfile(
                 userId = "qr_$username",
                 username = username,
-                appearance = AvatarAppearance(avatarType = avatarType),
+                appearance = AvatarAppearance(avatarId = avatarId),
                 totalStars = stars
             )
             return Result.success(parsed)

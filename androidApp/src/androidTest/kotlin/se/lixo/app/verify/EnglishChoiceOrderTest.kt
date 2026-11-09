@@ -80,6 +80,7 @@ class EnglishChoiceOrderTest {
         val seed = (1L..200L).first { expected(it)[0].indexOf(correctWord) != 0 }
 
         compose.setContent {
+            val content = repo.content.active.value
             LixoTheme {
                 Box(Modifier.fillMaxSize().safeDrawingPadding()) {
                     MathActivityScreen(
@@ -90,6 +91,7 @@ class EnglishChoiceOrderTest {
                         showSwedishTtsButtons = false,
                         onLogMathError = { _, _, _, _ -> },
                         onFinishMathSession = { _, _ -> error("Not used in verify runs") },
+                        content = content,
                         onEquipItem = {},
                         onSelectAvatar = {},
                         onCloseToMap = {},
@@ -129,6 +131,7 @@ class EnglishChoiceOrderTest {
         fun expected() = EnglishChoices.buildForTask(task.englishItems, Random(seed))
 
         compose.setContent {
+            val content = repo.content.active.value
             LixoTheme {
                 Box(Modifier.fillMaxSize().safeDrawingPadding()) {
                     MathActivityScreen(
@@ -139,6 +142,7 @@ class EnglishChoiceOrderTest {
                         showSwedishTtsButtons = false,
                         onLogMathError = { _, _, _, _ -> },
                         onFinishMathSession = { _, _ -> error("Not used in verify runs") },
+                        content = content,
                         onEquipItem = {},
                         onSelectAvatar = {},
                         onCloseToMap = {},

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -32,12 +33,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
+import se.lixo.app.data.local.ContentPackCache
 import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
 import se.lixo.app.data.local.ProfileStore
+import se.lixo.app.data.local.RoomContentPackCache
 import se.lixo.app.data.local.RoomProfileStore
-import se.lixo.app.data.local.RoomWardrobeCatalogCache
-import se.lixo.app.data.local.WardrobeCatalogCache
+import se.lixo.app.domain.engine.InMemoryTrustedClockStore
+import se.lixo.app.domain.engine.TrustedClockAnchor
+import se.lixo.app.domain.engine.TrustedClockStore
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Locale
 
 object AndroidPlatformContext {
@@ -364,8 +370,12 @@ private fun buildLixoDatabase(ctx: Context, fileName: String): LixoDatabase =
     )
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
-        // Every LixoDatabase version bump needs a Migration in LIXO_MIGRATIONS (no destructive fallback).
+        // 022 reset the schema to v1 with no explicit migration yet (see LIXO_MIGRATIONS' KDoc).
+        // Existing installs are at v7, so opening at v1 is a DOWNGRADE: both the upgrade and
+        // downgrade destructive fallbacks are required, or Room throws on the first query.
         .addMigrations(*LIXO_MIGRATIONS)
+        .fallbackToDestructiveMigration(dropAllTables = true)
+        .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
         .build()
 
 actual fun createPlatformLixoDatabase(): LixoDatabase? {
@@ -388,11 +398,96 @@ fun createAndroidProfileStore(context: Context, dbFileName: String): ProfileStor
     RoomProfileStore(buildLixoDatabase(context.applicationContext, dbFileName).lixoDao())
 
 /**
- * For instrumented tests only: builds a [WardrobeCatalogCache] backed by a separate Room
- * database file, same caveats as [createAndroidProfileStore] (`doc/plans/015`).
+ * For instrumented tests only (same rationale as [createAndroidProfileStore]): builds a
+ * [ContentPackCache] backed by a separate Room database file.
  */
-fun createAndroidWardrobeCatalogCache(context: Context, dbFileName: String): WardrobeCatalogCache =
-    RoomWardrobeCatalogCache(buildLixoDatabase(context.applicationContext, dbFileName).lixoDao())
+fun createAndroidContentPackCache(context: Context, dbFileName: String): ContentPackCache =
+    RoomContentPackCache(buildLixoDatabase(context.applicationContext, dbFileName).contentPackDao())
+
+actual suspend fun fetchHttpServerTimeMillis(url: String): Long? = withContext(Dispatchers.IO) {
+    try {
+        (URL(url).openConnection() as HttpURLConnection).run {
+            requestMethod = "HEAD"
+            connectTimeout = 5000
+            readTimeout = 5000
+            useCaches = false
+            try {
+                responseCode
+                date.takeIf { it > 0L }
+            } finally {
+                disconnect()
+            }
+        }
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+actual fun readDebugContentPreviewFile(): String? = try {
+    AndroidPlatformContext.applicationContext
+        ?.filesDir
+        ?.resolve("content_pack_preview.json")
+        ?.takeIf { it.isFile }
+        ?.readText()
+} catch (_: Throwable) {
+    null
+}
+
+// The androidHostTest JVM throws "Method elapsedRealtime not mocked" against the android.jar
+// stubs, so this must never be called unguarded from ContentRepository's default TrustedClock().
+actual fun platformMonotonicMillis(): Long = try {
+    android.os.SystemClock.elapsedRealtime()
+} catch (_: Throwable) {
+    System.nanoTime() / 1_000_000
+}
+
+actual fun platformBootId(): String? =
+    AndroidPlatformContext.applicationContext
+        ?.let { ctx -> runCatching { Settings.Global.getInt(ctx.contentResolver, Settings.Global.BOOT_COUNT, -1) }.getOrNull() }
+        ?.takeIf { it >= 0 }
+        ?.toString()
+
+private class AndroidTrustedClockStore(private val context: Context) : TrustedClockStore {
+    companion object {
+        private const val PREFS_NAME = "lixo_trusted_clock"
+        private const val KEY_ANCHOR_SERVER_MILLIS = "anchor_server_millis"
+        private const val KEY_ANCHOR_MONOTONIC_MILLIS = "anchor_monotonic_millis"
+        private const val KEY_ANCHOR_BOOT_ID = "anchor_boot_id"
+        private const val KEY_LAST_TRUSTED_MILLIS = "last_trusted_millis"
+    }
+
+    private fun prefs() = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    override fun loadAnchor(): TrustedClockAnchor? {
+        val p = prefs()
+        if (!p.contains(KEY_ANCHOR_SERVER_MILLIS) || !p.contains(KEY_ANCHOR_MONOTONIC_MILLIS)) return null
+        return TrustedClockAnchor(
+            serverMillis = p.getLong(KEY_ANCHOR_SERVER_MILLIS, 0L),
+            monotonicMillis = p.getLong(KEY_ANCHOR_MONOTONIC_MILLIS, 0L),
+            bootId = p.getString(KEY_ANCHOR_BOOT_ID, null)
+        )
+    }
+
+    override fun saveAnchor(anchor: TrustedClockAnchor) {
+        prefs().edit()
+            .putLong(KEY_ANCHOR_SERVER_MILLIS, anchor.serverMillis)
+            .putLong(KEY_ANCHOR_MONOTONIC_MILLIS, anchor.monotonicMillis)
+            .putString(KEY_ANCHOR_BOOT_ID, anchor.bootId)
+            .apply()
+    }
+
+    override fun loadLastTrustedMillis(): Long? {
+        val p = prefs()
+        return if (p.contains(KEY_LAST_TRUSTED_MILLIS)) p.getLong(KEY_LAST_TRUSTED_MILLIS, 0L) else null
+    }
+
+    override fun saveLastTrustedMillis(millis: Long) {
+        prefs().edit().putLong(KEY_LAST_TRUSTED_MILLIS, millis).apply()
+    }
+}
+
+actual fun createPlatformTrustedClockStore(): TrustedClockStore =
+    AndroidPlatformContext.applicationContext?.let { AndroidTrustedClockStore(it) } ?: InMemoryTrustedClockStore()
 
 actual object PendingEmailLinkStorage {
     private const val PREFS_NAME = "lixo_email_link_auth_prefs"

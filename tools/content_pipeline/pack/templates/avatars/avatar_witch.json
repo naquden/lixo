@@ -1,0 +1,12 @@
+{
+  "id": "avatar_witch",
+  "nameKey": "avatar_witch.name",
+  "order": 5,
+  "humanoid": true,
+  "skinHex": "#4A90E2",
+  "defaultTintHex": "#F5A623",
+  "unlock": {"type": "stars", "stars": 135},
+  "body": "standard",
+  "ears": null,
+  "tail": null
+}

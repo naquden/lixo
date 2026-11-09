@@ -98,7 +98,7 @@ class AchievementLadderTest {
 
     @Test
     fun freshProfile_showsOneCardPerChainAtTier1() {
-        val definitions = LixoRepository.buildSeedAchievements()
+        val definitions = LixoRepository.buildSeedAchievements(TestContent.active.dropRules.achievementRewards)
         val profile = ChildProfile(id = "p_fresh014", displayName = "Saga")
 
         compose.setContent {
@@ -121,9 +121,9 @@ class AchievementLadderTest {
 
     @Test
     fun afterTier1_nextChallengeAppears() {
-        val definitions = LixoRepository.buildSeedAchievements()
-        val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val definitions = LixoRepository.buildSeedAchievements(TestContent.active.dropRules.achievementRewards)
+        val catalog = TestContent.active.items
+        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(TestContent.active.dropRules.levelRewards)
         val readingLevel = levels.first { it.subject == Subject.SWEDISH }
         val today = DailyActivityRecord(profileId = "p_tier1", calendarDateIso = "2026-11-01")
 
@@ -137,9 +137,8 @@ class AchievementLadderTest {
             achievedWpm = 0,
             completedTimedChallenge = false,
             eligibleForRepetitionGift = true,
-            rewardItemIdForTask = null,
             clearedLevelsCountBeforeRun = 6,
-            allWardrobeItems = catalog,
+            content = TestContent.active,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
             nowEpochMillis = 1L,
@@ -166,7 +165,7 @@ class AchievementLadderTest {
 
     @Test
     fun speakerButton_speaksInstruction() {
-        val definitions = LixoRepository.buildSeedAchievements()
+        val definitions = LixoRepository.buildSeedAchievements(TestContent.active.dropRules.achievementRewards)
         val profile = ChildProfile(id = "p_speak014", displayName = "Saga")
         val tts = RecordingTts()
 
@@ -190,9 +189,9 @@ class AchievementLadderTest {
 
     @Test
     fun celebration_showsNextChallenge() {
-        val definitions = LixoRepository.buildSeedAchievements()
-        val catalog = LixoRepository.buildSeedWardrobeCatalog()
-        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(catalog)
+        val definitions = LixoRepository.buildSeedAchievements(TestContent.active.dropRules.achievementRewards)
+        val catalog = TestContent.active.items
+        val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(TestContent.active.dropRules.levelRewards)
         val readingLevel = levels.first { it.subject == Subject.SWEDISH }
         val today = DailyActivityRecord(profileId = "p_celeb014", calendarDateIso = "2026-11-01")
 
@@ -206,9 +205,8 @@ class AchievementLadderTest {
             achievedWpm = 0,
             completedTimedChallenge = false,
             eligibleForRepetitionGift = true,
-            rewardItemIdForTask = null,
             clearedLevelsCountBeforeRun = 6,
-            allWardrobeItems = catalog,
+            content = TestContent.active,
             currentlyUnlockedItemIds = emptySet(),
             todayActivityBeforeRun = today,
             nowEpochMillis = 1L,
@@ -220,6 +218,7 @@ class AchievementLadderTest {
         compose.setContent {
             LixoTheme {
                 CelebrationSequenceHost(
+                    content = TestContent.active,
                     outcome = outcome,
                     starsEarned = 3,
                     onEquipItem = {},
@@ -248,7 +247,7 @@ class AchievementLadderTest {
 
     @Test
     fun ladderStrip_fitsAt360dp() {
-        val definitions = LixoRepository.buildSeedAchievements()
+        val definitions = LixoRepository.buildSeedAchievements(TestContent.active.dropRules.achievementRewards)
         val profile = ChildProfile(id = "p_360_018", displayName = "Saga")
 
         compose.setContent {

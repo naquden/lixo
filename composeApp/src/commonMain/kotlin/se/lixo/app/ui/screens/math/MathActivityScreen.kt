@@ -59,12 +59,12 @@ import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
 import se.lixo.app.domain.engine.MathSessionScoreResult
-import se.lixo.app.domain.model.AvatarType
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.TaskType
-import se.lixo.app.domain.model.WardrobeItem
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.components.celebration.CelebrationSequenceHost
 import se.lixo.app.ui.components.celebration.FlitChestMeter
@@ -103,8 +103,9 @@ fun MathActivityScreen(
     showSwedishTtsButtons: Boolean,
     onLogMathError: (MathProblemType, String, Int, Int) -> Unit,
     onFinishMathSession: (MathSessionScoreResult, Int) -> LevelCompletionOutcome,
-    onEquipItem: (WardrobeItem) -> Unit,
-    onSelectAvatar: (AvatarType) -> Unit,
+    content: ActiveContent,
+    onEquipItem: (ContentItem) -> Unit,
+    onSelectAvatar: (String) -> Unit,
     onCloseToMap: () -> Unit,
     /** Seeds the shuffled English answer order. Null (default) means a random seed per session; tests pass a fixed value. */
     choiceSeed: Long? = null
@@ -429,11 +430,13 @@ fun MathActivityScreen(
                     cornerContent = {
                         FlitChestMeter(
                             halfPoints = completion.updatedProfile.chestProgressHalfPoints,
+                            thresholdHalf = content.dropRules.chestCostHalfPoints,
                             size = 44.dp,
                             animation = chestFillAnimation(
                                 completion.updatedProfile.chestProgressHalfPoints,
                                 completion.chestPointsAwardedHalf,
-                                completion.chestOutcome != null
+                                completion.chestOutcome != null,
+                                content.dropRules.chestCostHalfPoints
                             ),
                             startDelayMillis = chestMeterStartDelayMillis(score.starsEarned)
                         )
@@ -526,6 +529,7 @@ fun MathActivityScreen(
 
         completedResult?.let { (score, completion) ->
             CelebrationSequenceHost(
+                content = content,
                 outcome = completion,
                 starsEarned = score.starsEarned,
                 onEquipItem = onEquipItem,
