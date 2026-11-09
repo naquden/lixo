@@ -4,11 +4,17 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
-- [ ] 027 — Held items (HAND_LEFT/RIGHT) scale uniformly, round shields stay round on slim avatars (bug) → [plan](doc/plans/027-held-items-uniform-scale.md)
-- [ ] 028 — Item previews on standard bones with base-body ghost, not chibi cat (bug) → [plan](doc/plans/028-item-preview-standard-bones.md)
-- [ ] 029 — Dog tail visible past the left arm (bug) → [plan](doc/plans/029-dog-tail-visible.md)
 
 ## Done
+
+- [x] 029 — Dog tail visible past the left arm (bug) → [plan](doc/plans/029-dog-tail-visible.md)  
+  _Verified 2026-11-09 (wf_9f965e6a-624): `BundledCatalogRenderTest` 3/3 on emulator-5554, pytest 47/47 (new `test_tails_clear_left_arm`); bare_avatar_dog.png tail visible right of left arm; screenshots in temp/verify/lixo_screenshots/verify027_029/. LOW: tracked __pycache__ files despite .gitignore (`git rm -r --cached`)._
+
+- [x] 028 — Item previews on standard bones with base-body ghost, not chibi cat (bug) → [plan](doc/plans/028-item-preview-standard-bones.md)  
+  _Verified 2026-11-09 (wf_9f965e6a-624): `BundledCatalogRenderTest#everyItem_rendersInItemPreview` + class 3/3 on emulator-5554; items_*.png show authored proportions, ghost has no cat parts; screenshots in temp/verify/lixo_screenshots/verify027_029/. Implemented via `PlacedLayer.authoredBoneSize` instead of plan's ghostScale map._
+
+- [x] 027 — Held items (HAND_LEFT/RIGHT) scale uniformly, round shields stay round on slim avatars (bug) → [plan](doc/plans/027-held-items-uniform-scale.md)  
+  _Verified 2026-11-09 (wf_9f965e6a-624): `BundledCatalogRenderTest` 3/3 on emulator-5554 (S25 not attached), LayerTransformTest green; round shields round on princess/witch, swords keep proportions, gloves still stretch; screenshots in temp/verify/lixo_screenshots/verify027_029/. LOW: held-item anchor ignores HAND bone offset overrides (none bundled today)._
 
 - [x] 026 — Distinct avatars: own silhouette (bone sizes), colours, palette, signature parts (hair/beard/muzzle/skirt), items stretch per bone (feature, after 021) → [plan](doc/plans/026-distinct-avatars.md)  
   _Verified 2026-11-09 (wf_3b7e3745-12a): `BundledCatalogRenderTest` 3/3 on emulator-5554 (S25 not attached); AvatarSilhouetteTest 2/2, LayerTransformTest 9/9, ContentPackValidatorTest 18/18, BundledPackValidTest 1/1, pytest 46/46; 6 bare + 48 equipped + 20 item sheets in temp/verify/lixo_screenshots/verify026/, 6 avatars distinct. LOW: round shields/swords stretch non-uniformly on slim avatars; ItemPreview now uses cat (chibi) bones; dog tail hidden behind arm; HAT_REACH_AU=67 hard-coded; feet moved to 108*base on all screens (check AvatarMapScreen margin)._

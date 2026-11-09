@@ -157,9 +157,23 @@ def dog_spot(sizes: Sizes) -> dict:
 
 
 def dog_tail(sizes: Sizes) -> dict:
+    """A stubby tail that tips up. The TAIL origin sits 6 au inside the torso's right edge, where ARM_L starts
+    (`LayerGeometry.boneLayoutAu`), and TAIL draws behind ARM. So the tail must reach past 6 + arm width
+    to show. It reaches aw + 34, so the tip stays clear of the arm through most of the dog's
+    tailWag 1.8 swing (doc/plans/029)."""
+    aw = sizes["ARM_L"][0]
     return _part(
         "tail",
-        [layer("TAIL", "TAIL", poly([(0, 6), (8, -24), (18, -22), (12, 8)]), "tint", shade=-0.22, shading="flat")],
+        [
+            layer(
+                "TAIL", "TAIL",
+                join(
+                    round_rect(0, 0, aw + 28, 12, 6),
+                    poly([(aw + 18, 4), (aw + 24, -18), (aw + 34, -16), (aw + 30, 8)]),
+                ),
+                "tint", shade=-0.22, shading="flat",
+            )
+        ],
     )
 
 

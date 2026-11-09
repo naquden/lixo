@@ -544,6 +544,28 @@ class ContentPackPipelineTests(unittest.TestCase):
         for avatar in self.build_pack.build_avatars():
             self.assertEqual(self.validate_pack.avatar_errors(avatar), [], avatar["id"])
 
+    def test_tails_clear_left_arm(self) -> None:
+        # doc/plans/029: `LayerGeometry.boneLayoutAu` puts the TAIL origin at x = torsoRight - 6,
+        # while ARM_L starts at torsoRight and TAIL draws behind ARM. So a tail only shows past
+        # the arm if its max x reaches past 6 + ARM_L width.
+        ids = []
+        for avatar in self.build_pack.build_avatars():
+            tail_parts = [p for p in avatar["parts"] if p["part"] == "tail"]
+            if not tail_parts:
+                continue
+            ids.append(avatar["id"])
+            arm_w = avatar.get("bones", {}).get("ARM_L", {}).get(
+                "size", self.validate_pack.STANDARD_BONE_BOX["ARM_L"]
+            )[0]
+            max_x = max(
+                self.validate_pack.path_bounds(l["d"])[2]
+                for part in tail_parts
+                for l in part["layers"]
+                if l["bone"] == "TAIL"
+            )
+            self.assertGreater(max_x, 6 + arm_w + 4, f"{avatar['id']} tail hidden behind ARM_L")
+        self.assertEqual(sorted(ids), ["avatar_cat", "avatar_dog"])
+
     def test_body_parts_standard_matches_legacy(self) -> None:
         sizes = self.avatar_body.expand_bones({})
         parts = {p["part"]: p for p in self.avatar_body.body_parts(sizes)}

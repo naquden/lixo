@@ -268,8 +268,9 @@ fun DrawScope.drawAvatar(
 
 /**
  * Draws a single item's layers at rest, fitted to the canvas with a 10% margin (no stage, no
- * aura, no face). Draws the default avatar's matching ghost-body layers first, at alpha 0.25,
- * when `item.preview?.ghostBody == true`.
+ * aura, no face). Draws on standard bones (`drawList.avatar` has no bone overrides), so items
+ * keep their authored proportions; when `item.preview?.ghostBody == true`, the default avatar's
+ * base-body ghost layers (rescaled to the standard boxes) are drawn first at alpha 0.25.
  */
 fun DrawScope.drawItemPreview(
     content: ActiveContent,

@@ -25,7 +25,7 @@ Nothing is deployed: no backwards compatibility, no `schemaVersion` bump, no mig
    - Add `itemScale: Offset` to `BoneTransform` = effective size / `STANDARD_BONE_BOX` size, per bone.
    - In `layerMatrix`, after `m.scale(pxPerAu, pxPerAu)`, also apply `m.scale(itemScale.x, itemScale.y)` for **item** layers only. Avatar part layers are authored in the effective box and stay unscaled. Pass a flag on `PlacedLayer` (it already knows whether it comes from an item or a part).
    - Apply the same idea in `faceMatrix`: scale the 56×56 face to the effective HEAD size, so eyes and smile stay centred on bigger or taller heads.
-   - `ItemPreview` (default avatar, standard bones) is unchanged.
+   - `ItemPreview` draws on standard bones (default avatar with bone overrides cleared) with a base-body ghost rescaled to the standard boxes (fixed in plan 028; 026 had left it on the cat's chibi bones).
 2. **Avatar palette**:
    - Add `palette: AvatarPalette? = null` (`primary`, `secondary`, `accent` hex strings) to `ContentAvatar`.
    - In the validator, allow PRIMARY/SECONDARY/ACCENT on avatar part layers only when `palette != null`, and check that the hex strings parse.

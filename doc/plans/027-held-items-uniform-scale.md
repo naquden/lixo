@@ -11,6 +11,7 @@
 - `ITEM_SCALE_PIVOT[HAND_L/HAND_R] = (0.5, 0.5)` (`LayerGeometry.kt:190`).
 - `ContentItem.slot: EquipmentSlot` (`domain/content/ContentPack.kt:110`). `PlacedLayer.item` holds it.
 - Found by the 026 review (LOW).
+- Note (analysis): bundled HAND_RIGHT items (swords, wands) are authored on ARM_R, not HAND_R, so held-item detection also covers ARM_L/ARM_R. These layers scale around the hand centre inside the arm box (std (19,61)).
 
 ## Steps
 1. In `LayerGeometry.kt` add a helper `private fun isHeldItemLayer(p: PlacedLayer) = p.item != null && p.item.slot in setOf(EquipmentSlot.HAND_LEFT, EquipmentSlot.HAND_RIGHT) && p.bone in setOf(Bone.HAND_L, Bone.HAND_R)`.

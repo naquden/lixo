@@ -25,10 +25,13 @@ top-left of the bone's box and `y` points down — the same convention `Avatar3D
 uses for its hand-drawn shapes. An avatar can override a bone's box with `ContentAvatar.bones[bone]`: when it does, the renderer
 scales **item** layers (never avatar part layers, which are already authored in the effective
 box) on that bone by `BoneTransform.itemScale = avatarBoneSize / STANDARD_BONE_BOX[bone]`, so one
-item fits every avatar without per-avatar art — sleeves, gloves and hand-held items on an oversized
-arm/hand stretch together because `HAND` is derived from `ARM`. The face (eyes/smile, designed
-once in a 56×56 au box) is stretched the same way onto the avatar's effective `HEAD` box by
-`faceMatrix`.
+item fits every avatar without per-avatar art — sleeves and gloves on an oversized arm/hand stretch
+together because `HAND` is derived from `ARM`. Held items (HAND_LEFT/HAND_RIGHT slot layers on
+HAND_L/HAND_R/ARM_L/ARM_R) are not stretched per axis. They are scaled uniformly by the geometric
+mean `sqrt(itemScale.x * itemScale.y)` around the hand centre (the hand-box centre, or for arm
+bones the centre of the hand inside the arm box), so a round shield stays round on a slim avatar.
+The face (eyes/smile, designed once in a 56×56 au box) is stretched the same way onto the avatar's
+effective `HEAD` box by `faceMatrix`.
 
 A layer's path must stay inside its bone box **expanded by `BONE_BOX_OVERHANG` (1.5×) on every
 side** (`Skeleton.expandedBoneBox`), so hats, capes and weapons can stick out past their anchor
@@ -418,6 +421,15 @@ An item preview is framed from its PLACED bounds (after the bones have been posi
 different bones' LOCAL spaces and would collapse a multi-bone item (e.g. mirrored gloves) onto
 one spot. `ItemPreviewHints.yaw` is in RADIANS (unlike the turntable's degrees).
 
+`ItemPreview` draws on standard bones (`ItemDrawList.avatar` is the default avatar with `bones`
+cleared, keeping its skin, tint and palette), so every item shows its authored proportions
+whatever avatar a player wears. With `preview.ghostBody`, the ghost uses only the default
+avatar's base body parts (`BASE_BODY_PARTS`, which mirrors `avatar_body.BODY_PART_NAMES`: torso,
+arms, hands, legs, pants, shoes, head) on the bones the item places, minus `hidesParts`. Signature
+parts (ears, muzzle, stripes, hair...) are never shown. Each ghost layer carries
+`PlacedLayer.authoredBoneSize` (the default avatar's effective box) and is stretched to the
+standard box, mirrored within the authored width first.
+
 ### Avatar frame (026)
 
 `avatarFrame(canvasSize, avatar)` shrinks an avatar (below the base `min(w,h)/340` scale, never
@@ -425,8 +437,9 @@ below 0.45× that) whenever its HEAD top plus a 67au "tallest hat" reach, scaled
 own effective HEAD height, would exceed a 290au budget above the feet — e.g. the witch's tall
 head with a style-4 top hat. Standard-size avatars (cat, dog) are unaffected; the witch shrinks
 the most (~5%). Feet sit at `h * 0.56 + 108 * base` (previously 96; moved down 12au so the
-tallest hat still clears the canvas in the 340dp screenshot). A `null` avatar keeps the old,
-unshrunk scale (`ItemPreview`'s default avatar).
+tallest hat still clears the canvas in the 340dp screenshot). A `null` avatar (or one without bone
+overrides) keeps the old, unshrunk scale. `ItemPreview` does not use `avatarFrame`; see Preview
+framing.
 
 ## Avatar sources (pipeline)
 

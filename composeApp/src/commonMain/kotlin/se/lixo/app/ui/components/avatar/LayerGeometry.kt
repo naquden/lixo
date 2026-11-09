@@ -10,6 +10,7 @@ import kotlin.math.PI
 import kotlin.math.min
 import kotlin.math.max
 import kotlin.math.sin
+import kotlin.math.sqrt
 import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.content.BACK_BUCKET_PARALLAX
@@ -195,6 +196,25 @@ val ITEM_SCALE_PIVOT: Map<Bone, Offset> = mapOf(
     Bone.TAIL to Offset(0f, 0f)
 )
 
+private val HELD_ITEM_SLOTS = setOf(EquipmentSlot.HAND_LEFT, EquipmentSlot.HAND_RIGHT)
+private val HELD_ITEM_BONES = setOf(Bone.HAND_L, Bone.HAND_R, Bone.ARM_L, Bone.ARM_R)
+
+/** HAND_LEFT/HAND_RIGHT-slot item layers on a hand or arm bone: scaled uniformly, not per axis. */
+private fun isHeldItemLayer(p: PlacedLayer): Boolean =
+    p.item != null && p.item.slot in HELD_ITEM_SLOTS && p.bone in HELD_ITEM_BONES
+
+/** The hand centre a held-item layer on [bone] is scaled around: (standard-box point, effective-box point), bone-local au. */
+private fun heldItemAnchors(bone: Bone, t: BoneTransform, bones: Map<Bone, BoneTransform>): Pair<Offset, Offset> {
+    val std = STANDARD_BONE_BOX[bone] ?: Size.Zero
+    val eff = t.effectiveSize
+    val hand = when (bone) { Bone.ARM_R -> Bone.HAND_R; Bone.ARM_L -> Bone.HAND_L; else -> null }
+        ?: return Offset(std.width / 2f, std.height / 2f) to Offset(eff.width / 2f, eff.height / 2f)
+    val stdHand = STANDARD_BONE_BOX[hand] ?: Size.Zero
+    val effHand = bones[hand]?.effectiveSize ?: stdHand
+    return Offset(std.width / 2f, std.height - stdHand.height / 2f) to
+        Offset(eff.width / 2f, eff.height - effHand.height / 2f)
+}
+
 /**
  * A bone's fully-posed placement for one frame, in px. [origin], [pivot] and [breathPivot] are in
  * px; [breathPivot] is the torso bottom centre and is the same value for every bone.
@@ -279,7 +299,12 @@ data class PlacedLayer(
     val item: ContentItem?,
     val partName: String?,
     val fillColor: Color = Color.Gray,
-    val strokeColor: Color? = null
+    val strokeColor: Color? = null,
+    /** Part layers only: the bone box this layer was authored in, when it is drawn on a
+     * different-size bone (`ItemPreview`'s ghost body). [layerMatrix] stretches the layer from
+     * this box to the bone's effective box and mirrors it within this box's width. Null means it
+     * was authored in the drawn bone's own effective box. */
+    val authoredBoneSize: Size? = null
 )
 
 /** This layer's horizontal parallax, in px, per `doc/plans/020-layer-renderer.md` approach D step 1. */
@@ -321,7 +346,12 @@ private fun boneMatrix(
 
 /**
  * The full placement [Matrix] for layer [p], per `doc/plans/020-layer-renderer.md` approach D.
- * [sideOffsetAu] is used for a BLOCK-shaded layer's darker side face.
+ * [sideOffsetAu] is used for a BLOCK-shaded layer's darker side face. Item layers are stretched per
+ * axis by [BoneTransform.itemScale], except held items (HAND_LEFT/HAND_RIGHT slot layers on
+ * HAND_L/HAND_R/ARM_L/ARM_R). Those are scaled uniformly by the geometric mean of itemScale around
+ * the hand centre (hand-box centre; for arm bones, the centre of the hand inside the arm box), so
+ * round shields stay round on slim avatars. [PlacedLayer.authoredBoneSize] layers (`ItemPreview`'s
+ * ghost body) are stretched from that authored box to the bone's effective box instead.
  */
 fun layerMatrix(p: PlacedLayer, bones: Map<Bone, BoneTransform>, sideOffsetAu: Float = 0f): Matrix {
     val t = bones[p.bone] ?: error("no BoneTransform for ${p.bone}")
@@ -329,7 +359,15 @@ fun layerMatrix(p: PlacedLayer, bones: Map<Bone, BoneTransform>, sideOffsetAu: F
     val m = boneMatrix(p.bone, bones, parallax, p.layer.breath)
 
     if (p.item != null) {
-        m.scale(t.itemScale.x, t.itemScale.y)
+        if (isHeldItemLayer(p)) {
+            val (stdAnchor, effAnchor) = heldItemAnchors(p.bone, t, bones)
+            val k = sqrt(t.itemScale.x * t.itemScale.y)
+            m.translate(effAnchor.x, effAnchor.y)
+            m.scale(k, k)
+            m.translate(-stdAnchor.x, -stdAnchor.y)
+        } else {
+            m.scale(t.itemScale.x, t.itemScale.y)
+        }
         val std = STANDARD_BONE_BOX[p.bone] ?: Size.Zero
         if (p.item.scale != 1f) {
             val frac = ITEM_SCALE_PIVOT[p.bone] ?: Offset.Zero
@@ -339,6 +377,10 @@ fun layerMatrix(p: PlacedLayer, bones: Map<Bone, BoneTransform>, sideOffsetAu: F
             m.scale(k, k)
             m.translate(-pivot.x, -pivot.y)
         }
+    } else if (p.authoredBoneSize != null) {
+        val a = p.authoredBoneSize
+        val eff = t.effectiveSize
+        m.scale(if (a.width != 0f) eff.width / a.width else 1f, if (a.height != 0f) eff.height / a.height else 1f)
     }
 
     if (sideOffsetAu != 0f) {
@@ -346,7 +388,11 @@ fun layerMatrix(p: PlacedLayer, bones: Map<Bone, BoneTransform>, sideOffsetAu: F
     }
 
     if (p.mirrored) {
-        val w = if (p.item != null) (STANDARD_BONE_BOX[p.bone]?.width ?: 0f) else t.effectiveSize.width
+        val w = when {
+            p.item != null -> STANDARD_BONE_BOX[p.bone]?.width ?: 0f
+            p.authoredBoneSize != null -> p.authoredBoneSize.width
+            else -> t.effectiveSize.width
+        }
         m.translate(w, 0f)
         m.scale(-1f, 1f)
     }
@@ -438,8 +484,15 @@ fun buildAvatarDrawList(content: ActiveContent, appearance: AvatarAppearance): A
     return AvatarDrawList(avatar, items, layers, hasLegendary)
 }
 
+/** Base body parts every avatar has; mirrors `avatar_body.BODY_PART_NAMES`
+ * (`tools/content_pipeline/pack/templates/avatars/body.py`). `ItemPreview`'s ghost body uses only
+ * these, never signature parts (ears, muzzle, stripes, tail, hair...). */
+internal val BASE_BODY_PARTS: Set<String> = setOf("torso", "arms", "hands", "legs", "pants", "shoes", "head")
+
 /** A single item's layers (for [ItemPreview][se.lixo.app.ui.components.avatar.drawItemPreview]),
- * plus the default avatar's ghost-body layers underneath it when `item.preview?.ghostBody == true`. */
+ * drawn against [avatar] — the default avatar with its bone overrides cleared (standard bones;
+ * skin, tint and palette kept) — plus [ghostLayers]: the default avatar's base-body parts on the
+ * item's bones, rescaled to the standard boxes, underneath it when `item.preview?.ghostBody == true`. */
 data class ItemDrawList(
     val item: ContentItem,
     val avatar: ContentAvatar,
@@ -447,7 +500,11 @@ data class ItemDrawList(
     val ghostLayers: List<PlacedLayer>
 )
 
-/** Builds [item]'s draw list against [content]'s default avatar's skin/tint, per approach I. */
+/** Builds [item]'s draw list against [content]'s default avatar's skin/tint/palette, per approach I.
+ * [ItemDrawList.avatar] has its bone overrides cleared so items render on standard bones, at their
+ * authored proportions, whatever avatar a player wears. The ghost body (when
+ * `item.preview?.ghostBody == true`) uses only [BASE_BODY_PARTS], rescaled from the default
+ * avatar's effective bone sizes to the standard boxes via [PlacedLayer.authoredBoneSize]. */
 fun buildItemDrawList(content: ActiveContent, item: ContentItem): ItemDrawList {
     val avatar = content.defaultAvatar
     val skin = parseContentHex(avatar.skinHex)?.let(::Color) ?: Color.Gray
@@ -465,19 +522,20 @@ fun buildItemDrawList(content: ActiveContent, item: ContentItem): ItemDrawList {
         val placedBones = itemLayers.map { it.bone }.toSet()
         val hiddenParts = item.hidesParts.toSet()
         sortLayers(
-            avatar.parts.filter { it.part !in hiddenParts }.flatMap { part ->
+            avatar.parts.filter { it.part in BASE_BODY_PARTS && it.part !in hiddenParts }.flatMap { part ->
                 part.layers.flatMap { layer ->
                     val fill = applyShade(resolveRoleColor(layer.fill.role, null, skin, tint, avatar.palette), layer.fill.shade)
                     val stroke = layer.stroke?.let { resolveRoleColor(it.role, null, skin, tint, avatar.palette) }
                     expandMirror(layer, null, part.part, fill, stroke)
                 }
             }.filter { it.bone in placedBones }
+                .map { it.copy(authoredBoneSize = effectiveBoneSize(avatar, it.bone)) }
         )
     } else {
         emptyList()
     }
 
-    return ItemDrawList(item, avatar, itemLayers, ghostLayers)
+    return ItemDrawList(item, avatar.copy(bones = emptyMap()), itemLayers, ghostLayers)
 }
 
 /** [p]'s placed bounding box, in px, under [bones]. */

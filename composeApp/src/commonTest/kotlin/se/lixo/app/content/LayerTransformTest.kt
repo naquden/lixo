@@ -5,12 +5,18 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import se.lixo.app.domain.content.ActiveContent
+import se.lixo.app.domain.content.AvatarPart
 import se.lixo.app.domain.content.Bone
 import se.lixo.app.domain.content.BoneOverride
+import se.lixo.app.domain.content.ItemPreviewHints
 import se.lixo.app.domain.content.SampleContentPack
+import se.lixo.app.domain.content.ZBucket
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.ui.components.avatar.REST_POSE
@@ -37,6 +43,30 @@ class LayerTransformTest {
     private val content = SampleContentPack.activeContent()
     private val cat = content.avatarsById["avatar_cat"]!!
 
+    /** A copy of [content] whose cat renames its "body" part to "torso" (a [se.lixo.app.ui.components.avatar.BASE_BODY_PARTS]
+     * part) and adds a "stripes" signature part, plus a test tee shirt with `ghostBody = true`. */
+    private fun chibiContent(): ActiveContent {
+        val bodyLayer = cat.parts.single { it.part == "body" }.layers.single()
+        val chibiCat = cat.copy(
+            bones = mapOf(
+                Bone.TORSO to BoneOverride(size = listOf(70f, 62f)),
+                Bone.ARM_L to BoneOverride(size = listOf(32f, 62f)),
+                Bone.ARM_R to BoneOverride(size = listOf(32f, 62f))
+            ),
+            parts = listOf(
+                AvatarPart("torso", listOf(bodyLayer.copy(d = "M 0 0 L 70 0 L 70 62 L 0 62 Z"))),
+                AvatarPart("stripes", listOf(bodyLayer.copy(z = ZBucket.TORSO_OVER, d = "M 10 10 L 20 10 L 20 20 L 10 20 Z")))
+            ) + cat.parts.filter { it.part != "body" }
+        )
+        val ghostTee = content.itemsById["item_shirt_test_tee"]!!.copy(preview = ItemPreviewHints(ghostBody = true))
+        return ActiveContent.from(
+            content.pack.copy(
+                avatars = content.pack.avatars.map { if (it.id == cat.id) chibiCat else it },
+                items = content.pack.items.map { if (it.id == ghostTee.id) ghostTee else it }
+            )
+        )
+    }
+
     @Test
     fun itemLayersScaleWithOversizedBone() {
         val hatItem = content.itemsById["item_hat_test_cone"]!!
@@ -58,6 +88,64 @@ class LayerTransformTest {
         val oversizedDiff = oversizedMatrix.map(Offset(10f, 0f)) - oversizedMatrix.map(Offset.Zero)
         val oversizedDist = hypot(oversizedDiff.x, oversizedDiff.y)
         assertEquals(20f, oversizedDist, 1e-3f)
+    }
+
+    @Test
+    fun heldItemScalesUniformlyOnNarrowHand() {
+        val slim = cat.copy(bones = mapOf(Bone.HAND_R to BoneOverride(size = listOf(28f, 37.05f))))
+        val bones = boneTransforms(slim, REST_POSE, 0f, RigFrame(Offset.Zero, 1f))
+
+        val wand = content.itemsById["item_hand_right_test_wand"]!!
+        val layer = wand.layers.single().copy(d = "M 0 0 L 38 0 L 38 38 L 0 38 Z")
+        val placed = PlacedLayer(layer, Bone.HAND_R, mirrored = false, item = wand, partName = null)
+
+        val b = placedBoundsPx(content, placed, bones)
+        val expected = 38f * sqrt((28f / 38f) * (37.05f / 38f))
+        assertEquals(b.height, b.width, 0.01f)
+        assertEquals(expected, b.width, 0.01f)
+        val expectedCenter = bones[Bone.HAND_R]!!.origin + Offset(14f, 37.05f / 2f)
+        assertEquals(expectedCenter.x, b.center.x, 0.01f)
+        assertEquals(expectedCenter.y, b.center.y, 0.01f)
+    }
+
+    @Test
+    fun heldItemOnArmScalesUniformlyAroundHand() {
+        val slim = cat.copy(
+            bones = mapOf(
+                Bone.ARM_R to BoneOverride(size = listOf(28f, 78f)),
+                Bone.HAND_R to BoneOverride(size = listOf(28f, 37.05f))
+            )
+        )
+        val bones = boneTransforms(slim, REST_POSE, 0f, RigFrame(Offset.Zero, 1f))
+
+        val wand = content.itemsById["item_hand_right_test_wand"]!!
+        val layer = wand.layers.single().copy(bone = Bone.ARM_R, d = "M 9 51 L 29 51 L 29 71 L 9 71 Z")
+        val placed = PlacedLayer(layer, Bone.ARM_R, mirrored = false, item = wand, partName = null)
+
+        val b = placedBoundsPx(content, placed, bones)
+        val expected = 20f * sqrt((28f / 38f) * (78f / 80f))
+        assertEquals(b.height, b.width, 0.01f)
+        assertEquals(expected, b.width, 0.01f)
+        val expectedCenter = bones[Bone.ARM_R]!!.origin + Offset(14f, 78f - 37.05f / 2f)
+        assertEquals(expectedCenter.x, b.center.x, 0.01f)
+        assertEquals(expectedCenter.y, b.center.y, 0.01f)
+    }
+
+    @Test
+    fun glovesStillStretchPerAxis() {
+        val slim = cat.copy(bones = mapOf(Bone.HAND_R to BoneOverride(size = listOf(28f, 37.05f))))
+        val bones = boneTransforms(slim, REST_POSE, 0f, RigFrame(Offset.Zero, 1f))
+
+        val mitt = content.itemsById["item_gloves_test_mitt"]!!
+        val layer = mitt.layers.single().copy(d = "M 0 0 L 38 0 L 38 38 L 0 38 Z")
+        val placed = PlacedLayer(layer, Bone.HAND_R, mirrored = true, item = mitt, partName = null)
+
+        val b = placedBoundsPx(content, placed, bones)
+        assertEquals(28f, b.width, 0.01f)
+        assertEquals(37.05f, b.height, 0.01f)
+        val origin = bones[Bone.HAND_R]!!.origin
+        assertEquals(origin.x, b.topLeft.x, 0.01f)
+        assertEquals(origin.y, b.topLeft.y, 0.01f)
     }
 
     @Test
@@ -124,12 +212,74 @@ class LayerTransformTest {
     }
 
     @Test
+    fun itemPreviewUsesStandardBones() {
+        val c = chibiContent()
+        val drawList = buildItemDrawList(c, c.itemsById["item_shirt_test_tee"]!!)
+
+        assertTrue(drawList.avatar.bones.isEmpty())
+        assertEquals(c.defaultAvatar.skinHex, drawList.avatar.skinHex)
+
+        val bones = boneTransforms(drawList.avatar, REST_POSE, 0f, RigFrame(Offset.Zero, 1f))
+        val b = placedBoundsPx(c, drawList.layers.single(), bones)
+
+        assertEquals(70f, b.width, 0.01f)
+        assertEquals(70f, b.height, 0.01f)
+        val expectedTopLeft = bones[Bone.TORSO]!!.origin + Offset(5f, 5f)
+        assertEquals(expectedTopLeft.x, b.topLeft.x, 0.01f)
+        assertEquals(expectedTopLeft.y, b.topLeft.y, 0.01f)
+    }
+
+    @Test
+    fun ghostBodyIsBasePartsAtStandardSize() {
+        val c = chibiContent()
+        val drawList = buildItemDrawList(c, c.itemsById["item_shirt_test_tee"]!!)
+
+        assertTrue(drawList.ghostLayers.isNotEmpty())
+        val baseParts = setOf("torso", "arms", "hands", "legs", "pants", "shoes", "head")
+        for (ghost in drawList.ghostLayers) {
+            assertTrue(ghost.partName in baseParts)
+        }
+        assertFalse(drawList.ghostLayers.any { it.partName == "stripes" })
+
+        val bones = boneTransforms(drawList.avatar, REST_POSE, 0f, RigFrame(Offset.Zero, 1f))
+        val torso = drawList.ghostLayers.single { it.partName == "torso" }
+        val b = placedBoundsPx(c, torso, bones)
+
+        assertEquals(80f, b.width, 0.01f)
+        assertEquals(80f, b.height, 0.01f)
+        val origin = bones[Bone.TORSO]!!.origin
+        assertEquals(origin.x, b.topLeft.x, 0.01f)
+        assertEquals(origin.y, b.topLeft.y, 0.01f)
+    }
+
+    @Test
+    fun ghostPartMirrorsInAuthoredWidth() {
+        val bones = boneTransforms(cat.copy(bones = emptyMap()), REST_POSE, 0f, RigFrame(Offset.Zero, 1f))
+
+        val armLayer = cat.parts.single { it.part == "arms" }.layers.single().copy(d = "M 0 0 L 16 0 L 16 62 L 0 62 Z")
+        val placed = PlacedLayer(
+            armLayer,
+            Bone.ARM_R,
+            mirrored = true,
+            item = null,
+            partName = "arms",
+            authoredBoneSize = Size(32f, 62f)
+        )
+        val b = placedBoundsPx(content, placed, bones)
+
+        val o = bones[Bone.ARM_R]!!.origin
+        assertEquals(o.x + 19f, b.left, 0.01f)
+        assertEquals(o.x + 38f, b.right, 0.01f)
+        assertEquals(80f, b.height, 0.01f)
+    }
+
+    @Test
     fun previewFramingFitsBoundsWithMargin() {
         val cape = content.itemsById["item_shoulders_test_cape"]!!
         val drawList = buildItemDrawList(content, cape)
         val yawDeg = previewYawDeg(cape)
         val frame = previewFrame(content, drawList, yawDeg, Size(200f, 100f))!!
-        val bones = boneTransforms(content.defaultAvatar, REST_POSE, yawDeg, frame)
+        val bones = boneTransforms(drawList.avatar, REST_POSE, yawDeg, frame)
 
         var union: Rect? = null
         for (p in drawList.layers) {

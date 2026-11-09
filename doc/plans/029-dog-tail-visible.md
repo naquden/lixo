@@ -13,7 +13,8 @@
 
 ## Steps
 1. Rewrite `dog_tail(sizes)` in `extras.py` so that it is relative to the arm width: `aw = sizes["ARM_L"][0]`. Use a stubby tail that goes out past the arm and tips up:
-   `join(round_rect(0, 0, aw + 18, 12, 6), poly([(aw + 8, 4), (aw + 14, -18), (aw + 24, -16), (aw + 20, 8)]))`, fill `tint`, shade -0.22, flat shading (as now). Keep the bucket (`TAIL`), z order and part name `tail`.
+   `join(round_rect(0, 0, aw + 28, 12, 6), poly([(aw + 18, 4), (aw + 24, -18), (aw + 34, -16), (aw + 30, 8)]))`, fill `tint`, shade -0.22, flat shading (as now). Keep the bucket (`TAIL`), z order and part name `tail`.
+   The original `aw + 18` / `aw + 24` shape only clears the arm at rest (wag 0): `BundledCatalogRenderTest` captures each screenshot 500 ms after (re)composition, when the dog's `tailWag` 1.8 idle animation has rotated the tip to about -29°, and at that pose only ~45% of that shape's tip was visible past the arm — so the shape is moved 10 au further out (bar to `aw + 28`, tip to `aw + 34`) to stay visible through most of the wag cycle.
 2. Rebuild the bundled pack: `python3 tools/content_pipeline/pack/build_pack.py` (writes `composeApp/src/commonMain/composeResources/files/content_pack.json`), then run `validate_pack.py`. Bounds/caps must still pass.
 
 ## Tests / verification
@@ -24,7 +25,7 @@ pytest (`tools/tests/test_pipelines.py`):
 commonTest: `BundledPackValidTest` still Accepted, 0 skips, 6 avatars.
 
 Instrumented (emulator-5554, or R5CXC0681EM when attached):
-- `se.lixo.app.verify.BundledCatalogRenderTest` (all 3 green). Review `bare_avatar_dog.png` (tail tip visible to the right of the left arm) and a couple of `avatar_avatar_dog_style*.png` (tail still visible with pants/shirt equipped, not floating).
+- `se.lixo.app.verify.BundledCatalogRenderTest` (all 3 green). Review `bare_avatar_dog.png` (tail tip visible to the right of the left arm). Note: in `avatar_avatar_dog_style*.png` every slot is equipped, including TAIL, and `SLOT_HIDES_PARTS` hides the dog's own `tail` part whenever a TAIL item is equipped — so those renders show the equipped item's tail, not this fix, and only `bare_avatar_dog.png` demonstrates it.
 
 ```
 ANDROID_SERIAL=emulator-5554 ./gradlew :androidApp:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=se.lixo.app.verify.BundledCatalogRenderTest
