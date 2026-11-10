@@ -6,12 +6,20 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.DeviceConfigurationOverride
+import androidx.compose.ui.test.FontScale
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -22,11 +30,14 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToKey
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -41,10 +52,13 @@ import se.lixo.app.platform.AndroidPlatformContext
 import se.lixo.app.platform.NoOpTextToSpeechEngine
 import se.lixo.app.screenshots.FakeCloudGateway
 import se.lixo.app.ui.components.avatar.avatarContentDescription
+import se.lixo.app.ui.screens.wardrobe.WARDROBE_AVATAR_STAGE_TAG
 import se.lixo.app.ui.screens.wardrobe.WARDROBE_ITEM_GRID_TAG
 import se.lixo.app.ui.screens.wardrobe.WardrobeScreen
 import se.lixo.app.ui.theme.LixoStrings
 import se.lixo.app.ui.theme.LixoTheme
+
+private val CONTAINER_TAG = "wardrobe_test_container"
 
 /**
  * Verifies 022 (the wardrobe runs on the content pack): the avatar picker lists every bundled
@@ -55,6 +69,10 @@ import se.lixo.app.ui.theme.LixoTheme
  * Also verifies 031 (the avatar always stays visible while browsing and choosing items): the
  * avatar stage is pinned above an adaptive-row item grid, and switching slots resets that grid
  * back to its first ("Ingen") card.
+ *
+ * Also verifies 034 (the avatar stage and the item area are proportioned to screen height): the
+ * stage and the grid share the leftover height by weight, grid cells fill their row with no
+ * leftover band, and a short screen or a large font scale falls back to a scrolling column.
  */
 class WardrobeScreenContentTest {
 
@@ -90,28 +108,44 @@ class WardrobeScreenContentTest {
      * Renders the real [WardrobeScreen]. [compose.setContent] can only be called once per test,
      * so every test calls this exactly once, after any extra unlocks it needs. [container] lets
      * the small-screen test bound the available space the way the real app's Scaffold does.
+     * [fontScale] drives the font scale through the real platform
+     * [android.content.res.Configuration]/`FontScaleConverter`, not a linear [Density] scale, so
+     * tests exercise the same nonlinear (Android 14+) scaling the 034 scroll fallback has to
+     * estimate against, to exercise the 034 scroll fallback.
      */
-    private fun render(container: Modifier = Modifier.fillMaxSize()) {
+    private fun render(container: Modifier = Modifier.fillMaxSize(), fontScale: Float? = null) {
         compose.setContent {
-            LixoTheme {
-                Box(container) {
-                    val profiles = repo.profiles.collectAsState().value
-                    val unlocked = repo.unlockedItemIds.collectAsState().value
-                    WardrobeScreen(
-                        profile = profiles.first(),
-                        content = TestContent.active,
-                        unlockedItemIds = unlocked,
-                        ttsEngine = NoOpTextToSpeechEngine,
-                        showSwedishTtsButtons = false,
-                        onSelectAvatar = repo::selectAvatarOnActiveProfile,
-                        onEquipSlotItem = repo::equipItemOnActiveProfile,
-                        onCustomizeBaseTraits = { h, e, s -> repo.customizeBaseAppearanceOnActiveProfile(h, e, s) },
-                        onBack = {}
-                    )
+            val screen: @Composable () -> Unit = {
+                LixoTheme {
+                    Box(container.testTag(CONTAINER_TAG)) {
+                        val profiles = repo.profiles.collectAsState().value
+                        val unlocked = repo.unlockedItemIds.collectAsState().value
+                        WardrobeScreen(
+                            profile = profiles.first(),
+                            content = TestContent.active,
+                            unlockedItemIds = unlocked,
+                            ttsEngine = NoOpTextToSpeechEngine,
+                            showSwedishTtsButtons = false,
+                            onSelectAvatar = repo::selectAvatarOnActiveProfile,
+                            onEquipSlotItem = repo::equipItemOnActiveProfile,
+                            onCustomizeBaseTraits = { h, e, s -> repo.customizeBaseAppearanceOnActiveProfile(h, e, s) },
+                            onBack = {}
+                        )
+                    }
                 }
+            }
+            if (fontScale != null) {
+                DeviceConfigurationOverride(DeviceConfigurationOverride.FontScale(fontScale)) {
+                    screen()
+                }
+            } else {
+                screen()
             }
         }
     }
+
+    /** Converts a raw pixel measurement (e.g. from [androidx.compose.ui.semantics.SemanticsNode]) to dp. */
+    private fun pxToDp(px: Float) = with(compose.density) { px.toDp() }
 
     private fun shot(name: String) {
         compose.waitForIdle()
@@ -241,6 +275,87 @@ class WardrobeScreenContentTest {
         compose.onNodeWithText(LixoStrings.WARDROBE_NONE_ITEM).assertIsDisplayed()
         compose.onNodeWithText(content.itemName(screenOrder(EquipmentSlot.HAT).first())).assertIsDisplayed()
 
+        val stage = compose.onNodeWithTag(WARDROBE_AVATAR_STAGE_TAG).fetchSemanticsNode().size.height
+        assertTrue(pxToDp(stage.toFloat()) >= 150.dp)
+
         shot("wardrobe_small_screen")
+    }
+
+    @Test
+    fun tallScreen_fillsHeight() {
+        unlockSlotItems(EquipmentSlot.HAT)
+        render(Modifier.size(412.dp, 900.dp))
+
+        // The container may be clamped to the window's real height, so every assertion is based
+        // on its measured bounds, not the literal 900dp requested above.
+        val c = compose.onNodeWithTag(CONTAINER_TAG).fetchSemanticsNode().boundsInRoot
+
+        val stagePx = compose.onNodeWithTag(WARDROBE_AVATAR_STAGE_TAG).fetchSemanticsNode().size.height
+        assertTrue(stagePx >= 0.30f * c.height)
+        assertTrue(pxToDp(stagePx.toFloat()) > 240.dp)
+
+        val gridBottom = compose.onNodeWithTag(WARDROBE_ITEM_GRID_TAG).fetchSemanticsNode().boundsInRoot.bottom
+        val paddingPx = with(compose.density) { 16.dp.toPx() }
+        assertTrue(abs(pxToDp(c.bottom - paddingPx - gridBottom).value) <= 24.dp.value)
+
+        compose.onNodeWithContentDescription(avatarDesc()).assertIsDisplayed()
+
+        shot("034_tall")
+    }
+
+    @Test
+    fun largeFont_itemsStillReachable() {
+        unlockSlotItems(EquipmentSlot.HAT)
+        render(Modifier.size(360.dp, 640.dp), fontScale = 1.6f)
+
+        val content = TestContent.active
+        val name = content.itemName(screenOrder(EquipmentSlot.HAT).first())
+
+        compose.onNodeWithText(name).performScrollTo().assertIsDisplayed()
+
+        val card = compose.onNodeWithText(name).fetchSemanticsNode().boundsInRoot
+        val text = compose.onNodeWithText(name, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue(text.bottom <= card.bottom + 1f)
+        assertTrue(text.top >= card.top - 1f)
+
+        compose.onNodeWithContentDescription(avatarDesc()).assertExists()
+
+        shot("034_large_font")
+    }
+
+    @Test
+    fun veryLargeFont_scrollFallbackKeepsItemsReachable() {
+        unlockSlotItems(EquipmentSlot.HAT)
+        render(Modifier.size(360.dp, 640.dp), fontScale = 2.0f)
+
+        val content = TestContent.active
+        val name = content.itemName(screenOrder(EquipmentSlot.HAT).first())
+
+        // Scroll fallback is active: only the fallback layout puts the avatar inside a vertically
+        // scrollable Column (the item grid is a sibling, not an ancestor, of the avatar).
+        compose.onNode(
+            hasScrollAction() and hasAnyDescendant(hasContentDescription(avatarDesc()))
+        ).assertExists()
+
+        // Items stay reachable by scrolling.
+        // performScrollTo() only scrolls the nearest scrollable ancestor (the horizontal item
+        // grid), so scroll the vertical fallback page itself, like a user swiping up.
+        compose.onNode(
+            hasScrollAction() and hasAnyDescendant(hasContentDescription(avatarDesc()))
+        ).performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 100_000f) }
+        compose.waitForIdle()
+        compose.onNodeWithText(name).assertIsDisplayed()
+
+        // The card is not squashed: its name text sits fully inside the card bounds (the
+        // user-visible requirement). An absolute minCard px check doesn't work here because the
+        // card's semantics bounds exclude LixoCard's 3dp bottom lip, so they are ~3dp short of the cell.
+        val card = compose.onNodeWithText(name).fetchSemanticsNode().boundsInRoot
+        val text = compose.onNodeWithText(name, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue(text.top >= card.top - 1f)
+        assertTrue(text.bottom <= card.bottom + 1f)
+
+        compose.onNodeWithContentDescription(avatarDesc()).assertExists()
+
+        shot("034_very_large_font")
     }
 }

@@ -130,5 +130,7 @@ way.
 - Split ratio: is a stage:items ratio of 0.42:0.58 right? With 2 rows of cards that gives a stage of
   about 300dp on a typical phone. A bigger avatar (0.5:0.5) leaves only 1–2 rows. Default: 0.42:0.58.
   Tune it from the screenshots.
+  Resolved in implementation: 0.5:0.5. Measured fixed rows are about 262-280dp, so 0.42 would shrink
+  the 360x640 stage below today's 182dp and fail the 0.30-height tall-screen check.
 - Run order: 033 (turning the avatar) also touches the stage, but only inside `AvatarViewport`, so
   the order doesn't matter. Run 034 after 031/032 are committed, because it builds on 031's layout.
