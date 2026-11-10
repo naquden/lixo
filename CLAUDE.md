@@ -20,13 +20,16 @@ Tasks are executed later in batch (e.g. `use workflow` with model-split-implemen
 
 ### Running pending tasks
 
-The workflow does not read `FEATURES.md` itself — the main agent does:
+The workflow does not read `FEATURES.md` itself — the main agent does, in a loop that runs until `## Pending` is empty. This loop overrides the global "do not commit" rule: it commits, but never pushes.
 
-1. Collect the `## Pending` lines, ordered by their stated dependencies (e.g. "after 001" runs after 001), otherwise by number.
+1. **Collect.** Re-read `FEATURES.md` from disk and take the `## Pending` lines, ordered by their stated dependencies (e.g. "after 001" runs after 001), otherwise by number.
 2. Turn each into a task string that points at its plan: `"NNN — <title>: implement exactly per doc/plans/NNN-slug.md (read it first)"`.
-3. Run `model-split-implement` with `{ tasks: [...], batchVerify: true }` and `env: { verifyMode: "android-instrumented", verifyNotes: "Device R5CXC0681EM. ANDROID_SERIAL=R5CXC0681EM ./gradlew :androidApp:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=<fqcn,fqcn>, using the instrumented test classes listed in each plan" }`.
-   - batchVerify = per task in order: opus analyse → sonnet implement → haiku build + unit tests (fix build errors immediately). Then one device verification for all tasks, one opus diagnosis across all failures (incl. cross-task interactions), fixes in task order, re-verify only failures. One opus review of the whole diff at the end.
-4. Afterwards: tick passed tasks and move them to `## Done` with a one-line verification note (test class + result, evidence path). Failed tasks stay in `## Pending` with a note on the root cause.
+3. **Run** `model-split-implement` with `{ tasks: [...], batchVerify: true, commitEach: true }` and `env: { verifyMode: "android-instrumented", verifyNotes: "Device R5CXC0681EM. ANDROID_SERIAL=R5CXC0681EM ./gradlew :androidApp:connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=<fqcn,fqcn>, using the instrumented test classes listed in each plan" }`.
+   - Per task in order: opus analyse → sonnet implement → haiku build + unit tests (fix build errors immediately) → haiku **commits that task** (subject = the task string; files that were dirty before the run are never staged).
+   - Then one device verification over all the committed tasks, one opus diagnosis across all failures (incl. cross-task interactions), fixes in task order with **one commit per fix** (`Fix after verify round N: …`), re-verify only failures. One opus review of the whole run (`git diff <baseSha>`) at the end.
+4. **Record.** Tick passed tasks and move them to `## Done` with a one-line verification note (test class + result, evidence path). Failed tasks stay in `## Pending` with a note on the root cause. Commit `FEATURES.md` on its own: `Update FEATURES.md: done NNN, NNN`. If the review reported HIGH findings, fix them before the next step (sonnet) and commit as `Address review: …`.
+5. **Repeat.** Go back to step 1. New tasks added to `FEATURES.md` while the run was going are picked up here, along with failed tasks, which get retried. Stop only when `## Pending` is empty.
+   - A task that has failed in two runs with the same root cause is not retried again. Leave it in `## Pending` with the note, skip it in later runs, and treat the loop as done when only such tasks are left. Report them at the end.
 
 ## Verifying fixes on device
 
