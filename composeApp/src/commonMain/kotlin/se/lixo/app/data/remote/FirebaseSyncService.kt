@@ -3,23 +3,37 @@ package se.lixo.app.data.remote
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.ActionCodeSettings
 import dev.gitlive.firebase.auth.AndroidPackageName
+import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.crashlytics.crashlytics
+import dev.gitlive.firebase.firestore.DocumentSnapshot
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.FirebaseFirestoreException
+import dev.gitlive.firebase.firestore.FirestoreExceptionCode
+import dev.gitlive.firebase.firestore.Timestamp
+import dev.gitlive.firebase.firestore.TimestampSerializer
+import dev.gitlive.firebase.firestore.code
 import dev.gitlive.firebase.firestore.firestore
-import kotlinx.datetime.Clock
+import dev.gitlive.firebase.firestore.fromMilliseconds
+import dev.gitlive.firebase.firestore.toMilliseconds
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import se.lixo.app.domain.model.AddFriendError
 import se.lixo.app.domain.model.AddFriendException
 import se.lixo.app.domain.content.AvatarAppearance
-import se.lixo.app.domain.content.DEFAULT_AVATAR_ID
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.Course
 import se.lixo.app.domain.model.DictionaryEntry
-import se.lixo.app.domain.model.EquipmentSlot
-import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.content.SUPPORTED_SCHEMA_VERSION
+import se.lixo.app.domain.social.FRIEND_CODE_ALPHABET
+import se.lixo.app.domain.social.FRIEND_CODE_LENGTH
+import se.lixo.app.domain.social.Nickname
+import se.lixo.app.domain.social.fromList
 import se.lixo.app.platform.fetchHttpServerTimeMillis
+import se.lixo.app.platform.secureRandomBytes
 
 const val LIXO_FIREBASE_PROJECT_ID = "lixo-fd45d"
 const val LIXO_FIREBASE_HOSTING_DOMAIN = "lixo-fd45d.firebaseapp.com"
@@ -141,10 +155,16 @@ interface CloudSyncGateway {
     suspend fun signInWithEmailLink(email: String, link: String): Result<String>
 
     suspend fun registerOptionalEmailAccount(email: String, password: String): Result<String>
-    suspend fun publishPublicFriendAvatar(profile: FriendProfile): Result<Unit>
-    suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?>
     suspend fun deleteAccountAndAllCloudData(userId: String): Result<Unit>
     fun setCrashlyticsCollectionEnabled(enabled: Boolean)
+
+    /**
+     * doc/plans/030 §1: the current Firebase Auth uid, signing in anonymously first if there is
+     * no current user. Never invents a uid: a failure (e.g. offline) is a `Result.failure`, and
+     * the caller ([se.lixo.app.data.repository.LixoRepository.ensureCloudIdentity]) retries
+     * lazily on the next friend action.
+     */
+    suspend fun ensureSignedIn(): Result<String>
 }
 
 @Serializable
@@ -176,52 +196,111 @@ private data class ContentMetaDoc(val packs: Map<String, ContentMetaEntry> = emp
 @Serializable
 private data class ContentChunkDoc(val data: String)
 
+/**
+ * Firestore-shaped mirror of [AvatarAppearance] (H2 in temp/verify/030_review.md): kotlinx
+ * serialization's default `Map<EquipmentSlot, String>` encoding uses the enum entry *name*
+ * ("HAT", "SHOULDERS_BACK", ...) as the JSON key, but `firestore.rules`' `validEquipped` only
+ * accepts the lowercase [se.lixo.app.domain.model.EquipmentSlot.id] keys -- so every card write
+ * with any gear equipped was rejected in production. This DTO re-keys [equipped] by `slot.id` on
+ * the way out and maps back by id on the way in, ignoring any key that doesn't match a known
+ * slot (a newer client's slot id this build doesn't know yet). `ProfileEntity.appearanceJson` /
+ * `FriendEntity.appearanceJson` keep using the plain [AvatarAppearance] serializer directly
+ * (unaffected -- Room is not Firestore and has no such key restriction).
+ */
 @Serializable
-private data class FirestorePublicAvatarDoc(
-    val userId: String,
-    val username: String,
-    val appearance: AvatarAppearance,
-    val totalStars: Int,
-    val updatedAt: Long
+private data class FirestoreAppearanceDoc(
+    val avatarId: String,
+    val tintHex: Long? = null,
+    val eyeIndex: Int = 0,
+    val smileIndex: Int = 0,
+    val equipped: Map<String, String> = emptyMap()
 )
+
+private fun AvatarAppearance.toFirestoreDoc(): FirestoreAppearanceDoc = FirestoreAppearanceDoc(
+    avatarId = avatarId,
+    tintHex = tintHex,
+    eyeIndex = eyeIndex,
+    smileIndex = smileIndex,
+    equipped = equipped.entries.associate { (slot, itemId) -> slot.id to itemId }
+)
+
+private val equipmentSlotsById = se.lixo.app.domain.model.EquipmentSlot.entries.associateBy { it.id }
+
+private fun FirestoreAppearanceDoc.toDomain(): AvatarAppearance = AvatarAppearance(
+    avatarId = avatarId,
+    tintHex = tintHex,
+    eyeIndex = eyeIndex,
+    smileIndex = smileIndex,
+    equipped = equipped.mapNotNull { (key, itemId) -> equipmentSlotsById[key]?.let { it to itemId } }.toMap()
+)
+
+/** `friend_cards/{cardId}` document shape (030 §2): `nick` is `[adjIdx, animalIdx, num]`. */
+@Serializable
+private data class FirestoreFriendCardDoc(
+    val ownerUid: String,
+    val nick: List<Int>,
+    val appearance: FirestoreAppearanceDoc
+)
+
+/** `friend_cards/{cardId}/readers/{readerUid}` presence row (030 §2), redeemer side (branch a). */
+@Serializable
+private data class FirestoreReaderDoc(
+    val readerCardId: String,
+    val viaInvite: String? = null
+)
+
+/**
+ * The reciprocal reader doc the redeemer writes on their OWN card, granting the invite's owner
+ * access (rules' branch b). H3 in temp/verify/030_review.md: this type has NO `viaInvite`
+ * property at all, rather than `viaInvite: String? = null` -- `rules.firestore`'s branch (b)
+ * requires `!('viaInvite' in request.resource.data)`, and kotlinx serialization would otherwise
+ * encode a null default as an explicit `viaInvite: null` field, failing both rule branches.
+ */
+@Serializable
+private data class FirestoreReciprocalReaderDoc(
+    val readerCardId: String
+)
+
+/** `friend_invites/{code}` document shape (030 §2): `expiresAt` is a Firestore Timestamp. */
+@Serializable
+private data class FirestoreInviteDoc(
+    val cardId: String,
+    val ownerUid: String,
+    @Serializable(with = TimestampSerializer::class) val expiresAt: Timestamp,
+    val uses: Int
+)
+
+private const val FRIEND_CARDS_COLLECTION = "friend_cards"
+private const val FRIEND_INVITES_COLLECTION = "friend_invites"
+private const val READERS_SUBCOLLECTION = "readers"
+private const val FRIEND_INVITE_WINDOW_MILLIS = 10 * 60 * 1000L
+private const val FRIEND_INVITE_MAX_USES = 30
+
+/** M7 in temp/verify/030_review.md: safety margin subtracted from [FRIEND_INVITE_WINDOW_MILLIS]. */
+private const val FRIEND_INVITE_CLOCK_SKEW_MARGIN_MILLIS = 30 * 1000L
 
 /**
  * Production GitLive Firebase SDK implementation configured for project `lixo-fd45d`
  * with automatic offline-safe fallback when in Local-Only mode or without network connectivity.
+ *
+ * [explicitAuth]/[explicitFirestore] (null by default) let an instrumented test bind two or more
+ * [FirebaseSyncService] instances to separate secondary [dev.gitlive.firebase.FirebaseApp]s
+ * (separate anonymous users) that all talk to the same local Firebase emulator, simulating
+ * several real devices (`androidApp/.../verify/FirebaseFriendCloudEmulatorTest.kt`). [authInstance]
+ * / [firestoreInstance] resolve to those when given, otherwise lazily to the global
+ * `Firebase.auth`/`Firebase.firestore` on first actual use -- same as plain production code, and
+ * critically NOT eagerly at construction time: `commonTest`/`androidHostTest` construct a plain
+ * `FirebaseSyncService()` (e.g. `FriendFlowTest`'s `fakeGateway`) in a JVM with no native
+ * FirebaseApp, where touching `Firebase.auth`/`Firebase.firestore` throws immediately.
  */
 class FirebaseSyncService(
-    private var isLocalOnlyMode: Boolean = true
-) : CloudSyncGateway {
+    private var isLocalOnlyMode: Boolean = true,
+    private val explicitAuth: FirebaseAuth? = null,
+    private val explicitFirestore: FirebaseFirestore? = null
+) : CloudSyncGateway, FriendCloud {
 
-    private val directoryCache = mutableMapOf<String, FriendProfile>(
-        "stjarn_riddare_99" to FriendProfile(
-            userId = "friend_demo_1",
-            username = "stjarn_riddare_99",
-            appearance = AvatarAppearance(
-                avatarId = "avatar_knight",
-                tintHex = 0xFF3498DB,
-                equipped = mapOf(
-                    EquipmentSlot.HAT to "item_hat_starter_explorer",
-                    EquipmentSlot.HAND_RIGHT to "item_hand_right_math_sword_1"
-                )
-            ),
-            totalStars = 42,
-            addedAtEpochMillis = 1730000000000L
-        ),
-        "magisk_katt_07" to FriendProfile(
-            userId = "friend_demo_2",
-            username = "magisk_katt_07",
-            appearance = AvatarAppearance(
-                avatarId = "avatar_wizard",
-                tintHex = 0xFF9B59B6,
-                equipped = mapOf(
-                    EquipmentSlot.SHOULDERS_BACK to "item_shoulders_back_sv_cape_1"
-                )
-            ),
-            totalStars = 78,
-            addedAtEpochMillis = 1730000000000L
-        )
-    )
+    private val authInstance: FirebaseAuth by lazy { explicitAuth ?: Firebase.auth }
+    private val firestoreInstance: FirebaseFirestore by lazy { explicitFirestore ?: Firebase.firestore }
 
     fun setLocalOnlyMode(enabled: Boolean) {
         isLocalOnlyMode = enabled
@@ -240,7 +319,7 @@ class FirebaseSyncService(
         // read-only in Firestore with zero PII uploaded, so it can be downloaded even when user
         // account is in Local-Only mode.
         return try {
-            val snapshot = Firebase.firestore.collection("courses").get()
+            val snapshot = firestoreInstance.collection("courses").get()
             snapshot.documents.map { it.data<Course>() }
         } catch (_: Throwable) {
             emptyList()
@@ -249,7 +328,7 @@ class FirebaseSyncService(
 
     override suspend fun fetchLevelsForCourse(courseId: String): List<CampaignLevel> {
         return try {
-            val snapshot = Firebase.firestore
+            val snapshot = firestoreInstance
                 .collection("levels")
                 .where { "courseId" equalTo courseId }
                 .get()
@@ -261,7 +340,7 @@ class FirebaseSyncService(
 
     override suspend fun fetchTasksForCourse(courseId: String): List<HomeworkTask> {
         return try {
-            val snapshot = Firebase.firestore.collection("tasks").get()
+            val snapshot = firestoreInstance.collection("tasks").get()
             snapshot.documents.map { it.data<HomeworkTask>() }
         } catch (_: Throwable) {
             emptyList()
@@ -270,7 +349,7 @@ class FirebaseSyncService(
 
     override suspend fun fetchLexiconMeta(): LexiconMeta? {
         return try {
-            val snap = Firebase.firestore.collection("lexicon").document("meta").get()
+            val snap = firestoreInstance.collection("lexicon").document("meta").get()
             if (snap.exists) snap.data<LexiconMeta>() else null
         } catch (_: Throwable) {
             null
@@ -280,7 +359,7 @@ class FirebaseSyncService(
     override suspend fun fetchLexiconEntries(chunkCount: Int): List<DictionaryEntry> {
         return try {
             (0 until chunkCount).flatMap { i ->
-                Firebase.firestore.collection("lexicon").document("chunk_$i").get()
+                firestoreInstance.collection("lexicon").document("chunk_$i").get()
                     .data<LexiconChunkDoc>().entries
             }
         } catch (_: Throwable) {
@@ -290,7 +369,7 @@ class FirebaseSyncService(
 
     override suspend fun fetchContentMeta(): ContentMetaResult? {
         return try {
-            val snap = Firebase.firestore.collection("content").document("meta").get()
+            val snap = firestoreInstance.collection("content").document("meta").get()
             if (!snap.exists) return null
             val entry = snap.data<ContentMetaDoc>().packs[SUPPORTED_SCHEMA_VERSION.toString()] ?: return null
             val serverTime = fetchHttpServerTimeMillis(LIXO_FIRESTORE_CONTENT_META_REST_URL)
@@ -303,7 +382,7 @@ class FirebaseSyncService(
     override suspend fun fetchContentChunks(schema: Int, version: Int, count: Int): List<String>? {
         return try {
             (0 until count).map { i ->
-                val snap = Firebase.firestore.collection("content_chunks").document("${schema}_${version}_$i").get()
+                val snap = firestoreInstance.collection("content_chunks").document("${schema}_${version}_$i").get()
                 if (!snap.exists) return null
                 snap.data<ContentChunkDoc>().data
             }
@@ -331,7 +410,7 @@ class FirebaseSyncService(
         }
         val actionCodeSettings = buildEmailLinkActionCodeSettings()
         return try {
-            Firebase.auth.sendSignInLinkToEmail(
+            authInstance.sendSignInLinkToEmail(
                 email = cleaned,
                 actionCodeSettings = actionCodeSettings
             )
@@ -346,7 +425,7 @@ class FirebaseSyncService(
         val trimmed = link.trim()
         if (trimmed.isEmpty()) return false
         return try {
-            Firebase.auth.isSignInWithEmailLink(trimmed)
+            authInstance.isSignInWithEmailLink(trimmed)
         } catch (_: Throwable) {
             // Deterministic fallback in unit tests before native FirebaseApp initialization
             trimmed.contains("oobCode=") &&
@@ -368,7 +447,7 @@ class FirebaseSyncService(
         }
         isLocalOnlyMode = false
         return try {
-            val authResult = Firebase.auth.signInWithEmailLink(
+            val authResult = authInstance.signInWithEmailLink(
                 email = cleanedEmail,
                 link = cleanedLink
             )
@@ -387,9 +466,9 @@ class FirebaseSyncService(
         isLocalOnlyMode = false
         return try {
             val authResult = try {
-                Firebase.auth.createUserWithEmailAndPassword(email.trim(), password)
+                authInstance.createUserWithEmailAndPassword(email.trim(), password)
             } catch (_: Throwable) {
-                Firebase.auth.signInWithEmailAndPassword(email.trim(), password)
+                authInstance.signInWithEmailAndPassword(email.trim(), password)
             }
             val uid = authResult.user?.uid ?: "uid_${email.lowercase().hashCode().toUInt()}"
             Result.success(uid)
@@ -400,98 +479,227 @@ class FirebaseSyncService(
         }
     }
 
-    override suspend fun publishPublicFriendAvatar(profile: FriendProfile): Result<Unit> {
-        if (isLocalOnlyMode) {
-            return Result.failure(IllegalStateException("Lokal-only-läge är aktivt"))
-        }
-        directoryCache[profile.username.lowercase()] = profile
-        return try {
-            val doc = FirestorePublicAvatarDoc(
-                userId = profile.userId,
-                username = profile.username.lowercase(),
-                appearance = profile.appearance,
-                totalStars = profile.totalStars,
-                updatedAt = Clock.System.now().toEpochMilliseconds()
-            )
-            Firebase.firestore
-                .collection("public_avatars")
-                .document(profile.userId)
-                .set(doc)
-            Result.success(Unit)
-        } catch (_: Throwable) {
-            Result.success(Unit)
-        }
-    }
-
-    override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> {
-        // Note: project.md §3 states: "Avatarer är publika — konto behövs inte för att
-        // lägga till vänner, men man kan inte bli tillagd utan molnnärvaro."
-        val cleaned = query
-            .removePrefix("lixo://friend/")
-            .trim()
-            .lowercase()
-        if (cleaned.isEmpty()) return Result.success(null)
-
-        // Support QR payload format `lixo://friend/<username>:<avatarId>:<stars>`
-        if (cleaned.contains(":")) {
-            val parts = cleaned.split(":")
-            val username = parts.getOrNull(0) ?: return Result.success(null)
-            val raw = parts.getOrNull(1).orEmpty()
-            val avatarId = when {
-                raw.isBlank() -> DEFAULT_AVATAR_ID
-                raw.startsWith("avatar_") -> raw
-                else -> "avatar_$raw"
-            }
-            val stars = parts.getOrNull(2)?.toIntOrNull() ?: 15
-            val parsed = FriendProfile(
-                userId = "qr_$username",
-                username = username,
-                appearance = AvatarAppearance(avatarId = avatarId),
-                totalStars = stars
-            )
-            return Result.success(parsed)
-        }
-
-        // Try live Firestore `public_avatars` query first, then fallback to local directory cache
-        var queryThrew = false
-        try {
-            val snap = Firebase.firestore
-                .collection("public_avatars")
-                .where { "username" equalTo cleaned }
-                .get()
-            val remoteDoc = snap.documents.firstOrNull()?.data<FirestorePublicAvatarDoc>()
-            if (remoteDoc != null) {
-                return Result.success(
-                    FriendProfile(
-                        userId = remoteDoc.userId,
-                        username = remoteDoc.username,
-                        appearance = remoteDoc.appearance,
-                        totalStars = remoteDoc.totalStars,
-                        addedAtEpochMillis = remoteDoc.updatedAt
-                    )
-                )
-            }
-        } catch (_: Throwable) {
-            // Fall through to local cache
-            queryThrew = true
-        }
-
-        val cached = directoryCache[cleaned]
-        if (cached == null && queryThrew) {
-            return Result.failure(AddFriendException(AddFriendError.NETWORK))
-        }
-        return Result.success(cached)
-    }
-
     override suspend fun deleteAccountAndAllCloudData(userId: String): Result<Unit> {
-        directoryCache.entries.removeAll { it.value.userId == userId }
         try {
-            Firebase.firestore.collection("public_avatars").document(userId).delete()
-            Firebase.auth.currentUser?.delete()
+            authInstance.currentUser?.delete()
         } catch (_: Throwable) {
             // Safe fallback if offline
         }
         isLocalOnlyMode = true
         return Result.success(Unit)
+    }
+
+    override suspend fun ensureSignedIn(): Result<String> {
+        return try {
+            val existing = authInstance.currentUser?.uid
+            if (existing != null) return Result.success(existing)
+            val result = authInstance.signInAnonymously()
+            val uid = result.user?.uid
+                ?: return Result.failure(IllegalStateException("Anonymous sign-in returned no uid"))
+            Result.success(uid)
+        } catch (t: Throwable) {
+            Result.failure(t)
+        }
+    }
+
+    // --- FriendCloud (doc/plans/030 §4) ---
+
+    private suspend fun requireUid(): String =
+        authInstance.currentUser?.uid ?: ensureSignedIn().getOrThrow()
+
+    private fun cardRef(cardId: String) = firestoreInstance.collection(FRIEND_CARDS_COLLECTION).document(cardId)
+    private fun readersCollection(cardId: String) = cardRef(cardId).collection(READERS_SUBCOLLECTION)
+    private fun readerRef(cardId: String, readerUid: String) = readersCollection(cardId).document(readerUid)
+    private fun inviteRef(code: String) = firestoreInstance.collection(FRIEND_INVITES_COLLECTION).document(code)
+
+    private fun FirestoreFriendCardDoc.toCard(cardId: String): FriendCard? {
+        val decodedNick = fromList(nick) ?: return null
+        return FriendCard(cardId = cardId, ownerUid = ownerUid, nick = decodedNick, appearance = appearance.toDomain())
+    }
+
+    override suspend fun upsertMyCard(cardId: String?, nick: Nickname, appearance: AvatarAppearance): Result<String> {
+        return try {
+            val uid = requireUid()
+            val ref = cardId?.let { cardRef(it) } ?: firestoreInstance.collection(FRIEND_CARDS_COLLECTION).document
+            ref.set(FirestoreFriendCardDoc(ownerUid = uid, nick = nick.toList(), appearance = appearance.toFirestoreDoc()))
+            Result.success(ref.id)
+        } catch (t: Throwable) {
+            Result.failure(t as? AddFriendException ?: AddFriendException(AddFriendError.NETWORK))
+        }
+    }
+
+    override suspend fun createInvite(cardId: String): Result<FriendInvite> {
+        return try {
+            val uid = requireUid()
+            var attempt = 0
+            while (attempt < 5) {
+                attempt++
+                val code = generateSecureFriendCode()
+                val ref = inviteRef(code)
+                if (ref.get().exists) continue
+                // M7 in temp/verify/030_review.md: the rules require `expiresAt <= request.time +
+                // 10m`; `request.time` is the SERVER clock, so a device clock running even a few
+                // seconds ahead of the HTTP `Date` probe would make every create fail. A 30 s
+                // safety margin below the full window absorbs that clock skew.
+                val expiresAtMillis = fetchHttpServerTimeMillis(LIXO_FIRESTORE_CONTENT_META_REST_URL)
+                    ?.let { it + FRIEND_INVITE_WINDOW_MILLIS - FRIEND_INVITE_CLOCK_SKEW_MARGIN_MILLIS }
+                    ?: (nowMillisFallback() + FRIEND_INVITE_WINDOW_MILLIS - FRIEND_INVITE_CLOCK_SKEW_MARGIN_MILLIS)
+                ref.set(
+                    FirestoreInviteDoc(
+                        cardId = cardId,
+                        ownerUid = uid,
+                        expiresAt = Timestamp.fromMilliseconds(expiresAtMillis.toDouble()),
+                        uses = 0
+                    )
+                )
+                return Result.success(FriendInvite(code, cardId, uid, expiresAtMillis, 0))
+            }
+            Result.failure(AddFriendException(AddFriendError.NETWORK))
+        } catch (t: Throwable) {
+            Result.failure(t as? AddFriendException ?: AddFriendException(AddFriendError.NETWORK))
+        }
+    }
+
+    override suspend fun deleteInvite(code: String): Result<Unit> {
+        return try {
+            inviteRef(code).delete()
+            Result.success(Unit)
+        } catch (t: Throwable) {
+            Result.failure(t)
+        }
+    }
+
+    override suspend fun redeemInvite(code: String, myCardId: String): Result<FriendCard> {
+        return try {
+            val uid = requireUid()
+            val inviteSnap = inviteRef(code).get()
+            if (!inviteSnap.exists) return Result.failure(AddFriendException(AddFriendError.NOT_FOUND))
+            val invite = inviteSnap.data<FirestoreInviteDoc>()
+            if (invite.ownerUid == uid) return Result.failure(AddFriendException(AddFriendError.SELF))
+            if (invite.expiresAt.toMilliseconds() <= nowMillisFallback().toDouble()) {
+                return Result.failure(AddFriendException(AddFriendError.EXPIRED))
+            }
+            if (invite.uses >= FRIEND_INVITE_MAX_USES) return Result.failure(AddFriendException(AddFriendError.FULL))
+            if (readerRef(invite.cardId, uid).get().exists) return Result.failure(AddFriendException(AddFriendError.ALREADY_FRIEND))
+
+            // H3 in temp/verify/030_review.md: the transaction reads ONLY the invite (before any
+            // write in the transaction -- Firestore transactions require every read to happen
+            // before the first write, and a `get` on the friend's card would fail that rule, plus
+            // the reader doc the rules check doesn't exist yet so the read would be denied
+            // anyway). The reciprocal reader doc on *my own* card never carries `viaInvite` at
+            // all -- not even `viaInvite = null` -- because the rules' branch (b) requires
+            // `!('viaInvite' in request.resource.data)`, and kotlinx serialization would
+            // otherwise encode the nullable default field as an explicit `viaInvite: null`.
+            val freshInviteCardId = firestoreInstance.runTransaction {
+                val freshInvite = get(inviteRef(code)).data<FirestoreInviteDoc>()
+                if (freshInvite.uses >= FRIEND_INVITE_MAX_USES) {
+                    throw AddFriendException(AddFriendError.FULL)
+                }
+                update(inviteRef(code), "uses" to (freshInvite.uses + 1))
+                set(readerRef(freshInvite.cardId, uid), FirestoreReaderDoc(readerCardId = myCardId, viaInvite = code))
+                set(readerRef(myCardId, freshInvite.ownerUid), FirestoreReciprocalReaderDoc(readerCardId = freshInvite.cardId))
+                freshInvite.cardId
+            }
+            // Plain get() after commit, outside the transaction (H3): by now the reader doc on
+            // the friend's card exists, so the rules' `get` branch allows it.
+            val cardSnap = cardRef(freshInviteCardId).get()
+            if (!cardSnap.exists) return Result.failure(AddFriendException(AddFriendError.NOT_FOUND))
+            cardSnap.data<FirestoreFriendCardDoc>().toCard(freshInviteCardId)?.let { Result.success(it) }
+                ?: Result.failure(AddFriendException(AddFriendError.NOT_FOUND))
+        } catch (t: Throwable) {
+            Result.failure(t as? AddFriendException ?: AddFriendException(AddFriendError.NETWORK))
+        }
+    }
+
+    override suspend fun listMyReaders(myCardId: String): Result<List<ReaderRef>> {
+        return try {
+            val snap = readersCollection(myCardId).get()
+            Result.success(snap.documents.map { ReaderRef(it.id, it.data<FirestoreReaderDoc>().readerCardId) })
+        } catch (t: Throwable) {
+            Result.failure(t)
+        }
+    }
+
+    // H4 in temp/verify/030_review.md: gitlive closes `.snapshots` with the underlying
+    // FirebaseFirestoreException (e.g. PERMISSION_DENIED when signed out / offline with no
+    // cached permission) rather than emitting anything, which crashed every uncaught collector.
+    // Never throws: swallow to an empty list, same as "no readers yet".
+    override fun observeMyReaders(myCardId: String): Flow<List<ReaderRef>> =
+        readersCollection(myCardId).snapshots
+            .map { snap -> snap.documents.map { ReaderRef(it.id, it.data<FirestoreReaderDoc>().readerCardId) } }
+            .catch { emit(emptyList()) }
+
+    /** True once the server has confirmed [t] means "this uid no longer has access" (H4/H5). */
+    private fun isConfirmedDenied(t: Throwable): Boolean =
+        t is FirebaseFirestoreException &&
+            (t.code == FirestoreExceptionCode.PERMISSION_DENIED || t.code == FirestoreExceptionCode.NOT_FOUND)
+
+    override fun observeCard(cardId: String): Flow<CardState> =
+        cardRef(cardId).snapshots
+            .map { snap -> snapshotToCardState(cardId, snap) }
+            .catch { t -> emit(if (isConfirmedDenied(t)) CardState.Gone else CardState.Unknown) }
+
+    private fun snapshotToCardState(cardId: String, snap: DocumentSnapshot): CardState {
+        if (!snap.exists) {
+            // A from-cache "doesn't exist" read is inconclusive offline (H5): the server hasn't
+            // actually confirmed this card is gone, it's just not in the local cache (e.g. never
+            // fetched yet, or this device has been offline since before it was deleted).
+            return if (snap.metadata.isFromCache) CardState.Unknown else CardState.Gone
+        }
+        return try {
+            val card = snap.data<FirestoreFriendCardDoc>().toCard(cardId) ?: return CardState.Unknown
+            CardState.Present(card)
+        } catch (_: Throwable) {
+            CardState.Unknown
+        }
+    }
+
+    override suspend fun removeFriend(myCardId: String, friendUid: String, friendCardId: String): Result<Unit> {
+        return try {
+            readerRef(myCardId, friendUid).delete()
+            readerRef(friendCardId, requireUid()).delete()
+            Result.success(Unit)
+        } catch (t: Throwable) {
+            Result.failure(t)
+        }
+    }
+
+    /**
+     * M4 in temp/verify/030_review.md: deletes [cardId]'s readers (listed as the owner -- the
+     * rules' `readers` subcollection allows `list` to the card owner), then the invites this
+     * card owns (listed via the `friend_invites` `ownerUid == auth.uid` rule, filtered to this
+     * card client-side since one uid can own several cards across sibling profiles), then the
+     * card itself. Called from the GDPR account-deletion path for every profile that has a card.
+     */
+    override suspend fun deleteMyCard(cardId: String): Result<Unit> {
+        return try {
+            val uid = requireUid()
+            readersCollection(cardId).get().documents.forEach { readerRef(cardId, it.id).delete() }
+            firestoreInstance.collection(FRIEND_INVITES_COLLECTION)
+                .where { "ownerUid" equalTo uid }
+                .get()
+                .documents
+                .filter { it.data<FirestoreInviteDoc>().cardId == cardId }
+                .forEach { inviteRef(it.id).delete() }
+            cardRef(cardId).delete()
+            Result.success(Unit)
+        } catch (t: Throwable) {
+            Result.failure(t)
+        }
+    }
+}
+
+/** Best-effort wall clock for invite expiry math when the HTTP server-time probe is unavailable. */
+private fun nowMillisFallback(): Long = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+
+/**
+ * An 8-char invite code from [FRIEND_CODE_ALPHABET] (32 symbols = 5 bits), generated from
+ * [secureRandomBytes] rather than `kotlin.random.Random`: since there is no accept step, this
+ * code is the only gate on a friendship (doc/plans/030 §2a), so it must not be guessable.
+ */
+internal fun generateSecureFriendCode(): String {
+    val bytes = secureRandomBytes(FRIEND_CODE_LENGTH)
+    return buildString {
+        for (b in bytes) append(FRIEND_CODE_ALPHABET[b.toInt() and 0x1F])
     }
 }

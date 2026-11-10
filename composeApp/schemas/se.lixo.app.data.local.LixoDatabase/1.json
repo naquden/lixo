@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "6c1f1593ecd6f89cf625bad0b92fcc28",
+    "identityHash": "89a4c1d6b0ac96587255bbcf618da3a2",
     "entities": [
       {
         "tableName": "profiles",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `displayName` TEXT NOT NULL, `publicUsername` TEXT, `ageYears` INTEGER NOT NULL, `tutorialCompleted` INTEGER NOT NULL, `tutorialSkippableByParent` INTEGER NOT NULL, `appearanceJson` TEXT NOT NULL, `unlockedAvatarIdsCsv` TEXT NOT NULL, `currentLevelOrder` INTEGER NOT NULL, `totalStars` INTEGER NOT NULL, `currentStreakDays` INTEGER NOT NULL, `bestStreakDays` INTEGER NOT NULL, `lastStreakDateIso` TEXT, `dailyReadingGoalMinutes` INTEGER NOT NULL, `dailyMathGoalProblems` INTEGER NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, `chestProgressHalfPoints` INTEGER NOT NULL, `achievementProgressJson` TEXT NOT NULL DEFAULT '{}', `achievementCountedLevelIdsJson` TEXT NOT NULL DEFAULT '{}', `unlockedAchievementIdsJson` TEXT NOT NULL DEFAULT '[]', `pendingAchievementRewardIdsJson` TEXT NOT NULL DEFAULT '[]', `chestsSinceRarePlus` INTEGER NOT NULL DEFAULT 0, `chestsSinceEpicPlus` INTEGER NOT NULL DEFAULT 0, `chestsSinceLegendary` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `displayName` TEXT NOT NULL, `nicknameJson` TEXT DEFAULT NULL, `friendCardId` TEXT DEFAULT NULL, `ageYears` INTEGER NOT NULL, `tutorialCompleted` INTEGER NOT NULL, `tutorialSkippableByParent` INTEGER NOT NULL, `appearanceJson` TEXT NOT NULL, `unlockedAvatarIdsCsv` TEXT NOT NULL, `currentLevelOrder` INTEGER NOT NULL, `totalStars` INTEGER NOT NULL, `currentStreakDays` INTEGER NOT NULL, `bestStreakDays` INTEGER NOT NULL, `lastStreakDateIso` TEXT, `dailyReadingGoalMinutes` INTEGER NOT NULL, `dailyMathGoalProblems` INTEGER NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, `chestProgressHalfPoints` INTEGER NOT NULL, `achievementProgressJson` TEXT NOT NULL DEFAULT '{}', `achievementCountedLevelIdsJson` TEXT NOT NULL DEFAULT '{}', `unlockedAchievementIdsJson` TEXT NOT NULL DEFAULT '[]', `pendingAchievementRewardIdsJson` TEXT NOT NULL DEFAULT '[]', `chestsSinceRarePlus` INTEGER NOT NULL DEFAULT 0, `chestsSinceEpicPlus` INTEGER NOT NULL DEFAULT 0, `chestsSinceLegendary` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -21,9 +21,16 @@
             "notNull": true
           },
           {
-            "fieldPath": "publicUsername",
-            "columnName": "publicUsername",
-            "affinity": "TEXT"
+            "fieldPath": "nicknameJson",
+            "columnName": "nicknameJson",
+            "affinity": "TEXT",
+            "defaultValue": "NULL"
+          },
+          {
+            "fieldPath": "friendCardId",
+            "columnName": "friendCardId",
+            "affinity": "TEXT",
+            "defaultValue": "NULL"
           },
           {
             "fieldPath": "ageYears",
@@ -671,17 +678,29 @@
       },
       {
         "tableName": "friends",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`userId` TEXT NOT NULL, `username` TEXT NOT NULL, `appearanceJson` TEXT NOT NULL, `totalStars` INTEGER NOT NULL, `addedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`userId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` TEXT NOT NULL, `friendUid` TEXT NOT NULL, `friendCardId` TEXT NOT NULL, `nickJson` TEXT NOT NULL, `appearanceJson` TEXT NOT NULL, `label` TEXT, `addedAtEpochMillis` INTEGER NOT NULL, `revealedAtEpochMillis` INTEGER DEFAULT NULL, PRIMARY KEY(`profileId`, `friendUid`))",
         "fields": [
           {
-            "fieldPath": "userId",
-            "columnName": "userId",
+            "fieldPath": "profileId",
+            "columnName": "profileId",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "username",
-            "columnName": "username",
+            "fieldPath": "friendUid",
+            "columnName": "friendUid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "friendCardId",
+            "columnName": "friendCardId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nickJson",
+            "columnName": "nickJson",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -692,14 +711,62 @@
             "notNull": true
           },
           {
-            "fieldPath": "totalStars",
-            "columnName": "totalStars",
-            "affinity": "INTEGER",
-            "notNull": true
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT"
           },
           {
             "fieldPath": "addedAtEpochMillis",
             "columnName": "addedAtEpochMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "revealedAtEpochMillis",
+            "columnName": "revealedAtEpochMillis",
+            "affinity": "INTEGER",
+            "defaultValue": "NULL"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "profileId",
+            "friendUid"
+          ]
+        }
+      },
+      {
+        "tableName": "friend_removal_tombstones",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`profileId` TEXT NOT NULL, `friendUid` TEXT NOT NULL, `myCardId` TEXT NOT NULL, `friendCardId` TEXT NOT NULL, `createdAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `friendUid`))",
+        "fields": [
+          {
+            "fieldPath": "profileId",
+            "columnName": "profileId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "friendUid",
+            "columnName": "friendUid",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "myCardId",
+            "columnName": "myCardId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "friendCardId",
+            "columnName": "friendCardId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "createdAtEpochMillis",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -707,13 +774,14 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "userId"
+            "profileId",
+            "friendUid"
           ]
         }
       },
       {
         "tableName": "app_settings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`singletonId` INTEGER NOT NULL, `activeProfileId` TEXT, `isLocalOnlyMode` INTEGER NOT NULL, `optionalAccountEmail` TEXT, `optionalCloudUserId` TEXT, `appLaunchCount` INTEGER NOT NULL, `crashlyticsConsentPromptShown` INTEGER NOT NULL, `crashlyticsConsentGranted` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`singletonId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`singletonId` INTEGER NOT NULL, `activeProfileId` TEXT, `isLocalOnlyMode` INTEGER NOT NULL, `optionalAccountEmail` TEXT, `cloudUid` TEXT, `appLaunchCount` INTEGER NOT NULL, `crashlyticsConsentPromptShown` INTEGER NOT NULL, `crashlyticsConsentGranted` INTEGER NOT NULL, `updatedAtEpochMillis` INTEGER NOT NULL, PRIMARY KEY(`singletonId`))",
         "fields": [
           {
             "fieldPath": "singletonId",
@@ -738,8 +806,8 @@
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "optionalCloudUserId",
-            "columnName": "optionalCloudUserId",
+            "fieldPath": "cloudUid",
+            "columnName": "cloudUid",
             "affinity": "TEXT"
           },
           {
@@ -880,7 +948,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6c1f1593ecd6f89cf625bad0b92fcc28')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '89a4c1d6b0ac96587255bbcf618da3a2')"
     ]
   }
 }

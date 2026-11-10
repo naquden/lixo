@@ -5,14 +5,16 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.model.ChildProfile
+import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.LevelProgress
+import se.lixo.app.domain.social.Nickname
 
 /**
  * Encodes defaults so a later change to [AvatarAppearance]'s defaults (e.g. `primaryTintHex`)
  * never silently re-skins a persisted avatar, and ignores unknown keys so an older row from a
  * previous app version never fails to decode.
  */
-private val profileJson = Json {
+internal val profileJson = Json {
     ignoreUnknownKeys = true
     encodeDefaults = true
 }
@@ -27,7 +29,8 @@ private inline fun <T> ProfileEntity.decodeOr(field: String, default: T, block: 
 internal fun ChildProfile.toEntity(): ProfileEntity = ProfileEntity(
     id = id,
     displayName = displayName,
-    publicUsername = publicUsername,
+    nicknameJson = nickname?.let { profileJson.encodeToString(it) },
+    friendCardId = friendCardId,
     ageYears = ageYears,
     tutorialCompleted = tutorialCompleted,
     tutorialSkippableByParent = tutorialSkippableByParent,
@@ -55,7 +58,10 @@ internal fun ChildProfile.toEntity(): ProfileEntity = ProfileEntity(
 internal fun ProfileEntity.toDomain(): ChildProfile = ChildProfile(
     id = id,
     displayName = displayName,
-    publicUsername = publicUsername,
+    nickname = nicknameJson?.let { json ->
+        decodeOr("nickname", null as Nickname?) { profileJson.decodeFromString<Nickname>(json) }
+    },
+    friendCardId = friendCardId,
     ageYears = ageYears,
     tutorialCompleted = tutorialCompleted,
     tutorialSkippableByParent = tutorialSkippableByParent,
@@ -116,4 +122,31 @@ internal fun LevelProgressEntity.toDomain(): LevelProgress = LevelProgress(
     completedTimedChallenge = completedTimedChallenge,
     timesCompleted = timesCompleted,
     updatedAtEpochMillis = updatedAtEpochMillis
+)
+
+/** doc/plans/030 §5: never throws on a corrupt `nickJson`/`appearanceJson` row. */
+private inline fun <T> FriendEntity.decodeOr(field: String, default: T, block: () -> T): T =
+    runCatching(block)
+        .onFailure { println("LixoFriends: WARN friend $friendUid $field decode failed: $it") }
+        .getOrDefault(default)
+
+internal fun FriendEntity.toDomain(): FriendProfile = FriendProfile(
+    userId = friendUid,
+    cardId = friendCardId,
+    nick = decodeOr("nick", Nickname(0, 0, 0)) { profileJson.decodeFromString<Nickname>(nickJson) },
+    appearance = decodeOr("appearance", AvatarAppearance()) { profileJson.decodeFromString<AvatarAppearance>(appearanceJson) },
+    label = label,
+    addedAtEpochMillis = addedAtEpochMillis,
+    revealedAtEpochMillis = revealedAtEpochMillis
+)
+
+internal fun FriendProfile.toEntity(profileId: String): FriendEntity = FriendEntity(
+    profileId = profileId,
+    friendUid = userId,
+    friendCardId = cardId,
+    nickJson = profileJson.encodeToString(nick),
+    appearanceJson = profileJson.encodeToString(appearance),
+    label = label,
+    addedAtEpochMillis = addedAtEpochMillis,
+    revealedAtEpochMillis = revealedAtEpochMillis
 )

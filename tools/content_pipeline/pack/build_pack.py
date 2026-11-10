@@ -110,6 +110,14 @@ def load_drop_rules() -> dict:
     return json.loads((PACK_DIR / "drop_rules.json").read_text(encoding="utf-8"))
 
 
+def load_nickname_words() -> dict:
+    """`nicknameWords` (doc/plans/030): Swedish adjective/animal word lists used to render a
+    friend's fallback nickname (`adj + animal + num`), so no free text is ever stored in the
+    cloud. Appending words is safe; see `validate_pack.stability_errors` for the append-only
+    rule that keeps an existing index's word from ever changing."""
+    return json.loads((PACK_DIR / "nickname_words.json").read_text(encoding="utf-8"))
+
+
 def _expand_item_row(row: dict) -> dict:
     if "layers" in row:
         # Hand-authored rows (e.g. a holiday special's catalog/*.json) ship their own layers
@@ -232,6 +240,7 @@ def build(version: int, published_at: str = "") -> bytes:
         "items": build_items(),
         "events": load_events(),
         "dropRules": load_drop_rules(),
+        "nicknameWords": load_nickname_words(),
     }
     return json.dumps(pack, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
@@ -289,6 +298,7 @@ def mini_pack(full: dict) -> dict:
         "items": included_items,
         "events": [],
         "dropRules": filtered_drop_rules,
+        "nicknameWords": full.get("nicknameWords", {"adjectives": [], "animals": []}),
     }
 
 

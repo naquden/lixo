@@ -46,7 +46,21 @@ data class ContentPack(
     val avatars: List<ContentAvatar> = emptyList(),
     val items: List<ContentItem> = emptyList(),
     val events: List<ContentEvent> = emptyList(),
-    val dropRules: DropRules
+    val dropRules: DropRules,
+    /** doc/plans/030: word lists used to render a friend's generated nickname (`Nickname.render`). */
+    val nicknameWords: NicknameWords = NicknameWords()
+)
+
+/**
+ * Swedish adjective/animal word lists (doc/plans/030, doc/content/content-pack.md) used by
+ * `se.lixo.app.domain.social.Nickname` to render a fallback display name (`adj + animal + num`,
+ * e.g. "ModigRäv42") for a friend card, so no free text is ever stored in the cloud. Defaults to
+ * empty lists so a pack from before this field existed still parses.
+ */
+@Serializable
+data class NicknameWords(
+    val adjectives: List<String> = emptyList(),
+    val animals: List<String> = emptyList()
 )
 
 @Serializable

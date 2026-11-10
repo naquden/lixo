@@ -145,6 +145,13 @@ expect fun platformBootId(): String?
 expect fun createPlatformTrustedClockStore(): se.lixo.app.domain.engine.TrustedClockStore
 
 /**
+ * [size] cryptographically-secure random bytes (doc/plans/030 §4): the friend invite code must
+ * not be guessable with `kotlin.random.Random`'s non-CSPRNG default, since it is the only gate on
+ * a no-accept-step friendship. Android: `java.security.SecureRandom`. iOS: `SecRandomCopyBytes`.
+ */
+expect fun secureRandomBytes(size: Int): ByteArray
+
+/**
  * Local persistence for the user's email address when initiating Firebase Email Link Authentication.
  * Required by both Android (`SharedPreferences`) and Apple (`NSUserDefaults`) Email Link Auth guides
  * so the user does not have to re-type their email when opening the sign-in link on the same device.
@@ -154,6 +161,29 @@ expect object PendingEmailLinkStorage {
     fun getSavedEmail(): String?
     fun clearSavedEmail()
 }
+
+/** Result of one [QrScanner.scan] attempt (doc/plans/030 §7). */
+sealed interface QrScanResult {
+    /** [raw] is the decoded QR payload, not yet parsed into a friend code. */
+    data class Success(val raw: String) : QrScanResult
+    data object Cancelled : QrScanResult
+    /** No scanner available on this platform/device (e.g. iOS today, or Play Services missing). */
+    data object Unavailable : QrScanResult
+}
+
+/**
+ * Cross-platform QR scanner contract (doc/plans/030 §7), provided to [se.lixo.app.ui.screens.social.AvatarMapScreen]
+ * as a plain constructor parameter (not a composition local) so instrumented tests can pass a
+ * fake implementation instead of [createPlatformQrScanner]. Android uses the Google code scanner
+ * (`play-services-code-scanner`), which needs no `CAMERA` permission; iOS always returns
+ * [QrScanResult.Unavailable] (no iOS scanner in scope for 030).
+ */
+interface QrScanner {
+    suspend fun scan(): QrScanResult
+}
+
+/** Builds the platform's real [QrScanner]. */
+expect fun createPlatformQrScanner(): QrScanner
 
 /**
  * Cross-platform dispatcher receiving incoming Firebase Email Link deep links from:
@@ -181,3 +211,34 @@ object EmailLinkAuthDispatcher {
         _incomingLink.value = null
     }
 }
+
+/**
+ * Cross-platform dispatcher for the `lixo://friend/<code>` deep link (doc/plans/030 §7): a
+ * [android.content.Intent] `VIEW`/`DEFAULT`/`BROWSABLE` filter on `MainActivity` only *routes*
+ * the Avatar tab open with the code prefilled into the "Lägg till kompis" tab — nothing is ever
+ * redeemed automatically. [se.lixo.app.ui.LixoApp] observes [incomingFriendCode] and clears it
+ * via [consumeIncomingFriendCode] once the code has been handed to `AvatarMapScreen`.
+ */
+object FriendDeepLinkDispatcher {
+    private val _incomingFriendCode = MutableStateFlow<String?>(null)
+    val incomingFriendCode: StateFlow<String?> = _incomingFriendCode.asStateFlow()
+
+    /** [raw] is the whole `lixo://friend/<code>` link; parsing happens downstream via `parseFriendCode`. */
+    fun onIncomingLink(raw: String?): Boolean {
+        val trimmed = raw?.trim().orEmpty()
+        if (!trimmed.lowercase().startsWith("lixo://friend/")) return false
+        _incomingFriendCode.value = trimmed
+        return true
+    }
+
+    fun consumeIncomingFriendCode() {
+        _incomingFriendCode.value = null
+    }
+}
+
+/**
+ * doc/plans/030 §7: whether the system "remove animations" setting is on, so [se.lixo.app.ui.LixoApp]
+ * can provide [se.lixo.app.ui.feedback.LocalReducedMotion] at the root. Android: the
+ * `ANIMATOR_DURATION_SCALE` system setting is `0`. iOS: `UIAccessibilityIsReduceMotionEnabled()`.
+ */
+expect fun isReducedMotionEnabled(): Boolean

@@ -30,6 +30,7 @@ MAX_LAYERS = 24
 MAX_HIDES_PARTS = 8
 MAX_PARTS = 16
 MAX_PATH_CHARS = 4096
+MAX_NICKNAME_WORDS = 256
 
 ID_REGEX = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
 PART_REGEX = re.compile(r"^[a-z][a-z0-9_]{1,31}$")
@@ -458,6 +459,25 @@ def avatar_errors(avatar: dict) -> List[str]:
     return errors
 
 
+def nickname_words_errors(words: dict) -> List[str]:
+    """Port of the Kotlin `ContentPackValidator` nicknameWords check (doc/plans/030): each of
+    `adjectives`/`animals` must have unique, non-blank, whitespace-free entries, at most
+    `MAX_NICKNAME_WORDS` each. Append-only stability (an existing index's word never changes)
+    is checked separately in `stability_errors`, since it needs the previous pack to compare."""
+    errors: List[str] = []
+    for key in ("adjectives", "animals"):
+        entries = words.get(key, [])
+        if len(entries) > MAX_NICKNAME_WORDS:
+            errors.append(f"nicknameWords.{key} has more than {MAX_NICKNAME_WORDS} entries")
+        if any(not isinstance(w, str) or not w.strip() or w != w.strip() for w in entries):
+            errors.append(f"nicknameWords.{key} has a blank or padded entry")
+        if any(isinstance(w, str) and re.search(r"\s", w) for w in entries):
+            errors.append(f"nicknameWords.{key} has an entry containing whitespace")
+        if len(set(entries)) != len(entries):
+            errors.append(f"nicknameWords.{key} has duplicate entries")
+    return errors
+
+
 def drop_rules_errors(rules: dict) -> List[str]:
     errors: List[str] = []
     weights = rules.get("rarityWeights", {})
@@ -527,6 +547,8 @@ def validate(pack: dict) -> List[str]:
         errors.append("dropRules invalid: missing")
         return errors
     errors.extend(drop_rules_errors(drop_rules))
+
+    errors.extend(nickname_words_errors(pack.get("nicknameWords", {})))
 
     declared_event_ids = {e["id"] for e in events if ID_REGEX.match(e.get("id", ""))}
 
@@ -628,6 +650,17 @@ def stability_errors(new: dict, old: dict) -> List[str]:
     for item_id, slot in old_slots.items():
         if item_id in new_slots and new_slots[item_id] != slot:
             errors.append(f"item {item_id} slot changed from {slot} to {new_slots[item_id]}")
+
+    old_nickname_words = old.get("nicknameWords", {})
+    new_nickname_words = new.get("nicknameWords", {})
+    for key in ("adjectives", "animals"):
+        old_list = old_nickname_words.get(key, [])
+        new_list = new_nickname_words.get(key, [])
+        if len(new_list) < len(old_list):
+            errors.append(f"nicknameWords.{key} shrank from {len(old_list)} to {len(new_list)} entries")
+        for i, word in enumerate(old_list):
+            if i >= len(new_list) or new_list[i] != word:
+                errors.append(f"nicknameWords.{key}[{i}] changed (was {word!r})")
 
     if new.get("version", 0) <= old.get("version", 0):
         errors.append(f"version {new.get('version')} not greater than {old.get('version')}")

@@ -78,6 +78,9 @@ class ActiveContent private constructor(val pack: ContentPack) {
 
     val dropRules: DropRules = pack.dropRules
 
+    /** Word lists for `se.lixo.app.domain.social.Nickname.render`/`randomNickname`. */
+    val nicknameWords: NicknameWords = pack.nicknameWords
+
     /** Looks up a localized string, falling back to Swedish, then to [key] itself. */
     fun string(key: String, lang: String = "sv"): String =
         pack.strings[lang]?.get(key) ?: pack.strings["sv"]?.get(key) ?: key

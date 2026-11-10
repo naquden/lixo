@@ -40,9 +40,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import se.lixo.app.data.repository.AppPrivacySettings
+import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.DailyActivityRecord
+import se.lixo.app.domain.model.EMAIL_BACKUP_FEATURE_ENABLED
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.MathErrorLog
 import se.lixo.app.domain.model.StruggledWordLog
@@ -65,6 +67,7 @@ import se.lixo.app.ui.theme.LixoStrings
 fun ParentGateAndDashboardScreen(
     profiles: List<ChildProfile>,
     activeProfile: ChildProfile,
+    content: ActiveContent,
     dailyActivity: Map<String, DailyActivityRecord>,
     struggledWords: List<StruggledWordLog>,
     mathErrors: List<MathErrorLog>,
@@ -619,7 +622,12 @@ fun ParentGateAndDashboardScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "@${friend.username}",
+                                        // doc/plans/030 §7: "Kalle (@ModigRäv42)" when a label is
+                                        // set, else just "@ModigRäv42" -- the parent always sees
+                                        // the real generated nickname next to any private label.
+                                        text = friend.label?.let { label ->
+                                            "$label (@${friend.nick.render(content.nicknameWords)})"
+                                        } ?: "@${friend.nick.render(content.nicknameWords)}",
                                         style = MaterialTheme.typography.titleMedium,
                                         color = LixoColors.TextPrimary
                                     )
@@ -667,6 +675,12 @@ fun ParentGateAndDashboardScreen(
                         color = LixoColors.TextSecondary
                     )
 
+                    // doc/plans/030 §1: the email/account block is hidden from the UI (kept here,
+                    // not deleted) until email backup comes back as its own feature. Every child
+                    // now identifies to Firestore via anonymous auth (`ensureCloudIdentity`), and
+                    // hiding this prevents a parent from accidentally replacing that anonymous
+                    // user with an email-signed-in one, which would orphan every friend card.
+                    if (EMAIL_BACKUP_FEATURE_ENABLED) {
                     Spacer(Modifier.height(14.dp))
 
                     Text(
@@ -774,6 +788,7 @@ fun ParentGateAndDashboardScreen(
                             )
                         }
                     }
+                    } // if (false): email/account block (doc/plans/030 §1)
 
                     Spacer(Modifier.height(16.dp))
 

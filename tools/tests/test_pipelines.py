@@ -205,7 +205,7 @@ class LixoPipelineAndSpecificationTests(unittest.TestCase):
         rules_file = self.repo_root / "firebase" / "firestore.rules"
         self.assertTrue(rules_file.exists())
         rules_text = rules_file.read_text(encoding="utf-8")
-        self.assertIn("public_avatars", rules_text)
+        self.assertIn("friend_cards", rules_text)
         self.assertNotIn("match /wardrobe/", rules_text)
 
     def test_firebase_project_id_configured_across_all_configs(self) -> None:
@@ -644,6 +644,61 @@ class ContentPackPipelineTests(unittest.TestCase):
 
         catalog = generate_catalog(per_slot=64, seed=42)
         self.assertEqual(level_rewards, self.gen_catalog.replay_level_rewards(catalog))
+
+    def test_nickname_words_authored_and_built(self) -> None:
+        """doc/plans/030 §3: the authored word lists are unique/non-blank/no-whitespace and end
+        up verbatim in the built pack."""
+        words = json.loads((self.pack_dir / "nickname_words.json").read_text(encoding="utf-8"))
+        self.assertEqual(self.validate_pack.nickname_words_errors(words), [])
+        for key in ("adjectives", "animals"):
+            entries = words[key]
+            self.assertGreaterEqual(len(entries), 1)
+            self.assertLessEqual(len(entries), self.validate_pack.MAX_NICKNAME_WORDS)
+            self.assertEqual(len(set(entries)), len(entries))
+            for word in entries:
+                self.assertNotIn(" ", word)
+                self.assertTrue(word)
+                self.assertEqual(word, word.strip())
+
+        pack = json.loads(self.build_pack.build(1).decode("utf-8"))
+        self.assertEqual(pack["nicknameWords"], words)
+
+    def test_nickname_words_errors_catches_duplicates_blanks_and_too_many(self) -> None:
+        self.assertEqual(
+            self.validate_pack.nickname_words_errors({"adjectives": ["Modig"], "animals": ["Räv"]}), []
+        )
+        dup_errors = self.validate_pack.nickname_words_errors(
+            {"adjectives": ["Modig", "Modig"], "animals": ["Räv"]}
+        )
+        self.assertTrue(any("duplicate" in e for e in dup_errors), dup_errors)
+
+        blank_errors = self.validate_pack.nickname_words_errors(
+            {"adjectives": ["Modig", ""], "animals": ["Räv"]}
+        )
+        self.assertTrue(any("blank" in e for e in blank_errors), blank_errors)
+
+        whitespace_errors = self.validate_pack.nickname_words_errors(
+            {"adjectives": ["Modig Modig"], "animals": ["Räv"]}
+        )
+        self.assertTrue(any("whitespace" in e for e in whitespace_errors), whitespace_errors)
+
+        too_many = {"adjectives": [f"Ord{i}" for i in range(257)], "animals": ["Räv"]}
+        too_many_errors = self.validate_pack.nickname_words_errors(too_many)
+        self.assertTrue(any("more than" in e for e in too_many_errors), too_many_errors)
+
+    def test_nickname_words_stability_diff_is_append_only(self) -> None:
+        old = {"nicknameWords": {"adjectives": ["Modig", "Glad"], "animals": ["Räv", "Uggla"]}, "version": 1}
+
+        appended = {"nicknameWords": {"adjectives": ["Modig", "Glad", "Snabb"], "animals": ["Räv", "Uggla"]}, "version": 2}
+        self.assertEqual(self.validate_pack.stability_errors(appended, old), [])
+
+        changed = {"nicknameWords": {"adjectives": ["Stolt", "Glad"], "animals": ["Räv", "Uggla"]}, "version": 2}
+        errors = self.validate_pack.stability_errors(changed, old)
+        self.assertTrue(any("adjectives[0] changed" in e for e in errors), errors)
+
+        shrunk = {"nicknameWords": {"adjectives": ["Modig"], "animals": ["Räv", "Uggla"]}, "version": 2}
+        errors = self.validate_pack.stability_errors(shrunk, old)
+        self.assertTrue(any("shrank" in e for e in errors), errors)
 
     def test_stability_diff(self) -> None:
         pack = json.loads(self.build_pack.build(5).decode("utf-8"))

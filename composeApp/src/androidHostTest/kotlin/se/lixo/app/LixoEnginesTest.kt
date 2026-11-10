@@ -19,6 +19,8 @@ import se.lixo.app.data.remote.LIXO_FIREBASE_HOSTING_DOMAIN
 import se.lixo.app.data.remote.LIXO_IOS_BUNDLE_ID
 import se.lixo.app.data.remote.LexiconMeta
 import se.lixo.app.data.remote.SyncMergeEngine
+import se.lixo.app.data.remote.fake.FakeFriendCloud
+import se.lixo.app.data.remote.fake.FakeFriendCloudStore
 import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.engine.MathEngine
@@ -42,7 +44,6 @@ import se.lixo.app.domain.model.Course
 import se.lixo.app.domain.model.DailyActivityRecord
 import se.lixo.app.domain.model.DictionaryEntry
 import se.lixo.app.domain.model.EquipmentSlot
-import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathProblem
@@ -1843,112 +1844,114 @@ class LixoEnginesTest {
         assertEquals("mån-fy-ren", repo.lookupDictionaryWord("månfyren").syllables)
     }
 
-    @Test
-    fun addFriendByQuery_lookupFindsProfile_addsFriendFirstInList() = runTest {
-        val looked = FriendProfile(
-            userId = "friend_found_1",
-            username = "stjarn_sokare",
-            appearance = AvatarAppearance(avatarId = "avatar_cat"),
-            totalStars = 10
-        )
-        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
-            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
-                Result.success(looked)
-        }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true, content = BundledTestContent.repository())
-        val before = repo.friendsOfActiveProfile()
+    // doc/plans/030: addFriendByQuery/lookupFriendByUsernameOrQr are gone (replaced by invite
+    // codes); the detailed flow matrix lives in commonTest's FriendFlowTest against
+    // FakeFriendCloud. These keep basic repository-level coverage on the JVM host test too.
 
-        val result = repo.addFriendByQuery("stjarn_sokare")
+    private fun fakeCloudGatewayForUid(uid: String): CloudSyncGateway = object : CloudSyncGateway by FirebaseSyncService() {
+        override suspend fun ensureSignedIn(): Result<String> = Result.success(uid)
+    }
+
+    @Test
+    fun addFriendByCode_redeemsValidCode_addsFriendBothSides() = runTest {
+        val store = FakeFriendCloudStore()
+        val repoA = LixoRepository(
+            fakeCloudGatewayForUid("uidA"),
+            friendCloud = FakeFriendCloud("uidA", store),
+            lexiconCache = null,
+            isDebugBuild = true,
+            content = BundledTestContent.repository()
+        )
+        val repoB = LixoRepository(
+            fakeCloudGatewayForUid("uidB"),
+            friendCloud = FakeFriendCloud("uidB", store),
+            lexiconCache = null,
+            isDebugBuild = true,
+            content = BundledTestContent.repository()
+        )
+
+        val invite = repoA.createFriendCode().getOrThrow()
+        val result = repoB.addFriendByCode(invite.code, fromQr = false)
         assertTrue(result.isSuccess)
-        assertEquals("friend_found_1", result.getOrNull()?.userId)
-        assertEquals("friend_found_1", repo.friendsOfActiveProfile().first().userId)
-        assertEquals(before.size + 1, repo.friendsOfActiveProfile().size)
+        assertEquals(1, repoB.friendsOfActiveProfile().size)
+
+        repoA.refreshFriends()
+        assertEquals(1, repoA.friendsOfActiveProfile().size)
     }
 
     @Test
-    fun addFriendByQuery_lookupReturnsNull_failsWithNotFoundAndLeavesListUnchanged() = runTest {
-        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
-            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
-                Result.success(null)
-        }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true, content = BundledTestContent.repository())
-        val before = repo.friendsOfActiveProfile()
-
-        val result = repo.addFriendByQuery("nobody_here")
-        assertTrue(result.isFailure)
-        assertEquals(AddFriendError.NOT_FOUND, (result.exceptionOrNull() as? AddFriendException)?.reason)
-        assertEquals(before, repo.friendsOfActiveProfile())
-    }
-
-    @Test
-    fun addFriendByQuery_sameFriendTwice_secondCallFailsWithAlreadyFriend() = runTest {
-        val looked = FriendProfile(
-            userId = "friend_found_2",
-            username = "dubbel_vän",
-            appearance = AvatarAppearance(avatarId = "avatar_cat"),
-            totalStars = 5
+    fun addFriendByCode_invalidCode_failsWithInvalidQr() = runTest {
+        val repo = LixoRepository(
+            fakeCloudGatewayForUid("uidX"),
+            friendCloud = FakeFriendCloud("uidX"),
+            lexiconCache = null,
+            isDebugBuild = true,
+            content = BundledTestContent.repository()
         )
-        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
-            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
-                Result.success(looked)
-        }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true, content = BundledTestContent.repository())
+        val result = repo.addFriendByCode("not-a-code!!", fromQr = false)
+        assertTrue(result.isFailure)
+        assertEquals(AddFriendError.INVALID_QR, (result.exceptionOrNull() as? AddFriendException)?.reason)
+    }
 
-        val first = repo.addFriendByQuery("dubbel_vän")
+    @Test
+    fun addFriendByCode_sameCodeTwice_secondCallFailsWithAlreadyFriend() = runTest {
+        val store = FakeFriendCloudStore()
+        val repoA = LixoRepository(
+            fakeCloudGatewayForUid("uidA2"),
+            friendCloud = FakeFriendCloud("uidA2", store),
+            lexiconCache = null,
+            isDebugBuild = true,
+            content = BundledTestContent.repository()
+        )
+        val repoB = LixoRepository(
+            fakeCloudGatewayForUid("uidB2"),
+            friendCloud = FakeFriendCloud("uidB2", store),
+            lexiconCache = null,
+            isDebugBuild = true,
+            content = BundledTestContent.repository()
+        )
+
+        val invite = repoA.createFriendCode().getOrThrow()
+        val first = repoB.addFriendByCode(invite.code, fromQr = false)
         assertTrue(first.isSuccess)
-        val countAfterFirst = repo.friendsOfActiveProfile().size
+        val countAfterFirst = repoB.friendsOfActiveProfile().size
 
-        val second = repo.addFriendByQuery("dubbel_vän")
+        val second = repoB.addFriendByCode(invite.code, fromQr = false)
         assertTrue(second.isFailure)
         assertEquals(AddFriendError.ALREADY_FRIEND, (second.exceptionOrNull() as? AddFriendException)?.reason)
-        assertEquals(countAfterFirst, repo.friendsOfActiveProfile().size)
-    }
-
-    @Test
-    fun addFriendByQuery_lookupFails_failsWithNetwork() = runTest {
-        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
-            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
-                Result.failure(AddFriendException(AddFriendError.NETWORK))
-        }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true, content = BundledTestContent.repository())
-        val before = repo.friendsOfActiveProfile()
-
-        val result = repo.addFriendByQuery("offline_user")
-        assertTrue(result.isFailure)
-        assertEquals(AddFriendError.NETWORK, (result.exceptionOrNull() as? AddFriendException)?.reason)
-        assertEquals(before, repo.friendsOfActiveProfile())
+        assertEquals(countAfterFirst, repoB.friendsOfActiveProfile().size)
     }
 
     @Test
     fun friends_freshRepoIsEmptyAndFriendsAreScopedPerProfile() = runTest {
-        val looked = FriendProfile(
-            userId = "friend_scoped_1",
-            username = "egen_kompis",
-            appearance = AvatarAppearance(avatarId = "avatar_cat"),
-            totalStars = 3
+        val store = FakeFriendCloudStore()
+        val repoA = LixoRepository(
+            fakeCloudGatewayForUid("uidA3"),
+            friendCloud = FakeFriendCloud("uidA3", store),
+            lexiconCache = null,
+            isDebugBuild = true,
+            content = BundledTestContent.repository()
         )
-        val fakeGateway = object : CloudSyncGateway by FirebaseSyncService() {
-            override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> =
-                Result.success(looked)
-        }
-        val repo = LixoRepository(fakeGateway, lexiconCache = null, isDebugBuild = true, content = BundledTestContent.repository())
-        assertTrue(repo.friendsOfActiveProfile().isEmpty())
+        val repoB = LixoRepository(
+            fakeCloudGatewayForUid("uidB3"),
+            friendCloud = FakeFriendCloud("uidB3", store),
+            lexiconCache = null,
+            isDebugBuild = true,
+            content = BundledTestContent.repository()
+        )
+        assertTrue(repoB.friendsOfActiveProfile().isEmpty())
 
-        val firstProfileId = repo.activeProfileId.value!!
-        assertTrue(repo.addFriendByQuery("egen_kompis").isSuccess)
-        assertEquals(1, repo.friendsOfActiveProfile().size)
+        val invite = repoA.createFriendCode().getOrThrow()
+        val firstProfileId = repoB.activeProfileId.value!!
+        assertTrue(repoB.addFriendByCode(invite.code, fromQr = false).isSuccess)
+        assertEquals(1, repoB.friendsOfActiveProfile().size)
 
-        val sibling = repo.createProfile("Syskon", 7)
-        repo.selectProfile(sibling.id)
-        assertTrue(repo.friendsOfActiveProfile().isEmpty())
+        val sibling = repoB.createProfile("Syskon", 7)
+        repoB.selectProfile(sibling.id)
+        assertTrue(repoB.friendsOfActiveProfile().isEmpty())
 
-        // Same friend may be added independently by the sibling
-        assertTrue(repo.addFriendByQuery("egen_kompis").isSuccess)
-        repo.removeFriend("friend_scoped_1")
-        assertTrue(repo.friendsOfActiveProfile().isEmpty())
-
-        repo.selectProfile(firstProfileId)
-        assertEquals(listOf("friend_scoped_1"), repo.friendsOfActiveProfile().map { it.userId })
+        repoB.selectProfile(firstProfileId)
+        assertEquals(1, repoB.friendsOfActiveProfile().size)
     }
 
     @Test

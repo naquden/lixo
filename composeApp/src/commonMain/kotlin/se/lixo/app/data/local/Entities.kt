@@ -8,7 +8,10 @@ import androidx.room.PrimaryKey
 data class ProfileEntity(
     @PrimaryKey val id: String,
     val displayName: String,
-    val publicUsername: String?,
+    /** JSON of [se.lixo.app.domain.social.Nickname] (030), or null until a friend card exists. */
+    @ColumnInfo(defaultValue = "NULL") val nicknameJson: String? = null,
+    /** This profile's `friend_cards/{cardId}` id (030), or null until a friend card exists. */
+    @ColumnInfo(defaultValue = "NULL") val friendCardId: String? = null,
     val ageYears: Int,
     val tutorialCompleted: Boolean,
     val tutorialSkippableByParent: Boolean,
@@ -154,13 +157,43 @@ data class LexiconMetaEntity(
     val entryCount: Int
 )
 
-@Entity(tableName = "friends")
+/**
+ * A friend as seen by one local child profile (doc/plans/030 §5): [friendCardId]/[nickJson]/
+ * [appearanceJson] mirror the friend's cloud `friend_cards/{cardId}` doc (kept fresh by
+ * [se.lixo.app.data.repository.LixoRepository.observeFriendCards]); [label] is the private name
+ * *this* device's child gave the friend and is Room-only, never sent to the cloud or logged.
+ * [revealedAtEpochMillis] is null until the "Ny kompis!" celebration has played on this device.
+ */
+@Entity(tableName = "friends", primaryKeys = ["profileId", "friendUid"])
 data class FriendEntity(
-    @PrimaryKey val userId: String,
-    val username: String,
+    val profileId: String,
+    val friendUid: String,
+    val friendCardId: String,
+    val nickJson: String,
     val appearanceJson: String,
-    val totalStars: Int,
-    val addedAtEpochMillis: Long
+    val label: String? = null,
+    val addedAtEpochMillis: Long,
+    @ColumnInfo(defaultValue = "NULL") val revealedAtEpochMillis: Long? = null
+)
+
+/**
+ * A pending "please also delete this friend on the cloud" tombstone (M2 in
+ * temp/verify/030_review.md): [se.lixo.app.data.repository.LixoRepository.removeFriend] deletes
+ * the [FriendEntity] row from Room immediately (so the UI updates right away) but the matching
+ * [se.lixo.app.data.remote.FriendCloud.removeFriend] cloud write is fire-and-forget -- if that
+ * fails (offline, app killed mid-flight), the next [se.lixo.app.data.repository.LixoRepository.refreshFriends]
+ * would otherwise re-discover the still-live reader doc on the cloud and re-insert the friend
+ * (replaying the "Ny kompis!" reveal). A row here survives until the cloud delete actually
+ * succeeds: [refreshFriends] skips any uid with a tombstone when re-adding readers, and retries
+ * the cloud delete for every tombstone still present.
+ */
+@Entity(tableName = "friend_removal_tombstones", primaryKeys = ["profileId", "friendUid"])
+data class FriendRemovalTombstoneEntity(
+    val profileId: String,
+    val friendUid: String,
+    val myCardId: String,
+    val friendCardId: String,
+    val createdAtEpochMillis: Long
 )
 
 /**
@@ -194,7 +227,12 @@ data class AppSettingsEntity(
     val activeProfileId: String?,
     val isLocalOnlyMode: Boolean = true,
     val optionalAccountEmail: String? = null,
-    val optionalCloudUserId: String? = null,
+    /**
+     * The current Firebase Auth uid (030): anonymous by default, or the uid after an optional
+     * email-account upgrade. Renamed from `optionalCloudUserId` in place (Room schema stays v1,
+     * destructive fallback; see [LixoDatabase]'s KDoc).
+     */
+    val cloudUid: String? = null,
     val appLaunchCount: Int = 0,
     val crashlyticsConsentPromptShown: Boolean = false,
     val crashlyticsConsentGranted: Boolean = false,

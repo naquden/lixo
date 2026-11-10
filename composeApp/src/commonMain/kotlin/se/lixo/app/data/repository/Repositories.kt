@@ -3,23 +3,38 @@ package se.lixo.app.data.repository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.random.Random
+import se.lixo.app.data.local.FriendRemovalTombstone
 import se.lixo.app.data.local.LexiconCache
 import se.lixo.app.data.local.ProfileStore
 import se.lixo.app.data.local.createPlatformLexiconCache
 import se.lixo.app.data.local.createPlatformProfileStore
+import se.lixo.app.data.remote.CardState
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.FirebaseSyncService
+import se.lixo.app.data.remote.FriendCloud
+import se.lixo.app.data.remote.FriendInvite
 import se.lixo.app.data.remote.SyncMergeEngine
+import se.lixo.app.data.remote.isValidFriendCardId
 import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.content.ContentItem
@@ -50,6 +65,9 @@ import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.domain.model.achievementId
 import se.lixo.app.domain.model.requiresAiMode
+import se.lixo.app.domain.social.Nickname
+import se.lixo.app.domain.social.parseFriendCode
+import se.lixo.app.domain.social.randomNickname
 import se.lixo.app.platform.PendingEmailLinkStorage
 import se.lixo.app.platform.PlatformFeatureFlags
 import se.lixo.app.domain.model.AchievementStrings
@@ -73,6 +91,10 @@ data class AppPrivacySettings(
  */
 class LixoRepository(
     private val cloudGateway: CloudSyncGateway = FirebaseSyncService(),
+    /** doc/plans/030 §4: separate from [cloudGateway] so tests can inject a `FakeFriendCloud`. */
+    private val friendCloud: FriendCloud = cloudGateway as? FriendCloud ?: FirebaseSyncService(),
+    /** Injected so friend-flow tests can fast-forward a 10-minute invite window deterministically. */
+    private val clockMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val lexiconCache: LexiconCache? = createPlatformLexiconCache(),
     /**
      * Debug builds seed the dummy "Saga" profile (`DEBUG_SAGA_PROFILE_ID`) only when it is
@@ -141,6 +163,34 @@ class LixoRepository(
     fun friendsOfActiveProfile(): List<FriendProfile> =
         _activeProfileId.value?.let { _friendsByProfile.value[it] }.orEmpty()
 
+    /** doc/plans/030 §1: the current Firebase Auth uid, or null until [ensureCloudIdentity] succeeds. */
+    private val _cloudUid = MutableStateFlow<String?>(null)
+    val cloudUid: StateFlow<String?> = _cloudUid.asStateFlow()
+
+    /** The open invite per profile created by [createFriendCode], so re-opening the sheet within the 10-min window shows the same code. */
+    private val openInviteByProfile = mutableMapOf<String, FriendInvite>()
+
+    /** doc/plans/030 §6: `content.sync()` is triggered at most once per session for an unknown friend item id. */
+    private var didSyncForUnknownFriendItem = false
+
+    private var cardUpsertJob: Job? = null
+
+    /**
+     * doc/plans/030 review M8: serializes [ensureMyCard] so two near-simultaneous callers (e.g.
+     * [createFriendCode] and [addFriendByCode] both firing from a cold Avatar-tab open) can't both
+     * see `profile.friendCardId == null` and each create their own `friend_cards` document.
+     */
+    private val ensureMyCardMutex = kotlinx.coroutines.sync.Mutex()
+
+    /**
+     * doc/plans/030 review L4: profile ids whose own card failed to push (debounced upsert, or an
+     * offline [shuffleNickname]/[ensureMyCard]); retried from [refreshFriends] rather than lost.
+     */
+    private val dirtyCardProfileIds = mutableSetOf<String>()
+
+    /** doc/plans/030 review M2: uids currently tombstoned per profile, loaded once at startup. */
+    private val _tombstonedUidsByProfile = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
+
     private val _privacySettings = MutableStateFlow(AppPrivacySettings())
     val privacySettings: StateFlow<AppPrivacySettings> = _privacySettings.asStateFlow()
 
@@ -165,7 +215,6 @@ class LixoRepository(
     private fun buildDebugSagaProfile(now: Long): ChildProfile = ChildProfile(
         id = DEBUG_SAGA_PROFILE_ID,
         displayName = "Saga",
-        publicUsername = "saga_stjarna",
         ageYears = 8,
         tutorialCompleted = true,
         tutorialSkippableByParent = false,
@@ -203,6 +252,15 @@ class LixoRepository(
             val persistedProgress = runCatching { store.loadLevelProgress() }
                 .onFailure { println("LixoProfiles: WARN loadLevelProgress failed: $it") }
                 .getOrDefault(emptyList())
+            val persistedFriends = runCatching { store.loadFriends() }
+                .onFailure { println("LixoProfiles: WARN loadFriends failed: $it") }
+                .getOrDefault(emptyMap())
+            val persistedCloudUid = runCatching { store.loadCloudUid() }
+                .onFailure { println("LixoProfiles: WARN loadCloudUid failed: $it") }
+                .getOrNull()
+            val persistedTombstones = runCatching { store.loadFriendRemovalTombstones() }
+                .onFailure { println("LixoProfiles: WARN loadFriendRemovalTombstones failed: $it") }
+                .getOrDefault(emptyList())
 
             var profilesToMerge = persisted
             if (isDebugBuild && persisted.none { it.id == DEBUG_SAGA_PROFILE_ID }) {
@@ -228,6 +286,25 @@ class LixoRepository(
                     persistedByProfile[pid].orEmpty() + mem[pid].orEmpty()
                 }
             }
+            _friendsByProfile.update { mem ->
+                (persistedFriends.keys + mem.keys).associateWith { pid ->
+                    val memUids = mem[pid].orEmpty().map { it.userId }.toSet()
+                    persistedFriends[pid].orEmpty().filterNot { it.userId in memUids } + mem[pid].orEmpty()
+                }
+            }
+            if (_cloudUid.value == null) _cloudUid.value = persistedCloudUid
+            for (tombstone in persistedTombstones) {
+                pendingRemovalsByProfile.getOrPut(tombstone.profileId) { mutableMapOf() }
+                    .putIfAbsent(tombstone.friendUid, tombstone)
+            }
+            _tombstonedUidsByProfile.update { mem ->
+                val persistedByProfile = persistedTombstones.groupBy({ it.profileId }, { it.friendUid })
+                    .mapValues { (_, uids) -> uids.toSet() }
+                (persistedByProfile.keys + mem.keys).associateWith { pid ->
+                    persistedByProfile[pid].orEmpty() + mem[pid].orEmpty()
+                }
+            }
+            persistScope.launch { retryPendingFriendRemovals(persistedTombstones) }
 
             val merged = _profiles.value
             val resolvedActiveId = _activeProfileId.value?.takeIf { id -> merged.any { it.id == id } }
@@ -402,6 +479,7 @@ class LixoRepository(
                 }
             }
         }
+        scheduleCardUpsertDebounced()
     }
 
     fun selectAvatarOnActiveProfile(avatarId: String) {
@@ -416,6 +494,7 @@ class LixoRepository(
                 )
             }
         }
+        scheduleCardUpsertDebounced()
     }
 
     fun customizeBaseAppearanceOnActiveProfile(
@@ -438,6 +517,42 @@ class LixoRepository(
                 )
             }
         }
+        scheduleCardUpsertDebounced()
+    }
+
+    /**
+     * doc/plans/030 §4: "own gear goes live" -- 2 s after the equip/avatar/customize calls above,
+     * re-upserts the active profile's own friend card (if it has one) so friends see the change.
+     * The label is device-only and never part of this payload.
+     */
+    private fun scheduleCardUpsertDebounced() {
+        val activeId = _activeProfileId.value ?: return
+        cardUpsertJob?.cancel()
+        cardUpsertJob = persistScope.launch {
+            delay(2000)
+            val profile = _profiles.value.firstOrNull { it.id == activeId } ?: return@launch
+            val cardId = profile.friendCardId ?: return@launch
+            val nickname = profile.nickname ?: return@launch
+            // doc/plans/030 review L4: the debounced push's result used to be discarded, so a
+            // failed push (offline, transient error) was silently lost -- the friend's gear would
+            // never update for anyone else until the NEXT unrelated equip/avatar change happened
+            // to succeed. Mark the profile dirty on failure and retry from [refreshFriends].
+            friendCloud.upsertMyCard(cardId, nickname, profile.appearance)
+                .onSuccess { dirtyCardProfileIds.remove(activeId) }
+                .onFailure { dirtyCardProfileIds.add(activeId) }
+        }
+    }
+
+    /**
+     * doc/plans/030 review L4: retries this profile's own card push if [scheduleCardUpsertDebounced]
+     * (or [ensureMyCard]/[shuffleNickname]) previously failed. Called from [refreshFriends].
+     */
+    private suspend fun retryDirtyCardIfAny(profile: ChildProfile) {
+        if (profile.id !in dirtyCardProfileIds) return
+        val cardId = profile.friendCardId ?: return
+        val nickname = profile.nickname ?: return
+        friendCloud.upsertMyCard(cardId, nickname, profile.appearance)
+            .onSuccess { dirtyCardProfileIds.remove(profile.id) }
     }
 
     fun saveLevelProgress(progress: LevelProgress) {
@@ -524,42 +639,369 @@ class LixoRepository(
         )
     }
 
-    suspend fun addFriendByQuery(query: String): Result<FriendProfile> {
-        val lookupResult = cloudGateway.lookupFriendByUsernameOrQr(query)
-        if (lookupResult.isFailure) {
-            val cause = lookupResult.exceptionOrNull()
-            val reason = (cause as? AddFriendException)?.reason ?: AddFriendError.NETWORK
-            return Result.failure(AddFriendException(reason))
-        }
-        val friend = lookupResult.getOrNull()
-            ?: return Result.failure(AddFriendException(AddFriendError.NOT_FOUND))
+    /**
+     * doc/plans/030 §1: the current Firebase Auth uid, signing in anonymously if needed. Cached
+     * in [_cloudUid] (and Room, via [ProfileStore.saveCloudUid]) so a failed/offline attempt is
+     * retried lazily the next time a friend action needs it, rather than blocking startup.
+     */
+    /**
+     * The same clock [createFriendCode]/[addFriendByCode]/etc. use internally (doc/plans/030 §7),
+     * exposed so the UI's invite countdown reads the same time source -- and so instrumented
+     * tests that construct this repository with a fake `clockMillis` can fast-forward the
+     * countdown deterministically instead of racing a real wall clock.
+     */
+    fun nowMillis(): Long = clockMillis()
 
-        val activeId = _activeProfileId.value
-            ?: return Result.failure(AddFriendException(AddFriendError.NOT_FOUND))
-        val alreadyFriend = _friendsByProfile.value[activeId].orEmpty().any {
-            it.userId == friend.userId || it.username.equals(friend.username, ignoreCase = true)
+    suspend fun ensureCloudIdentity(): Result<String> {
+        _cloudUid.value?.let { return Result.success(it) }
+        val result = cloudGateway.ensureSignedIn()
+        result.onSuccess { uid ->
+            _cloudUid.value = uid
+            enqueueProfileWrite { saveCloudUid(uid) }
         }
-        if (alreadyFriend) {
-            return Result.failure(AddFriendException(AddFriendError.ALREADY_FRIEND))
-        }
-
-        val toAdd = if (friend.addedAtEpochMillis == 0L) {
-            friend.copy(addedAtEpochMillis = Clock.System.now().toEpochMilliseconds())
-        } else {
-            friend
-        }
-        _friendsByProfile.update { current ->
-            current + (activeId to (listOf(toAdd) + current[activeId].orEmpty()))
-        }
-        return Result.success(toAdd)
+        return result
     }
 
-    fun removeFriend(userId: String) {
+    private fun cloudFailure(cause: Throwable): Result<Nothing> =
+        Result.failure(cause as? AddFriendException ?: AddFriendException(AddFriendError.NETWORK))
+
+    private fun activeProfileOrNull(): ChildProfile? =
+        _activeProfileId.value?.let { id -> _profiles.value.firstOrNull { it.id == id } }
+
+    /**
+     * doc/plans/030 §4: lazily creates this profile's friend card (plus a generated nickname, if
+     * it doesn't have one yet) and persists `friendCardId`/`nickname` on the profile. A no-op
+     * (returns the existing id) once the card exists.
+     */
+    suspend fun ensureMyCard(): Result<String> = ensureMyCardMutex.withLock {
+        // doc/plans/030 review M8: re-read the profile AFTER acquiring the lock. Two concurrent
+        // callers (e.g. opening the add-friend sheet re-enters both `createFriendCode` and a
+        // deep-link-prefilled `addFriendByCode` at once) would otherwise both observe
+        // `friendCardId == null` and each `upsertMyCard(cardId = null, ...)`, creating two cards
+        // for the same profile.
+        val profile = activeProfileOrNull() ?: return@withLock Result.failure(IllegalStateException("No active profile"))
+        profile.friendCardId?.let { return@withLock Result.success(it) }
+        ensureCloudIdentity().onFailure { return@withLock cloudFailure(it) }
+
+        val nickname = profile.nickname ?: randomNickname(content.active.value.nicknameWords, Random.Default)
+        val created = friendCloud.upsertMyCard(cardId = null, nick = nickname, appearance = profile.appearance)
+        created.fold(
+            onSuccess = { cardId ->
+                updateProfiles { list ->
+                    list.map { if (it.id == profile.id) it.copy(friendCardId = cardId, nickname = nickname) else it }
+                }
+                Result.success(cardId)
+            },
+            onFailure = { cloudFailure(it) }
+        )
+    }
+
+    /** Rerolls the active profile's generated nickname ("Slumpa") and upserts the card if it has one. */
+    suspend fun shuffleNickname(): Result<Nickname> {
+        val profile = activeProfileOrNull() ?: return Result.failure(IllegalStateException("No active profile"))
+        val newNick = randomNickname(content.active.value.nicknameWords, Random.Default)
+        updateProfiles { list -> list.map { if (it.id == profile.id) it.copy(nickname = newNick) else it } }
+        return if (profile.friendCardId != null) {
+            friendCloud.upsertMyCard(profile.friendCardId, newNick, profile.appearance).fold(
+                onSuccess = { Result.success(newNick) },
+                onFailure = { cloudFailure(it) }
+            )
+        } else {
+            ensureMyCard().fold(
+                onSuccess = { Result.success(newNick) },
+                onFailure = { cloudFailure(it) }
+            )
+        }
+    }
+
+    /**
+     * Opens (or returns the still-open) 10-minute invite window for the active profile's card
+     * (doc/plans/030 §4): re-opening the sheet within the window shows the same code.
+     */
+    suspend fun createFriendCode(): Result<FriendInvite> {
+        val activeId = _activeProfileId.value ?: return Result.failure(AddFriendException(AddFriendError.NETWORK))
+        openInviteByProfile[activeId]?.let { cached ->
+            if (cached.expiresAtEpochMillis > clockMillis()) return Result.success(cached)
+        }
+        val cardId = ensureMyCard().getOrElse { return cloudFailure(it) }
+        return friendCloud.createInvite(cardId).onSuccess { invite -> openInviteByProfile[activeId] = invite }
+    }
+
+    /** "Stoppa koden": ends the active profile's open invite window early. */
+    suspend fun stopFriendCode() {
         val activeId = _activeProfileId.value ?: return
+        val invite = openInviteByProfile.remove(activeId) ?: return
+        friendCloud.deleteInvite(invite.code)
+    }
+
+    /**
+     * Live new friends on *my own* card while the add-friend sheet is open (doc/plans/030 §4): a
+     * listener on my card's readers, emitting each newly-seen reader as a [FriendProfile] and
+     * inserting it into Room immediately (no accept step).
+     */
+    fun observeNewFriendsDuring(code: String): Flow<FriendProfile> = flow {
+        val activeId = _activeProfileId.value ?: return@flow
+        val myCardId = activeProfileOrNull()?.friendCardId ?: return@flow
+        val seen = _friendsByProfile.value[activeId].orEmpty().map { it.userId }.toMutableSet()
+        friendCloud.observeMyReaders(myCardId).collect { readers ->
+            for (reader in readers) {
+                if (reader.readerUid in seen) continue
+                // doc/plans/030 review M1: a malformed readerCardId (e.g. containing '/') would
+                // throw inside `document(...)` deep in the gateway; skip rather than crash.
+                if (!isValidFriendCardId(reader.readerCardId)) continue
+                seen += reader.readerUid
+                val state = friendCloud.observeCard(reader.readerCardId).first()
+                val card = (state as? CardState.Present)?.card ?: continue
+                val friend = FriendProfile(
+                    userId = reader.readerUid,
+                    cardId = reader.readerCardId,
+                    nick = card.nick,
+                    appearance = card.appearance,
+                    addedAtEpochMillis = clockMillis(),
+                    revealedAtEpochMillis = null
+                )
+                insertFriendLocally(activeId, friend)
+                emit(friend)
+            }
+        }
+    }
+
+    /** Adds a friend from a typed code or a scanned QR payload (doc/plans/030 §4); both go through [parseFriendCode]. */
+    suspend fun addFriendByCode(raw: String, fromQr: Boolean): Result<FriendProfile> {
+        val code = parseFriendCode(raw) ?: return Result.failure(AddFriendException(AddFriendError.INVALID_QR))
+        val activeId = _activeProfileId.value ?: return Result.failure(AddFriendException(AddFriendError.NETWORK))
+        val myCardId = ensureMyCard().getOrElse { return cloudFailure(it) }
+        val redeemed = friendCloud.redeemInvite(code, myCardId)
+        return redeemed.fold(
+            onSuccess = { card ->
+                val now = clockMillis()
+                val friend = FriendProfile(
+                    userId = card.ownerUid,
+                    cardId = card.cardId,
+                    nick = card.nick,
+                    appearance = card.appearance,
+                    addedAtEpochMillis = now,
+                    revealedAtEpochMillis = now
+                )
+                insertFriendLocally(activeId, friend)
+                Result.success(friend)
+            },
+            onFailure = { cloudFailure(it) }
+        )
+    }
+
+    /**
+     * On Avatar-tab open / app start (doc/plans/030 §4): picks up new readers of my own card
+     * (people who redeemed my invite while the sheet was shut) and drops friends whose card the
+     * server has confirmed is gone ([CardState.Gone] only -- doc/plans/030 review H5: an offline
+     * or otherwise inconclusive read ([CardState.Unknown]) must never delete a friend). Captures
+     * the active profile ONCE up front (review M3): previously the `myCardId` lookup after the
+     * suspending per-friend loop re-read [activeProfileOrNull], so a profile switch mid-refresh
+     * mixed the two profiles' friends. Also retries any still-tombstoned cloud removal (review M2)
+     * and any dirty own-card push (review L4).
+     */
+    suspend fun refreshFriends() {
+        val activeId = _activeProfileId.value ?: return
+        val profile = activeProfileOrNull() ?: return
+        if (profile.id != activeId) return
+
+        retryDirtyCardIfAny(profile)
+        retryPendingFriendRemovals(loadTombstonesFor(activeId))
+
+        val existing = _friendsByProfile.value[activeId].orEmpty()
+        for (friend in existing) {
+            when (val state = friendCloud.observeCard(friend.cardId).first()) {
+                is CardState.Gone -> removeFriendLocally(activeId, friend.userId)
+                is CardState.Present -> {
+                    val card = state.card
+                    if (card.nick != friend.nick || card.appearance != friend.appearance) {
+                        updateFriendCardLocally(activeId, friend.userId, card.nick, card.appearance)
+                    }
+                }
+                is CardState.Unknown -> Unit // inconclusive (offline/cache) -- never remove.
+            }
+            if (activeId != _activeProfileId.value) return // profile switched mid-loop; stop here.
+        }
+
+        val myCardId = profile.friendCardId ?: return
+        val readers = friendCloud.listMyReaders(myCardId).getOrNull().orEmpty()
+        val tombstonedUids = _tombstonedUidsByProfile.value[activeId].orEmpty()
+        val knownUids = _friendsByProfile.value[activeId].orEmpty().map { it.userId }.toSet()
+        for (reader in readers) {
+            if (reader.readerUid in knownUids) continue
+            // doc/plans/030 review M2: a uid I just removed (tombstoned) must not be re-added
+            // just because its reader doc on my card hasn't been deleted by the cloud yet.
+            if (reader.readerUid in tombstonedUids) continue
+            if (!isValidFriendCardId(reader.readerCardId)) continue // review M1
+            val state = friendCloud.observeCard(reader.readerCardId).first()
+            val card = (state as? CardState.Present)?.card ?: continue
+            if (activeId != _activeProfileId.value) return
+            insertFriendLocally(
+                activeId,
+                FriendProfile(
+                    userId = reader.readerUid,
+                    cardId = reader.readerCardId,
+                    nick = card.nick,
+                    appearance = card.appearance,
+                    addedAtEpochMillis = clockMillis(),
+                    revealedAtEpochMillis = null
+                )
+            )
+        }
+    }
+
+    private fun loadTombstonesFor(profileId: String): List<FriendRemovalTombstone> =
+        _tombstonedUidsByProfile.value[profileId].orEmpty().mapNotNull { uid ->
+            pendingRemovalsByProfile[profileId]?.get(uid)
+        }
+
+    /** In-memory mirror of the tombstone rows, keyed the same way (profileId -> uid -> tombstone). */
+    private val pendingRemovalsByProfile = mutableMapOf<String, MutableMap<String, FriendRemovalTombstone>>()
+
+    /**
+     * doc/plans/030 review M2: retries the cloud-side [FriendCloud.removeFriend] for every
+     * [tombstones] row still present, removing the tombstone (Room + memory) once it succeeds.
+     */
+    private suspend fun retryPendingFriendRemovals(tombstones: List<FriendRemovalTombstone>) {
+        for (tombstone in tombstones) {
+            friendCloud.removeFriend(tombstone.myCardId, tombstone.friendUid, tombstone.friendCardId)
+                .onSuccess { clearTombstone(tombstone.profileId, tombstone.friendUid) }
+        }
+    }
+
+    private fun clearTombstone(profileId: String, friendUid: String) {
+        pendingRemovalsByProfile[profileId]?.remove(friendUid)
+        _tombstonedUidsByProfile.update { current ->
+            val set = current[profileId].orEmpty() - friendUid
+            current + (profileId to set)
+        }
+        enqueueProfileWrite { deleteFriendRemovalTombstone(profileId, friendUid) }
+    }
+
+    /**
+     * Room first, then the gateway (best effort) -- doc/plans/030 §4. doc/plans/030 review M2:
+     * records a tombstone BEFORE the fire-and-forget cloud delete, so a crash/offline failure is
+     * retried by [refreshFriends] instead of the friend quietly reappearing (replaying the "Ny
+     * kompis!" reveal) the next time this device discovers the still-live reader doc.
+     */
+    fun removeFriend(friendUid: String) {
+        val activeId = _activeProfileId.value ?: return
+        val profile = activeProfileOrNull()
+        val friend = _friendsByProfile.value[activeId]?.firstOrNull { it.userId == friendUid }
+        removeFriendLocally(activeId, friendUid)
+        val myCardId = profile?.friendCardId
+        if (myCardId != null && friend != null) {
+            val tombstone = FriendRemovalTombstone(
+                profileId = activeId,
+                friendUid = friendUid,
+                myCardId = myCardId,
+                friendCardId = friend.cardId,
+                createdAtEpochMillis = clockMillis()
+            )
+            pendingRemovalsByProfile.getOrPut(activeId) { mutableMapOf() }[friendUid] = tombstone
+            _tombstonedUidsByProfile.update { current -> current + (activeId to (current[activeId].orEmpty() + friendUid)) }
+            enqueueProfileWrite { saveFriendRemovalTombstone(tombstone) }
+            persistScope.launch {
+                friendCloud.removeFriend(myCardId, friendUid, friend.cardId)
+                    .onSuccess { clearTombstone(activeId, friendUid) }
+            }
+        }
+    }
+
+    /** Room-only, device-local (doc/plans/030 §5): the label never reaches the cloud or a log line. */
+    fun setFriendLabel(friendUid: String, label: String?) {
+        val activeId = _activeProfileId.value ?: return
+        val cleaned = label?.trim()?.take(20)?.ifBlank { null }
         _friendsByProfile.update { current ->
             val list = current[activeId] ?: return@update current
-            current + (activeId to list.filterNot { it.userId == userId })
+            current + (activeId to list.map { if (it.userId == friendUid) it.copy(label = cleaned) else it })
         }
+        enqueueProfileWrite { setFriendLabel(activeId, friendUid, cleaned) }
+    }
+
+    /**
+     * doc/plans/030 review L1: used to call [ProfileStore.saveFriend] (a `REPLACE` upsert)
+     * unconditionally, even when the in-memory guard found the uid already present and left
+     * [_friendsByProfile] untouched -- a racing double insert (e.g. [observeNewFriendsDuring] and
+     * [refreshFriends] both discovering the same new reader) would then overwrite the
+     * already-saved row and wipe its [FriendProfile.label] / [FriendProfile.revealedAtEpochMillis]
+     * back to this call's defaults. Only persist when the friend was actually added.
+     */
+    private fun insertFriendLocally(profileId: String, friend: FriendProfile) {
+        var inserted = false
+        _friendsByProfile.update { current ->
+            val list = current[profileId].orEmpty()
+            if (list.any { it.userId == friend.userId }) {
+                current
+            } else {
+                inserted = true
+                current + (profileId to (list + friend))
+            }
+        }
+        if (inserted) {
+            enqueueProfileWrite { saveFriend(profileId, friend) }
+        }
+    }
+
+    private fun removeFriendLocally(profileId: String, friendUid: String) {
+        _friendsByProfile.update { current ->
+            val list = current[profileId] ?: return@update current
+            current + (profileId to list.filterNot { it.userId == friendUid })
+        }
+        enqueueProfileWrite { deleteFriend(profileId, friendUid) }
+    }
+
+    private fun updateFriendCardLocally(profileId: String, friendUid: String, nick: Nickname, appearance: AvatarAppearance) {
+        _friendsByProfile.update { current ->
+            val list = current[profileId] ?: return@update current
+            current + (profileId to list.map { if (it.userId == friendUid) it.copy(nick = nick, appearance = appearance) else it })
+        }
+        enqueueProfileWrite { updateFriendCard(profileId, friendUid, nick, appearance) }
+    }
+
+    /**
+     * Live friend cards for [profileId] (doc/plans/030 §6): merges each friend's [FriendCloud.observeCard]
+     * flow, writes every change through to Room, and re-emits the updated friend list from
+     * [_friendsByProfile] so the UI (reading only from Room/this state) works offline with the
+     * last known gear. Triggers [ContentRepository.sync] once per session if a friend is wearing
+     * an item this device's content pack doesn't know yet.
+     */
+    fun observeFriendCards(profileId: String): Flow<List<FriendProfile>> {
+        val friends = _friendsByProfile.value[profileId].orEmpty()
+        if (friends.isEmpty()) return kotlinx.coroutines.flow.flowOf(emptyList())
+        return friends.map { friend ->
+            friendCloud.observeCard(friend.cardId).map { state -> friend.userId to state }
+        }.merge().onEach { (friendUid, state) ->
+            // doc/plans/030 review H4/H5: a friend is only ever dropped on a server-confirmed
+            // [CardState.Gone], never on [CardState.Unknown] (offline/cache-miss/other error)
+            // while this live listener is running.
+            when (state) {
+                is CardState.Gone -> removeFriendLocally(profileId, friendUid)
+                is CardState.Unknown -> Unit
+                is CardState.Present -> {
+                    val card = state.card
+                    updateFriendCardLocally(profileId, friendUid, card.nick, card.appearance)
+                    val hasUnknownItem = card.appearance.equipped.values.any { it !in content.active.value.itemsById }
+                    if (hasUnknownItem && !didSyncForUnknownFriendItem) {
+                        didSyncForUnknownFriendItem = true
+                        persistScope.launch { content.sync() }
+                    }
+                }
+            }
+        }.map { _friendsByProfile.value[profileId].orEmpty() }
+    }
+
+    /** Friends not yet celebrated with the "Ny kompis!" reveal on this device (doc/plans/030 §7). */
+    fun unrevealedFriends(profileId: String): Flow<List<FriendProfile>> =
+        _friendsByProfile.map { it[profileId].orEmpty().filter { friend -> friend.revealedAtEpochMillis == null } }
+
+    fun markRevealed(profileId: String, friendUid: String) {
+        val now = clockMillis()
+        _friendsByProfile.update { current ->
+            val list = current[profileId] ?: return@update current
+            current + (profileId to list.map { if (it.userId == friendUid) it.copy(revealedAtEpochMillis = now) else it })
+        }
+        enqueueProfileWrite { markFriendRevealed(profileId, friendUid, now) }
     }
 
     suspend fun sendEmailSignInLink(email: String): Result<Unit> {
@@ -638,7 +1080,16 @@ class LixoRepository(
         }
     }
 
+    /**
+     * doc/plans/030 review M4: [CloudSyncGateway.deleteAccountAndAllCloudData] never deleted any
+     * `friend_cards` document -- every profile's card (plus its readers/invites) was orphaned in
+     * Firestore forever. Delete every profile's card FIRST (it needs the still-live auth session
+     * to pass the rules' owner checks), then the account itself.
+     */
     suspend fun deleteCloudAccountAndSwitchToLocalOnly(): Result<Unit> {
+        for (profile in _profiles.value) {
+            profile.friendCardId?.let { cardId -> friendCloud.deleteMyCard(cardId) }
+        }
         val uid = _privacySettings.value.optionalCloudUserId
         if (uid != null) {
             cloudGateway.deleteAccountAndAllCloudData(uid)

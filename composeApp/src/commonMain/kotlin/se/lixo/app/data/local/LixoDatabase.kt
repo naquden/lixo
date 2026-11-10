@@ -28,6 +28,7 @@ import androidx.room.RoomDatabaseConstructor
         MathErrorEntity::class,
         DictionaryEntryEntity::class,
         FriendEntity::class,
+        FriendRemovalTombstoneEntity::class,
         AppSettingsEntity::class,
         LexiconMetaEntity::class,
         ContentPackMetaEntity::class,

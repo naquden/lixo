@@ -3,6 +3,9 @@ package se.lixo.app.platform
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.convert
+import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -21,6 +24,7 @@ import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDefaults
 import platform.Foundation.NSUserDomainMask
+import platform.UIKit.UIAccessibilityIsReduceMotionEnabled
 import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
 import se.lixo.app.domain.engine.TrustedClockAnchor
@@ -128,6 +132,16 @@ actual fun createPlatformSpeechRecognitionEngine(): SpeechRecognitionEngine =
 
 actual fun createPlatformTextToSpeechEngine(): TextToSpeechEngine =
     IosTextToSpeechEngine()
+
+@OptIn(ExperimentalForeignApi::class)
+actual fun secureRandomBytes(size: Int): ByteArray {
+    val result = ByteArray(size)
+    if (size == 0) return result
+    result.usePinned { pinned ->
+        platform.Security.SecRandomCopyBytes(platform.Security.kSecRandomDefault, size.convert(), pinned.addressOf(0))
+    }
+    return result
+}
 
 actual fun readDebugContentPreviewFile(): String? = null
 
@@ -244,3 +258,17 @@ actual object PendingEmailLinkStorage {
         NSUserDefaults.standardUserDefaults.removeObjectForKey(KEY_SAVED_EMAIL)
     }
 }
+
+/**
+ * doc/plans/030 §7: no iOS QR scanner is in scope for 030, so this always reports
+ * [QrScanResult.Unavailable], which the UI handles by falling back to the typed code field.
+ */
+private class IosUnavailableQrScanner : QrScanner {
+    override suspend fun scan(): QrScanResult = QrScanResult.Unavailable
+}
+
+actual fun createPlatformQrScanner(): QrScanner = IosUnavailableQrScanner()
+
+/** doc/plans/030 §7: iOS's "reduce motion" accessibility setting. */
+actual fun isReducedMotionEnabled(): Boolean =
+    runCatching { UIAccessibilityIsReduceMotionEnabled() }.getOrDefault(false)

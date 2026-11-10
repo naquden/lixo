@@ -272,4 +272,64 @@ class ContentPackValidatorTest {
         val result = validate(TestPackFixture.JSON, previous = previous)
         assertIs<ValidationResult.Rejected>(result)
     }
+
+    // --- nicknameWords (doc/plans/030 §3) ---
+
+    private fun wordsJson(adjectives: List<String>, animals: List<String>): JsonObject = JsonObject(
+        linkedMapOf(
+            "adjectives" to JsonArray(adjectives.map { JsonPrimitive(it) }),
+            "animals" to JsonArray(animals.map { JsonPrimitive(it) })
+        )
+    )
+
+    @Test
+    fun missingNicknameWordsDefaultsToEmpty() {
+        val accepted = accept(TestPackFixture.JSON)
+        assertEquals(emptyList(), accepted.pack.nicknameWords.adjectives)
+        assertEquals(emptyList(), accepted.pack.nicknameWords.animals)
+    }
+
+    @Test
+    fun acceptsValidNicknameWords() {
+        val json = TestPackFixture.edit {
+            this["nicknameWords"] = wordsJson(listOf("Modig", "Glad"), listOf("Räv", "Uggla"))
+        }
+        val accepted = accept(json)
+        assertEquals(listOf("Modig", "Glad"), accepted.pack.nicknameWords.adjectives)
+        assertEquals(listOf("Räv", "Uggla"), accepted.pack.nicknameWords.animals)
+    }
+
+    @Test
+    fun rejectsDuplicateNicknameWord() {
+        val json = TestPackFixture.edit {
+            this["nicknameWords"] = wordsJson(listOf("Modig", "Modig"), listOf("Räv"))
+        }
+        val rejected = assertIs<ValidationResult.Rejected>(validate(json))
+        assertTrue(rejected.reason.contains("nicknameWords"), rejected.reason)
+    }
+
+    @Test
+    fun rejectsBlankNicknameWord() {
+        val json = TestPackFixture.edit {
+            this["nicknameWords"] = wordsJson(listOf("Modig", ""), listOf("Räv"))
+        }
+        assertIs<ValidationResult.Rejected>(validate(json))
+    }
+
+    @Test
+    fun rejectsNicknameWordWithWhitespace() {
+        val json = TestPackFixture.edit {
+            this["nicknameWords"] = wordsJson(listOf("Modig Modig"), listOf("Räv"))
+        }
+        assertIs<ValidationResult.Rejected>(validate(json))
+    }
+
+    @Test
+    fun rejectsNicknameWordListOverMax() {
+        val tooMany = (0..256).map { "Ord$it" }
+        val json = TestPackFixture.edit {
+            this["nicknameWords"] = wordsJson(tooMany, listOf("Räv"))
+        }
+        assertIs<ValidationResult.Rejected>(validate(json))
+    }
 }

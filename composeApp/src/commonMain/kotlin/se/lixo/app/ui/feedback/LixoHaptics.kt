@@ -23,7 +23,9 @@ enum class SfxCue {
     EQUIP_CONFIRM,
     AVATAR_SWITCH,
     ANSWER_CORRECT,
-    ANSWER_WRONG
+    ANSWER_WRONG,
+    /** doc/plans/030 §7 "kompis-kistan"; no dedicated sound asset yet, falls back to ITEM_REVEAL. */
+    FRIEND_ADDED
 }
 
 /** Plays a sound effect for a given [SfxCue]. Implemented later; no-op for now. */
@@ -65,6 +67,15 @@ class LixoHaptics(
         cue?.let(sfx::play)
     }
 }
+
+/**
+ * doc/plans/030 §7: when the system "remove animations" setting is on (Android: `animator
+ * duration scale == 0`), celebration stages like [se.lixo.app.ui.components.celebration.FriendRevealStage]
+ * skip confetti/light-burst and just fade in. Exposed as a `CompositionLocal` (default `false`)
+ * rather than threaded through every composable's parameter list, so instrumented tests can force
+ * it with `CompositionLocalProvider(LocalReducedMotion provides true) { ... }`.
+ */
+val LocalReducedMotion = staticCompositionLocalOf { false }
 
 @Composable
 fun rememberLixoHaptics(): LixoHaptics {

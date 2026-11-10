@@ -69,6 +69,18 @@
                     android:host="lixo-fd45d.web.app"
                     android:pathPrefix="/finishSignUp" />
             </intent-filter>
+
+            <!-- doc/plans/030 §7: lixo://friend/<code> only prefills "Lägg till kompis", never
+                 auto-redeems. Lets the system camera app's QR scanner open Lixo directly. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="lixo"
+                    android:host="friend" />
+            </intent-filter>
         </activity>
     </application>
 

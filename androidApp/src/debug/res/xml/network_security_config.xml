@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only (src/debug, never packaged in release): allows plain HTTP to the local Firebase
+  Auth/Firestore emulators (10.0.2.2 is the AVD's alias for the host loopback) so
+  androidApp/src/androidTest/kotlin/se/lixo/app/verify/FirebaseFriendCloudEmulatorTest.kt
+  (doc/plans/030-friends-that-work.md) can call useEmulator(). Android blocks cleartext
+  traffic by default since API 28. Everything else keeps the platform default (HTTPS only).
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

@@ -40,6 +40,7 @@ object ContentPackValidator {
     const val MAX_LAYERS = 24
     const val MAX_HIDES_PARTS = 8
     const val MAX_PARTS = 16
+    const val MAX_NICKNAME_WORDS = 256
 
     private val ID_REGEX = Regex("^[a-z][a-z0-9_]{2,63}$")
     private val PART_REGEX = Regex("^[a-z][a-z0-9_]{1,31}$")
@@ -105,6 +106,13 @@ object ContentPackValidator {
             return ValidationResult.Rejected("dropRules invalid: ${t.message?.take(200)}")
         }
         dropRulesError(dropRules)?.let { return ValidationResult.Rejected("dropRules invalid: $it") }
+
+        val nicknameWords: NicknameWords = try {
+            root["nicknameWords"]?.let { ContentJson.decodeFromJsonElement<NicknameWords>(it) } ?: NicknameWords()
+        } catch (t: Throwable) {
+            return ValidationResult.Rejected("nicknameWords invalid: ${t.message?.take(200)}")
+        }
+        nicknameWordsError(nicknameWords)?.let { return ValidationResult.Rejected("nicknameWords invalid: $it") }
 
         val declaredEventIds: Set<String> = rawEvents.mapNotNull { element ->
             ((element as? JsonObject)?.get("id") as? JsonPrimitive)?.content
@@ -244,7 +252,8 @@ object ContentPackValidator {
             avatars = acceptedAvatars.values.toList(),
             items = acceptedItems.values.toList(),
             events = acceptedEvents.values.toList(),
-            dropRules = dropRules
+            dropRules = dropRules,
+            nicknameWords = nicknameWords
         )
         return ValidationResult.Accepted(pack, skipped)
     }
@@ -278,6 +287,23 @@ object ContentPackValidator {
         val seenLevels = HashSet<Int>()
         for (levelReward in rules.levelRewards) {
             if (!seenLevels.add(levelReward.level)) return "levelRewards has duplicate level ${levelReward.level}"
+        }
+        return null
+    }
+
+    /**
+     * [NicknameWords.adjectives]/[NicknameWords.animals] must each be unique, non-blank, have
+     * no whitespace (so `Nickname.render` never produces a string with an embedded space) and
+     * stay within [MAX_NICKNAME_WORDS]. Append-only stability across pack versions (an existing
+     * index's word never changes) is enforced on the Python side (`validate_pack.py`), since
+     * the Kotlin validator only ever sees the latest pack.
+     */
+    private fun nicknameWordsError(words: NicknameWords): String? {
+        for ((label, list) in listOf("adjectives" to words.adjectives, "animals" to words.animals)) {
+            if (list.size > MAX_NICKNAME_WORDS) return "$label has more than $MAX_NICKNAME_WORDS entries"
+            if (list.any { it.isBlank() || it.trim() != it }) return "$label has a blank or padded entry"
+            if (list.any { word -> word.any { it.isWhitespace() } }) return "$label has an entry with whitespace"
+            if (list.toSet().size != list.size) return "$label has duplicate entries"
         }
         return null
     }

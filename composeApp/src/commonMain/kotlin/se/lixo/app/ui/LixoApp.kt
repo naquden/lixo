@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -57,15 +58,20 @@ import se.lixo.app.domain.engine.TrustedClock
 import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.DailyActivityRecord
+import se.lixo.app.domain.model.EMAIL_BACKUP_FEATURE_ENABLED
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.platform.EmailLinkAuthDispatcher
+import se.lixo.app.platform.FriendDeepLinkDispatcher
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.PlatformFeatureFlags
+import se.lixo.app.platform.createPlatformQrScanner
 import se.lixo.app.platform.createPlatformSpeechRecognitionEngine
 import se.lixo.app.platform.createPlatformTextToSpeechEngine
 import se.lixo.app.platform.createPlatformTrustedClockStore
+import se.lixo.app.platform.isReducedMotionEnabled
+import se.lixo.app.ui.feedback.LocalReducedMotion
 import se.lixo.app.ui.screens.debug.ContentPreviewRoute
 import se.lixo.app.ui.screens.map.CampaignMapScreen
 import se.lixo.app.ui.screens.math.MathActivityScreen
@@ -167,6 +173,7 @@ fun LixoApp(
             repository.content.sync()
             eventClockTick++
         }
+        launch { repository.ensureCloudIdentity() }
         repository.loadCachedLexicon()
         repository.syncCurriculumFromCloud()
     }
@@ -185,10 +192,16 @@ fun LixoApp(
         EventEngine.activeEvents(content, trustedClock.now(), TimeZone.currentSystemDefault())
     }
 
+    // doc/plans/030 review L2: completing an email-link sign-in replaces the Firebase Anonymous
+    // Auth user every friend card is keyed to -- gated behind the same flag as the (already
+    // hidden) email/account UI in ParentGateAndDashboardScreen, since this https deep link path
+    // stayed live and reachable even with that UI's entry point hidden.
     LaunchedEffect(incomingEmailLink) {
         val link = incomingEmailLink
         if (!link.isNullOrBlank()) {
-            repository.completeEmailLinkSignIn(link)
+            if (EMAIL_BACKUP_FEATURE_ENABLED) {
+                repository.completeEmailLinkSignIn(link)
+            }
             EmailLinkAuthDispatcher.consumeIncomingLink()
         }
     }
@@ -202,6 +215,34 @@ fun LixoApp(
     }
     var activeGameplayLevel by remember { mutableStateOf<CampaignLevel?>(null) }
     var autoStartTutorialForProfileId by remember { mutableStateOf<String?>(null) }
+
+    // doc/plans/030 §7: the Google code scanner, injected into AvatarMapScreen as a plain
+    // constructor parameter (not resolved from a singleton inside the screen) so instrumented
+    // tests can pass a `FakeQrScanner` instead.
+    val qrScanner = remember { createPlatformQrScanner() }
+
+    // doc/plans/030 §7: `lixo://friend/<code>` only routes to the Avatar tab with the code
+    // prefilled into "Lägg till kompis" -- nothing is ever redeemed automatically.
+    val incomingFriendLink by FriendDeepLinkDispatcher.incomingFriendCode.collectAsState()
+    var pendingFriendDeepLinkCode by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(incomingFriendLink) {
+        val link = incomingFriendLink
+        if (!link.isNullOrBlank()) {
+            pendingFriendDeepLinkCode = link.substringAfterLast("/")
+            currentDestination = LixoMainDestination.AVATAR_MAP
+        }
+    }
+
+    // doc/plans/030 §4: pick up friends added while the Avatar tab was closed (new readers of my
+    // own card, or a friend whose card got deleted) every time the tab is opened.
+    LaunchedEffect(currentDestination, activeProfileId) {
+        if (currentDestination == LixoMainDestination.AVATAR_MAP) {
+            // doc/plans/030 review H4/H5: belt-and-suspenders -- FriendCloud/FirebaseSyncService
+            // itself must never throw out of observeCard/observeMyReaders, but this call site
+            // still must not crash the UI if that contract is ever broken by a future change.
+            runCatching { repository.refreshFriends() }
+        }
+    }
 
     // Selected subject "world" on the campaign map (plan: "Ämnesväljare med tre världar").
     // Survives tab switches/rotation; after finishing a level the child returns to the same world.
@@ -225,6 +266,12 @@ fun LixoApp(
         }
     }
 
+    // doc/plans/030 §7: provided once at the root (not resolved per-composable) so every
+    // celebration stage, including FriendRevealStage, reads the system "remove animations"
+    // setting via LocalReducedMotion instead of each wiring its own platform check.
+    val reducedMotion = remember { isReducedMotionEnabled() }
+
+    CompositionLocalProvider(LocalReducedMotion provides reducedMotion) {
     LixoTheme {
         Box(
             modifier = Modifier
@@ -462,15 +509,44 @@ fun LixoApp(
                                 )
                             }
                             LixoMainDestination.AVATAR_MAP -> {
+                                // doc/plans/030 review M6: `repository.unrevealedFriends(id)` /
+                                // `observeFriendCards(id)` build a fresh Flow/lambda every
+                                // recomposition; passed straight into `collectAsState`/a
+                                // `LaunchedEffect` inside AvatarMapScreen, a changed Flow
+                                // IDENTITY restarts that collection on every unrelated
+                                // recomposition of LixoApp, which could remount an in-progress
+                                // "Ny kompis!" reveal. `remember(activeProfile.id)` keeps the
+                                // same Flow/lambda instance across recompositions.
+                                val unrevealedFriendsFlow = remember(activeProfile.id) {
+                                    repository.unrevealedFriends(activeProfile.id)
+                                }
+                                val observeFriendCardsForProfile = remember(activeProfile.id) {
+                                    { repository.observeFriendCards(activeProfile.id) }
+                                }
                                 AvatarMapScreen(
                                     profile = activeProfile,
                                     friends = friendsByProfile[activeProfile.id].orEmpty(),
                                     content = content,
                                     ttsEngine = ttsEngine,
                                     showSwedishTtsButtons = showSwedishTts,
+                                    qrScanner = qrScanner,
+                                    nowMillis = { repository.nowMillis() },
+                                    prefilledFriendCode = pendingFriendDeepLinkCode,
+                                    onConsumePrefilledFriendCode = {
+                                        pendingFriendDeepLinkCode = null
+                                        FriendDeepLinkDispatcher.consumeIncomingFriendCode()
+                                    },
                                     onOpenWardrobe = { currentDestination = LixoMainDestination.WARDROBE },
-                                    onAddFriendByQuery = { repository.addFriendByQuery(it) },
+                                    onShuffleNickname = { repository.shuffleNickname() },
+                                    onCreateFriendCode = { repository.createFriendCode() },
+                                    onStopFriendCode = { repository.stopFriendCode() },
+                                    observeNewFriendsDuring = { repository.observeNewFriendsDuring(it) },
+                                    onAddFriendByCode = { raw, fromQr -> repository.addFriendByCode(raw, fromQr) },
                                     onRemoveFriend = { repository.removeFriend(it) },
+                                    onSetFriendLabel = { uid, label -> repository.setFriendLabel(uid, label) },
+                                    unrevealedFriends = unrevealedFriendsFlow,
+                                    onMarkRevealed = { repository.markRevealed(activeProfile.id, it) },
+                                    observeFriendCards = observeFriendCardsForProfile,
                                     onOpenContentPreview = if (featureFlags.isDebugBuild) {
                                         { currentDestination = LixoMainDestination.CONTENT_PREVIEW }
                                     } else {
@@ -502,6 +578,7 @@ fun LixoApp(
                                 ParentGateAndDashboardScreen(
                                     profiles = profiles,
                                     activeProfile = activeProfile,
+                                    content = content,
                                     dailyActivity = dailyActivityByProfile[activeProfile.id].orEmpty(),
                                     struggledWords = struggledWordsByProfile[activeProfile.id].orEmpty(),
                                     mathErrors = mathErrorsByProfile[activeProfile.id].orEmpty(),
@@ -592,5 +669,6 @@ fun LixoApp(
                 }
             }
         }
+    }
     }
 }

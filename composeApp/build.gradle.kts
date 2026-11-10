@@ -53,6 +53,8 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.vosk.android)
+            // doc/plans/030 §7: Google code scanner for QR, no CAMERA permission needed.
+            implementation(libs.play.services.code.scanner)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -74,6 +76,8 @@ kotlin {
             implementation(libs.gitlive.firebase.auth)
             implementation(libs.gitlive.firebase.firestore)
             implementation(libs.gitlive.firebase.crashlytics)
+            // doc/plans/030 §7: renders the "Min kompiskod" QR (FriendQrCode).
+            implementation(libs.qrose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

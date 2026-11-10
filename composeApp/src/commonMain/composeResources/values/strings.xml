@@ -74,12 +74,21 @@
     <string name="rarity_epic">Episk</string>
     <string name="rarity_legendary">Legendarisk</string>
 
-    <!-- Trophies & Friends -->
+    <!-- Trophies & Friends (doc/plans/030: friends are added with a code/QR, no username search) -->
     <string name="tab_trophies">Troféer</string>
     <string name="tab_friends">Kompisgalleri</string>
-    <string name="friends_add_placeholder">Användarnamn eller QR-kod</string>
-    <string name="friends_add_btn">Lägg till vän</string>
-    <string name="friends_my_qr_label">Min QR-kod</string>
+    <string name="friends_tab_my_code">Min kompiskod</string>
+    <string name="friends_tab_add_friend">Lägg till kompis</string>
+    <string name="friends_scan_qr_btn">Skanna QR-kod</string>
+    <string name="friends_code_field_placeholder">XXXX-XXXX</string>
+    <string name="friends_add_btn">Lägg till</string>
+    <string name="friends_stop_code_btn">Stoppa koden</string>
+    <string name="friends_show_new_code_btn">Visa ny kod</string>
+    <string name="friends_new_friends_title">Nya kompisar</string>
+    <string name="friends_name_step_title">Vad heter din kompis?</string>
+    <string name="friends_name_step_hint">Bara du ser det här namnet.</string>
+    <string name="friends_offline_notice">Kompisar kräver internet</string>
+    <string name="friend_reveal_title">Ny kompis!</string>
 
     <!-- Parent View & GDPR -->
     <string name="parent_gate_title">Föräldravy — Lös mattetalet för att öppna</string>

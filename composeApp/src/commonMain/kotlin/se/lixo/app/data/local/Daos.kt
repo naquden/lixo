@@ -117,15 +117,44 @@ interface LixoDao {
         upsertLexiconMeta(LexiconMetaEntity(version = version, entryCount = entries.size))
     }
 
-    // --- Friends ---
+    // --- Friends (doc/plans/030 §5) ---
     @Query("SELECT * FROM friends ORDER BY addedAtEpochMillis DESC")
-    fun observeFriends(): Flow<List<FriendEntity>>
+    suspend fun getAllFriends(): List<FriendEntity>
+
+    @Query("SELECT * FROM friends WHERE profileId = :profileId ORDER BY addedAtEpochMillis DESC")
+    fun observeFriends(profileId: String): Flow<List<FriendEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertFriend(friend: FriendEntity)
+    suspend fun insertFriend(friend: FriendEntity)
 
-    @Query("DELETE FROM friends WHERE userId = :userId")
-    suspend fun deleteFriend(userId: String)
+    @Query("DELETE FROM friends WHERE profileId = :profileId AND friendUid = :friendUid")
+    suspend fun deleteFriend(profileId: String, friendUid: String)
+
+    /** Updates the card-derived fields only; never touches [FriendEntity.label] (device-only name). */
+    @Query(
+        "UPDATE friends SET nickJson = :nickJson, appearanceJson = :appearanceJson " +
+            "WHERE profileId = :profileId AND friendUid = :friendUid"
+    )
+    suspend fun updateFriendCard(profileId: String, friendUid: String, nickJson: String, appearanceJson: String)
+
+    @Query("UPDATE friends SET label = :label WHERE profileId = :profileId AND friendUid = :friendUid")
+    suspend fun setLabel(profileId: String, friendUid: String, label: String?)
+
+    @Query(
+        "UPDATE friends SET revealedAtEpochMillis = :revealedAtEpochMillis " +
+            "WHERE profileId = :profileId AND friendUid = :friendUid"
+    )
+    suspend fun markRevealed(profileId: String, friendUid: String, revealedAtEpochMillis: Long)
+
+    // --- Friend removal tombstones (doc/plans/030 review M2) ---
+    @Query("SELECT * FROM friend_removal_tombstones")
+    suspend fun getAllFriendRemovalTombstones(): List<FriendRemovalTombstoneEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFriendRemovalTombstone(tombstone: FriendRemovalTombstoneEntity)
+
+    @Query("DELETE FROM friend_removal_tombstones WHERE profileId = :profileId AND friendUid = :friendUid")
+    suspend fun deleteFriendRemovalTombstone(profileId: String, friendUid: String)
 
     // --- App Settings & GDPR Controls ---
     @Query("SELECT * FROM app_settings WHERE singletonId = 1 LIMIT 1")

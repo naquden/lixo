@@ -146,14 +146,50 @@ object LixoStrings {
     const val FRIEND_SHEET_GEAR_TITLE = "Har på sig"
     const val FRIEND_SHEET_NO_GEAR = "Har inga föremål på sig än"
     const val SHEET_CLOSE_BTN = "Stäng"
-    const val FRIENDS_SUBTITLE = "Lägg till kompisar med kod eller användarnamn. Ingen chatt."
-    const val FRIENDS_INPUT_PLACEHOLDER = "Användarnamn eller kod"
     const val FRIENDS_ADD_BTN = "Lägg till"
     const val FRIENDS_REMOVE_BTN = "Ta bort"
-    const val FRIENDS_MY_CODE_PREFIX = "Min kod:"
-    const val FRIENDS_ERROR_NOT_FOUND = "Hittade ingen kompis med det namnet."
+    const val FRIENDS_ERROR_NOT_FOUND = "Hittade ingen kompis med den koden."
     const val FRIENDS_ERROR_ALREADY = "Ni är redan kompisar!"
     const val FRIENDS_ERROR_NETWORK = "Kunde inte nå internet. Försök igen."
+    const val FRIENDS_ERROR_EXPIRED = "Koden har gått ut – be om en ny."
+    const val FRIENDS_ERROR_SELF = "Du kan inte lägga till din egen kod."
+    const val FRIENDS_ERROR_FULL = "Koden har redan använts max antal gånger."
+    const val FRIENDS_ERROR_INVALID_QR = "Det där ser inte ut som en kompiskod."
+    const val FRIENDS_OFFLINE_NOTICE = "Kompisar kräver internet"
+
+    // doc/plans/030 §7: add-friend sheet tabs, QR code, countdown, "Nya kompisar" live list.
+    const val FRIENDS_TAB_MY_CODE = "Min kompiskod"
+    const val FRIENDS_TAB_ADD_FRIEND = "Lägg till kompis"
+    const val FRIENDS_CODE_LOADING = "Skapar din kod…"
+    const val FRIENDS_STOP_CODE_BTN = "Stoppa koden"
+    const val FRIENDS_SHOW_NEW_CODE_BTN = "Visa ny kod"
+    const val FRIENDS_NEW_FRIENDS_TITLE = "Nya kompisar"
+    const val FRIENDS_SCAN_QR_BTN = "Skanna QR-kod"
+    const val FRIENDS_CODE_FIELD_PLACEHOLDER = "XXXX-XXXX"
+    const val FRIENDS_SCANNER_UNAVAILABLE = "Skriv koden i stället"
+    const val FRIENDS_NAME_STEP_TITLE = "Vad heter din kompis?"
+    const val FRIENDS_NAME_STEP_HINT = "Bara du ser det här namnet."
+    const val FRIENDS_NAME_SAVE_BTN = "Spara"
+    const val FRIENDS_NAME_SKIP_BTN = "Hoppa över"
+    const val FRIEND_SHEET_CHANGE_NAME_BTN = "Byt namn"
+    const val AVATAR_MAP_NICKNAME_PREFIX = "Ditt kompisnamn:"
+    const val AVATAR_MAP_SHUFFLE_NICKNAME_BTN = "Slumpa"
+    const val FRIEND_REVEAL_TITLE = "Ny kompis!"
+
+    /** "Koden gäller i 9:42" (doc/plans/030 §7); [remainingSeconds] is clamped to >= 0. */
+    fun friendCodeExpiresIn(remainingSeconds: Long): String {
+        val clamped = remainingSeconds.coerceAtLeast(0)
+        val minutes = clamped / 60
+        val seconds = clamped % 60
+        return "Koden gäller i $minutes:${seconds.toString().padStart(2, '0')}"
+    }
+
+    /** "+2 till" shown while more friends wait to be revealed on the inviter side (doc/plans/030 §7). */
+    fun friendRevealQueuedMore(count: Int): String = "+$count till"
+
+    /** "3 nya kompisar!" badge on the village's "+" plot (doc/plans/030 §7). */
+    fun friendsUnrevealedBadge(count: Int): String =
+        if (count == 1) "1 ny kompis!" else "$count nya kompisar!"
 
     // Parent View & GDPR
     const val PARENT_GATE_TITLE = "Föräldraläge"

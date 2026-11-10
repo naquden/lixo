@@ -1,0 +1,12 @@
+{
+  "name": "lixo-firestore-rules-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test rules.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6",
+    "firebase": "^13"
+  }
+}

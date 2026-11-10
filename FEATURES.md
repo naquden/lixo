@@ -7,6 +7,9 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Done
 
+- [x] 030 — Friends that work: anonymous identity, add by code/QR (multi-use 10-min window, no accept step), private names, live avatar + gear, no stars (feature) → [plan](doc/plans/030-friends-that-work.md)  
+  _Verified 2026-11-10 on emulator-5554 (S25 not attached): FriendRevealTest 4/4, FriendCodeFlowTest 7/7, FriendLabelTest 2/2, FriendLiveGearTest 1/1, FriendDeepLinkTest 1/1, FirebaseFriendCloudEmulatorTest 1/1 (real FirebaseSyncService vs Auth+Firestore emulator, 14 scenarios) + Screenshot/ProfilePersistence/BottomNav/Wardrobe regression green; host tests 324/324, rules emulator tests 15/15, pytest 50/50; XML temp/verify/030_final/, screenshots temp/verify/lixo_screenshots/friends/. Manual: deploy rules + auth (anonymous), upload pack with nicknameWords, App Check console registration + debug tokens, enforcement last. iOS not compiled (kmp.ios.enabled=false). Simplified: landing anim = ring pulse, portal = fading circle. LOW: L3 device-clock countdown, no per-uid card/invite cap, L4 dirty-card retry in-memory only._
+
 - [x] 029 — Dog tail visible past the left arm (bug) → [plan](doc/plans/029-dog-tail-visible.md)  
   _Verified 2026-11-09 (wf_9f965e6a-624): `BundledCatalogRenderTest` 3/3 on emulator-5554, pytest 47/47 (new `test_tails_clear_left_arm`); bare_avatar_dog.png tail visible right of left arm; screenshots in temp/verify/lixo_screenshots/verify027_029/. LOW: tracked __pycache__ files despite .gitignore (`git rm -r --cached`)._
 

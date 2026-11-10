@@ -56,3 +56,11 @@ __pycache__/
 temp/
 tools/content_pipeline/pack/out/
 
+# Node (firebase rules tests)
+node_modules/
+**/node_modules/
+firestore-debug.log
+ui-debug.log
+firebase-debug.log
+*.log
+

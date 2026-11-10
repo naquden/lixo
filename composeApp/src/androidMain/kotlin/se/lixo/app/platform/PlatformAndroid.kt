@@ -88,6 +88,41 @@ object AndroidPlatformContext {
     }
 }
 
+/**
+ * doc/plans/030 §7: the Google code scanner (`play-services-code-scanner`) needs no `CAMERA`
+ * permission -- it launches Google Play Services' own full-screen scanning UI and hands back
+ * only the decoded text. [AndroidPlatformContext.applicationContext] is enough (no `Activity`
+ * reference is required by `GmsBarcodeScanning`).
+ */
+private class AndroidGmsQrScanner : QrScanner {
+    override suspend fun scan(): QrScanResult {
+        val ctx = AndroidPlatformContext.applicationContext ?: return QrScanResult.Unavailable
+        val options = com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE)
+            .build()
+        val scanner = com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx, options)
+        return try {
+            kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+                scanner.startScan()
+                    .addOnSuccessListener { barcode ->
+                        val raw = barcode.rawValue
+                        cont.resume(if (raw != null) QrScanResult.Success(raw) else QrScanResult.Cancelled) {}
+                    }
+                    .addOnCanceledListener {
+                        cont.resume(QrScanResult.Cancelled) {}
+                    }
+                    .addOnFailureListener {
+                        cont.resume(QrScanResult.Unavailable) {}
+                    }
+            }
+        } catch (_: Exception) {
+            QrScanResult.Unavailable
+        }
+    }
+}
+
+actual fun createPlatformQrScanner(): QrScanner = AndroidGmsQrScanner()
+
 actual class PlatformFeatureFlags actual constructor() {
     actual val platformName: String = "Android"
     actual val isSwedishTtsSupported: Boolean = true
@@ -423,6 +458,12 @@ actual suspend fun fetchHttpServerTimeMillis(url: String): Long? = withContext(D
     }
 }
 
+actual fun secureRandomBytes(size: Int): ByteArray {
+    val bytes = ByteArray(size)
+    java.security.SecureRandom().nextBytes(bytes)
+    return bytes
+}
+
 actual fun readDebugContentPreviewFile(): String? = try {
     AndroidPlatformContext.applicationContext
         ?.filesDir
@@ -522,4 +563,12 @@ actual object PendingEmailLinkStorage {
             .remove(KEY_SAVED_EMAIL)
             .apply()
     }
+}
+
+/** doc/plans/030 §7: Android's "remove animations" accessibility setting. */
+actual fun isReducedMotionEnabled(): Boolean {
+    val ctx = AndroidPlatformContext.applicationContext ?: return false
+    return runCatching {
+        Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    }.getOrDefault(false)
 }

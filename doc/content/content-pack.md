@@ -79,6 +79,7 @@ order.
 | `items` | List\<ContentItem> | `[]` |
 | `events` | List\<ContentEvent> | `[]` |
 | `dropRules` | DropRules | — |
+| `nicknameWords` | NicknameWords | `{adjectives=[], animals=[]}` |
 
 ### `ContentAvatar`
 
@@ -140,6 +141,31 @@ lower-case.
 | `mirror` | `none \| x` | `none` |
 | `patternClip` | Boolean | `false` |
 | `breath` | Boolean | `false` |
+
+### `NicknameWords` (030)
+
+Two Swedish word lists used to render a friend's generated nickname (`se.lixo.app.domain.social.Nickname`,
+doc/plans/030 §3) — a friend card stores only three small ints (`adj`, `animal`, `num`), never free
+text, and `Nickname.render(words)` turns them into e.g. `"ModigRäv42"` (`adjectives[adj] +
+animals[animal] + num`). An index that falls outside the current word list (an older pack, or a
+nickname generated against a newer one) renders as `"Kompis<num>"` instead of crashing.
+
+| Field | Type | Default |
+|---|---|---|
+| `adjectives` | List\<String> | `[]` |
+| `animals` | List\<String> | `[]` |
+
+Authored in `tools/content_pipeline/pack/nickname_words.json` (Swedish, child-safe, capitalised,
+one word per entry, no spaces) and copied verbatim into the built pack by `build_pack.py`'s
+`load_nickname_words`. Validated the same way on both sides (`ContentPackValidator.nicknameWordsError`
+/ `validate_pack.nickname_words_errors`): each list must have unique, non-blank,
+whitespace-free entries, at most `MAX_NICKNAME_WORDS` (256) each.
+
+**Stability is append-only, by index**: `validate_pack.stability_errors` rejects a pack whose
+`nicknameWords.adjectives`/`animals` list is shorter than the previously-published one, or whose
+word at any index the previous pack already had has changed — a nickname already shown to a
+friend (`{adj, animal}` indexes stored in Firestore/Room) must always render the same way. New
+words may only be appended to the end of either list.
 
 ### `ContentEvent` / `DropRules`
 

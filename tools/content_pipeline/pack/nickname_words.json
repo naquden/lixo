@@ -1,0 +1,22 @@
+{
+  "adjectives": [
+    "Modig", "Glad", "Snabb", "Stark", "Klok", "Snäll", "Pigg", "Rolig", "Ärlig", "Vänlig",
+    "Nyfiken", "Tapper", "Busig", "Stolt", "Lugn", "Vaken", "Smart", "Flink", "Varm", "Mjuk",
+    "Ljus", "Blid", "Käck", "Frisk", "Rask", "Vig", "Trogen", "Hurtig", "Solig", "Munter",
+    "Pålitlig", "Vis", "Ädel", "Trevlig", "Positiv", "Energisk", "Uthållig", "Kreativ", "Äventyrlig", "Hjälpsam",
+    "Generös", "Omtänksam", "Lekfull", "Skojig", "Rapp", "Kvick", "Duktig", "Kaxig", "Spralig", "Vänskaplig",
+    "Ödmjuk", "Nöjd", "Harmonisk", "Balanserad", "Fridfull", "Praktisk", "Noggrann", "Beslutsam", "Orädd", "Spontan",
+    "Charmig", "Underbar", "Fantastisk", "Magisk", "Stilig", "Vacker", "Glittrande", "Strålande", "Skarpsynt", "Klarsynt",
+    "Uppfinningsrik", "Luftig"
+  ],
+  "animals": [
+    "Räv", "Uggla", "Igelkott", "Ekorre", "Varg", "Björn", "Lo", "Hare", "Kanin", "Groda",
+    "Padda", "Fjäril", "Humla", "Myra", "Nyckelpiga", "Spindel", "Katt", "Hund", "Häst", "Get",
+    "Gris", "Höna", "Tupp", "Anka", "Gås", "Svan", "Pingvin", "Delfin", "Val", "Haj",
+    "Bläckfisk", "Sjöstjärna", "Krabba", "Hummer", "Säl", "Utter", "Mård", "Hermelin", "Mus", "Hamster",
+    "Marsvin", "Kalkon", "Pelikan", "Flamingo", "Papegoja", "Tukan", "Känguru", "Koala", "Panda", "Giraff",
+    "Elefant", "Noshörning", "Zebra", "Lejon", "Tiger", "Leopard", "Gepard", "Apa", "Gorilla", "Schimpans",
+    "Lemur", "Flodhäst", "Krokodil", "Alligator", "Sköldpadda", "Ödla", "Kameleont", "Orm", "Örn", "Falk",
+    "Kråka", "Skata", "Lärka", "Svala", "Mås"
+  ]
+}

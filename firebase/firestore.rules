@@ -1,15 +1,75 @@
 rules_version = '2';
 
-// Firestore Security Rules for Lixo (project.md §3 & §6)
+// Firestore Security Rules for Lixo (project.md §3 & §6, doc/plans/030-friends-that-work.md §2)
 // - Static curriculum content (`courses`, `levels`, `tasks`, `lexicon`) is public read-only.
 // - Static content-pack delivery (`content`, `content_chunks`, 024) is public read-only.
-// - Optional public friend profiles (`public_avatars/{userId}`) contain ONLY anonymous username,
-//   avatar appearance, and star count (zero PII, zero chat/DM). Users can only write/delete their own document.
+// - Friend cards (`friend_cards/{cardId}`) hold ONLY a generated nickname (word-list indexes) and
+//   avatar appearance (zero PII, zero chat/DM, no stars, no timestamps). Only the owner and
+//   friends (presence rows in `readers/{readerUid}`) may read a card; `list` is always denied.
+// - Friends are added via short-lived, multi-use invite codes (`friend_invites/{code}`), redeemed
+//   in one atomic write that bumps `uses` and creates the reader doc together, so a reader can't
+//   be minted without a live invite, and an invite can't be burned without actually befriending.
 // - Child homework progress, struggled words logs, and math error logs are NEVER stored in Firestore
 //   (strictly local-only on the device per GDPR §3 & §6).
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function validNick(nick) {
+      return nick is list
+        && nick.size() == 3
+        && nick[0] is int && nick[0] >= 0 && nick[0] <= 255
+        && nick[1] is int && nick[1] >= 0 && nick[1] <= 255
+        && nick[2] is int && nick[2] >= 0 && nick[2] <= 99;
+    }
+
+    function validAvatarId(id) {
+      return id is string && id.matches('^avatar_[a-z0-9_]{1,32}$');
+    }
+
+    function validItemId(id) {
+      return id is string && id.matches('^item_[a-z0-9_]{1,64}$');
+    }
+
+    function validEquipped(m) {
+      return m is map
+        && m.size() <= 9
+        && m.keys().hasOnly([
+          'hat', 'shoulders_back', 'arms_gloves', 'armor_shirt', 'pants',
+          'shoes', 'hand_right', 'hand_left', 'tail'
+        ])
+        && (!('hat' in m) || validItemId(m.hat))
+        && (!('shoulders_back' in m) || validItemId(m.shoulders_back))
+        && (!('arms_gloves' in m) || validItemId(m.arms_gloves))
+        && (!('armor_shirt' in m) || validItemId(m.armor_shirt))
+        && (!('pants' in m) || validItemId(m.pants))
+        && (!('shoes' in m) || validItemId(m.shoes))
+        && (!('hand_right' in m) || validItemId(m.hand_right))
+        && (!('hand_left' in m) || validItemId(m.hand_left))
+        && (!('tail' in m) || validItemId(m.tail));
+    }
+
+    // M1 in temp/verify/030_review.md: Firestore auto-generated doc ids are 20 chars from a
+    // 62-char alphanumeric alphabet; a redeemer's own card id must look like one of these (and,
+    // further down, must actually exist and be owned by them) before a reader doc referencing it
+    // is trusted.
+    function validCardId(id) {
+      return id is string && id.matches('^[A-Za-z0-9]{20}$');
+    }
+
+    function validAppearance(a) {
+      return a is map
+        && a.keys().hasOnly(['avatarId', 'tintHex', 'eyeIndex', 'smileIndex', 'equipped'])
+        && validAvatarId(a.avatarId)
+        && (!('tintHex' in a) || a.tintHex == null || a.tintHex is int)
+        && (!('eyeIndex' in a) || a.eyeIndex is int)
+        && (!('smileIndex' in a) || a.smileIndex is int)
+        && (!('equipped' in a) || validEquipped(a.equipped));
+    }
 
     // Static Curriculum & Dictionary Content (Read-Only for Clients)
     match /courses/{courseId} {
@@ -43,20 +103,93 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Public Friend Avatar Directory (QR / Username Lookup)
-    match /public_avatars/{userId} {
-      // Avatarer är publika — konto behövs inte för att lägga till vänner (project.md §3)
-      allow read: if true;
+    // Friend cards (030): one per child profile, readable only by the owner and current friends.
+    match /friend_cards/{cardId} {
+      allow get: if isSignedIn()
+        && (resource.data.ownerUid == request.auth.uid
+          || exists(/databases/$(database)/documents/friend_cards/$(cardId)/readers/$(request.auth.uid)));
+      allow list: if false;
 
-      // Endast inloggad ägare får skapa, uppdatera eller radera sin publika avatarprofil
-      allow create, update: if request.auth != null
-        && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['userId', 'username', 'appearance', 'totalStars', 'updatedAt'])
-        && request.resource.data.username is string
-        && request.resource.data.username.size() >= 3
-        && request.resource.data.username.size() <= 24;
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['ownerUid', 'nick', 'appearance'])
+        && validNick(request.resource.data.nick)
+        && validAppearance(request.resource.data.appearance);
 
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow update: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.keys().hasOnly(['ownerUid', 'nick', 'appearance'])
+        && validNick(request.resource.data.nick)
+        && validAppearance(request.resource.data.appearance);
+
+      allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+
+      // Presence rows: a reader doc existing for `readerUid` means that uid may read the card.
+      match /readers/{readerUid} {
+        allow get, list: if isSignedIn()
+          && (get(/databases/$(database)/documents/friend_cards/$(cardId)).data.ownerUid == request.auth.uid
+            || readerUid == request.auth.uid);
+
+        allow create: if isSignedIn()
+          && request.resource.data.keys().hasOnly(['readerCardId', 'viaInvite'])
+          && request.resource.data.readerCardId is string
+          && (
+            // (a) the redeemer grants themselves access via a live, not-yet-bumped invite for
+            //     this card; the same batch must bump the invite's `uses` by exactly 1, AND
+            //     (M1 in temp/verify/030_review.md) grant the invite's owner reciprocal access
+            //     on the redeemer's OWN card in the same batch -- otherwise a modified client
+            //     could read this card while staying invisible to its owner.
+            (readerUid == request.auth.uid
+              && 'viaInvite' in request.resource.data
+              && request.resource.data.viaInvite is string
+              && validCardId(request.resource.data.readerCardId)
+              && get(/databases/$(database)/documents/friend_invites/$(request.resource.data.viaInvite)).data.cardId == cardId
+              && get(/databases/$(database)/documents/friend_invites/$(request.resource.data.viaInvite)).data.expiresAt > request.time
+              && getAfter(/databases/$(database)/documents/friend_invites/$(request.resource.data.viaInvite)).data.uses
+                == get(/databases/$(database)/documents/friend_invites/$(request.resource.data.viaInvite)).data.uses + 1
+              && getAfter(/databases/$(database)/documents/friend_cards/$(request.resource.data.readerCardId)).data.ownerUid == request.auth.uid
+              && existsAfter(/databases/$(database)/documents/friend_cards/$(request.resource.data.readerCardId)/readers/$(get(/databases/$(database)/documents/friend_invites/$(request.resource.data.viaInvite)).data.ownerUid)))
+            // (b) the card owner grants a reciprocal reader doc on their own card (no invite
+            //     reference — this is the redeemer's own card, and they are its owner).
+            || (get(/databases/$(database)/documents/friend_cards/$(cardId)).data.ownerUid == request.auth.uid
+              && !('viaInvite' in request.resource.data))
+          );
+
+        allow update: if false;
+
+        allow delete: if isSignedIn()
+          && (get(/databases/$(database)/documents/friend_cards/$(cardId)).data.ownerUid == request.auth.uid
+            || readerUid == request.auth.uid);
+      }
+    }
+
+    // Short-lived, multi-use invite codes (030): 8-char code → one card, up to 30 redeems, 10 min.
+    match /friend_invites/{code} {
+      allow get: if isSignedIn();
+      // M4 in temp/verify/030_review.md: GDPR account deletion needs to find every invite a uid
+      // owns (across all of that uid's cards) to delete it -- scoped to the caller's own
+      // `ownerUid`, so this can't be used to enumerate anyone else's invites.
+      allow list: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
+
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['cardId', 'ownerUid', 'expiresAt', 'uses'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && get(/databases/$(database)/documents/friend_cards/$(request.resource.data.cardId)).data.ownerUid == request.auth.uid
+        && request.resource.data.uses == 0
+        && request.resource.data.expiresAt <= request.time + duration.value(10, 'm');
+
+      // Redeem: bump `uses` by exactly 1, only while the invite is still open, and only together
+      // with creating (in the same batch) a reader doc for the caller on the invite's card.
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses'])
+        && request.resource.data.uses == resource.data.uses + 1
+        && request.resource.data.uses <= 30
+        && resource.data.expiresAt > request.time
+        && !exists(/databases/$(database)/documents/friend_cards/$(resource.data.cardId)/readers/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/friend_cards/$(resource.data.cardId)/readers/$(request.auth.uid));
+
+      allow delete: if isSignedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
     // Explicitly deny any other collection (ensures zero accidental upload of child logs)

@@ -24,7 +24,6 @@ import se.lixo.app.domain.content.Sha256
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.Course
 import se.lixo.app.domain.model.DictionaryEntry
-import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.data.remote.LexiconMeta
 
@@ -93,10 +92,9 @@ private class FakeGateway(
     override suspend fun registerOptionalEmailAccount(email: String, password: String): Result<String> =
         Result.success("u")
 
-    override suspend fun publishPublicFriendAvatar(profile: FriendProfile): Result<Unit> = Result.success(Unit)
-    override suspend fun lookupFriendByUsernameOrQr(query: String): Result<FriendProfile?> = Result.success(null)
     override suspend fun deleteAccountAndAllCloudData(userId: String): Result<Unit> = Result.success(Unit)
     override fun setCrashlyticsCollectionEnabled(enabled: Boolean) = Unit
+    override suspend fun ensureSignedIn(): Result<String> = Result.success("u")
 }
 
 private fun metaFor(json: String, serverTimeMillis: Long? = null, schemaVersion: Int = 1): ContentMetaResult {

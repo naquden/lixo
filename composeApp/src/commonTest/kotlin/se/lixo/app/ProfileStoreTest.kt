@@ -7,6 +7,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import se.lixo.app.data.local.FriendRemovalTombstone
 import se.lixo.app.data.local.ProfileStore
 import se.lixo.app.data.local.toDomain
 import se.lixo.app.data.local.toEntity
@@ -18,8 +19,10 @@ import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.content.SampleContentPack
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
+import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.Subject
+import se.lixo.app.domain.social.Nickname
 
 /**
  * In-memory [ProfileStore] used to exercise [LixoRepository]'s persistence plumbing
@@ -31,6 +34,8 @@ class FakeProfileStore : ProfileStore {
     val unlocked = mutableSetOf<String>()
     val savedProfileIds = mutableListOf<String>()
     val levelProgress = LinkedHashMap<Pair<String, String>, LevelProgress>()
+    val friendsByProfile = LinkedHashMap<String, LinkedHashMap<String, FriendProfile>>()
+    var cloudUid: String? = null
 
     fun seed(profile: ChildProfile) {
         profilesById[profile.id] = profile
@@ -60,6 +65,50 @@ class FakeProfileStore : ProfileStore {
 
     override suspend fun saveLevelProgress(progress: LevelProgress) {
         levelProgress[progress.profileId to progress.levelId] = progress
+    }
+
+    override suspend fun loadFriends(): Map<String, List<FriendProfile>> =
+        friendsByProfile.mapValues { (_, byUid) -> byUid.values.toList() }
+
+    override suspend fun saveFriend(profileId: String, friend: FriendProfile) {
+        friendsByProfile.getOrPut(profileId) { LinkedHashMap() }[friend.userId] = friend
+    }
+
+    override suspend fun deleteFriend(profileId: String, friendUid: String) {
+        friendsByProfile[profileId]?.remove(friendUid)
+    }
+
+    override suspend fun updateFriendCard(profileId: String, friendUid: String, nick: Nickname, appearance: AvatarAppearance) {
+        val existing = friendsByProfile[profileId]?.get(friendUid) ?: return
+        friendsByProfile.getOrPut(profileId) { LinkedHashMap() }[friendUid] = existing.copy(nick = nick, appearance = appearance)
+    }
+
+    override suspend fun setFriendLabel(profileId: String, friendUid: String, label: String?) {
+        val existing = friendsByProfile[profileId]?.get(friendUid) ?: return
+        friendsByProfile.getOrPut(profileId) { LinkedHashMap() }[friendUid] = existing.copy(label = label)
+    }
+
+    override suspend fun markFriendRevealed(profileId: String, friendUid: String, revealedAtEpochMillis: Long) {
+        val existing = friendsByProfile[profileId]?.get(friendUid) ?: return
+        friendsByProfile.getOrPut(profileId) { LinkedHashMap() }[friendUid] = existing.copy(revealedAtEpochMillis = revealedAtEpochMillis)
+    }
+
+    override suspend fun loadCloudUid(): String? = cloudUid
+
+    override suspend fun saveCloudUid(uid: String) {
+        cloudUid = uid
+    }
+
+    val tombstones = LinkedHashMap<Pair<String, String>, FriendRemovalTombstone>()
+
+    override suspend fun loadFriendRemovalTombstones(): List<FriendRemovalTombstone> = tombstones.values.toList()
+
+    override suspend fun saveFriendRemovalTombstone(tombstone: FriendRemovalTombstone) {
+        tombstones[tombstone.profileId to tombstone.friendUid] = tombstone
+    }
+
+    override suspend fun deleteFriendRemovalTombstone(profileId: String, friendUid: String) {
+        tombstones.remove(profileId to friendUid)
     }
 }
 
@@ -191,7 +240,8 @@ class ProfileStoreTest {
         val p = ChildProfile(
             id = "profile_x",
             displayName = "Testa",
-            publicUsername = "testa_123",
+            nickname = Nickname(adj = 1, animal = 2, num = 42),
+            friendCardId = "card_testa_123",
             ageYears = 9,
             tutorialCompleted = true,
             tutorialSkippableByParent = true,
@@ -307,5 +357,47 @@ class ProfileStoreTest {
         )
 
         assertEquals(p, p.toEntity().toDomain())
+    }
+
+    @Test
+    fun friend_mapperRoundTrip() {
+        val friend = FriendProfile(
+            userId = "friend_uid_1",
+            cardId = "card_friend_1",
+            nick = Nickname(adj = 3, animal = 4, num = 7),
+            appearance = AvatarAppearance(avatarId = "avatar_dog", equipped = mapOf(EquipmentSlot.HAT to "item_hat_1")),
+            label = "Olle",
+            addedAtEpochMillis = 1000L,
+            revealedAtEpochMillis = 2000L
+        )
+        assertEquals(friend, friend.toEntity("profile_x").toDomain())
+    }
+
+    @Test
+    fun friends_persistAcrossRepositoryInstancesAndStayScopedPerProfile() = runTest {
+        val store = FakeProfileStore()
+        val repoA = newRepo(store, isDebugBuild = false)
+        repoA.profilesLoaded.first { it }
+        val ella = repoA.createProfile("Ella", 7)
+        val kalle = repoA.createProfile("Kalle", 8)
+
+        store.saveFriend(
+            ella.id,
+            FriendProfile(
+                userId = "friend_1",
+                cardId = "card_1",
+                nick = Nickname(0, 0, 1),
+                appearance = AvatarAppearance(),
+                label = "Min vän",
+                addedAtEpochMillis = 500L
+            )
+        )
+
+        val repoB = newRepo(store, isDebugBuild = false)
+        repoB.profilesLoaded.first { it }
+
+        assertEquals(1, repoB.friendsByProfile.value[ella.id]?.size)
+        assertEquals("Min vän", repoB.friendsByProfile.value[ella.id]?.first()?.label)
+        assertTrue(repoB.friendsByProfile.value[kalle.id].orEmpty().isEmpty())
     }
 }

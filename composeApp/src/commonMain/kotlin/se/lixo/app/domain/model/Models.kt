@@ -4,6 +4,19 @@ import kotlinx.serialization.Serializable
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.content.ContentItem
 import se.lixo.app.domain.content.DEFAULT_AVATAR_ID
+import se.lixo.app.domain.content.NicknameWords
+import se.lixo.app.domain.social.Nickname
+
+/**
+ * doc/plans/030 §1 / review L2: email backup is out of scope for 030 (every child now identifies
+ * to Firestore via Firebase Anonymous Auth, `LixoRepository.ensureCloudIdentity`), and completing
+ * an email-link sign-in REPLACES that anonymous user, which would orphan every friend card. Both
+ * the parent-screen email/account UI (`ParentGateAndDashboardScreen`) and the email-link deep
+ * link completion path (`LixoApp`'s `LaunchedEffect(incomingEmailLink)`) are gated behind this
+ * single flag so they can't drift out of sync; flip it back on only once email backup ships as
+ * its own feature with a proper "link, don't replace" merge story.
+ */
+const val EMAIL_BACKUP_FEATURE_ENABLED = false
 
 /**
  * 9 MVP Equipment slots as specified in project.md §2 ("Utrustningsplatser (9 slots)").
@@ -115,7 +128,10 @@ enum class MathProblemType(val id: String, val swedishNameKey: String) {
 data class ChildProfile(
     val id: String,
     val displayName: String,
-    val publicUsername: String? = null,
+    /** The generated friend nickname (doc/plans/030 §3), assigned when [friendCardId] is first created. */
+    val nickname: Nickname? = null,
+    /** This profile's `friend_cards/{cardId}` id (doc/plans/030 §4/§5), or null until the first friend-related action. */
+    val friendCardId: String? = null,
     val ageYears: Int = 8,
     val tutorialCompleted: Boolean = false,
     val tutorialSkippableByParent: Boolean = false,
@@ -373,22 +389,30 @@ data class Achievement(
 )
 
 /**
- * Friend profile visible in the Friend Gallery via QR code or username (project.md §2 "Kompisgalleri").
- * Contains only anonymous username and avatar appearance — zero PII or chat.
+ * Friend profile visible in the friend village ("Kompisbyn", doc/plans/030), added in person via
+ * QR code or typed invite code. Contains only the friend's generated [nick] and current avatar
+ * appearance — zero PII, zero stars, zero chat. [label] is the private name *this* device's
+ * child gave the friend; it is Room-only and never leaves the device (doc/plans/030 §5).
  */
 @Serializable
 data class FriendProfile(
     val userId: String,
-    val username: String,
+    val cardId: String,
+    val nick: Nickname,
     val appearance: AvatarAppearance,
-    val totalStars: Int = 0,
-    val addedAtEpochMillis: Long = 0L
-)
+    val label: String? = null,
+    val addedAtEpochMillis: Long = 0L,
+    /** `null` = not yet celebrated with the "Ny kompis!" reveal on this device (doc/plans/030 §7). */
+    val revealedAtEpochMillis: Long? = null
+) {
+    /** The private [label] if the child set one, else the generated nickname rendered against [words]. */
+    fun shownName(words: NicknameWords): String = label ?: nick.render(words)
+}
 
 /**
- * Reasons [LixoRepository.addFriendByQuery] can fail (project.md §2 "Kompisgalleri").
+ * Reasons [se.lixo.app.data.repository.LixoRepository.addFriendByCode] can fail (doc/plans/030 §4).
  */
-enum class AddFriendError { NOT_FOUND, ALREADY_FRIEND, NETWORK }
+enum class AddFriendError { NOT_FOUND, ALREADY_FRIEND, NETWORK, EXPIRED, SELF, FULL, INVALID_QR }
 
 class AddFriendException(val reason: AddFriendError) : Exception(reason.name)
 
