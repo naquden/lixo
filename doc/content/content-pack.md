@@ -51,8 +51,10 @@ override bone therefore gives its parts more room, never less.
 | `LEG_L` / `LEG_R` | 40 | 80 | each other | 0.3 |
 | `TAIL` | 40 | 60 | — | −0.4 |
 
-A layer in the `BACK` z-bucket always uses `BACK_BUCKET_PARALLAX` (−0.6) instead of its bone's
-default, unless the layer sets its own `parallax`.
+A layer in the `BACK` z-bucket that has no own `parallax` uses its bone's default parallax above
+plus `BoneTransform.backPeekPx` (`-sin(yaw) * BACK_PEEK_AU * itemScale.x`, see `LayerGeometry.kt`):
+extra horizontal slide, opposite to the body's turn, that lets capes and quivers peek out past the
+arms at large yaw. A layer that sets its own `parallax` uses that instead, with no `backPeekPx`.
 
 ## Z-bucket draw order
 

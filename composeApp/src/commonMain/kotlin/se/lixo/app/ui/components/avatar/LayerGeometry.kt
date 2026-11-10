@@ -7,13 +7,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.lerp
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.max
 import kotlin.math.sin
 import kotlin.math.sqrt
 import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.domain.content.AvatarAppearance
-import se.lixo.app.domain.content.BACK_BUCKET_PARALLAX
+import se.lixo.app.domain.content.BACK_PEEK_AU
 import se.lixo.app.domain.content.Bone
 import se.lixo.app.domain.content.ContentAvatar
 import se.lixo.app.domain.content.ContentItem
@@ -53,6 +54,21 @@ val REST_POSE = ProceduralIdlePose(
 
 /** Where the avatar's feet are on screen, and how many px map to one avatar unit (au). */
 data class RigFrame(val feet: Offset, val pxPerAu: Float)
+
+/** The avatar can be turned at most this many degrees to either side (doc/plans/033). */
+const val MAX_YAW_DEG = 90f
+
+/** Clamps a yaw drag/preview angle to ±[MAX_YAW_DEG]. */
+fun clampYaw(deg: Float): Float = deg.coerceIn(-MAX_YAW_DEG, MAX_YAW_DEG)
+
+/** How much [TURN_SQUASH] narrows the avatar at full yaw. */
+const val TURN_SQUASH = 0.15f
+
+/**
+ * The horizontal squash applied around the feet in `DrawScope.drawAvatar`, giving 85% width at
+ * ±90° yaw. 1f at yaw 0, so rendering there stays byte-identical to no squash at all.
+ */
+fun turnScaleX(yawDeg: Float): Float = 1f - TURN_SQUASH * abs(sin(yawDeg * PI.toFloat() / 180f))
 
 /** The tallest hat (top hat at legendary scale 1.15, 58 au × 1.15) reaches this far above the head top. */
 private const val HAT_REACH_AU = 67f
@@ -218,7 +234,10 @@ private fun heldItemAnchors(bone: Bone, t: BoneTransform, bones: Map<Bone, BoneT
 
 /**
  * A bone's fully-posed placement for one frame, in px. [origin], [pivot] and [breathPivot] are in
- * px; [breathPivot] is the torso bottom centre and is the same value for every bone.
+ * px; [breathPivot] is the torso bottom centre and is the same value for every bone. [backPeekPx]
+ * is the extra horizontal slide of [se.lixo.app.domain.content.ZBucket.BACK] layers that have no
+ * own `parallax`, opposite to the body's turn, at most [BACK_PEEK_AU] (standard-torso au, scaled
+ * by [itemScale]'s x) at ±90° yaw.
  */
 data class BoneTransform(
     val origin: Offset,
@@ -230,6 +249,7 @@ data class BoneTransform(
     val breathPivot: Offset,
     val parallaxPx: Float,
     val yawPx: Float,
+    val backPeekPx: Float,
     val itemScale: Offset
 )
 
@@ -250,7 +270,8 @@ fun boneTransforms(
 ): Map<Bone, BoneTransform> {
     val layout = boneLayoutAu(avatar)
     val legsTop = legsTopAu(avatar)
-    val yawPx = sin(yaw * PI.toFloat() / 180f) * 14f * frame.pxPerAu
+    val sinYaw = sin(yaw * PI.toFloat() / 180f)
+    val yawPx = sinYaw * 14f * frame.pxPerAu
     val headBobAu = pose.headBobOffsetY * 0.5f * avatar.pose.headBob
     val breathScale = 1f + (pose.torsoBreathScaleY - 1f) * avatar.pose.breath
     val breathPivotPx = toPx(frame, Offset(0f, legsTop))
@@ -284,6 +305,7 @@ fun boneTransforms(
             breathPivot = breathPivotPx,
             parallaxPx = yawPx * (DEFAULT_PARALLAX[bone] ?: 0f),
             yawPx = yawPx,
+            backPeekPx = -sinYaw * BACK_PEEK_AU * itemScale.x * frame.pxPerAu,
             itemScale = itemScale
         )
     }
@@ -308,12 +330,16 @@ data class PlacedLayer(
     val authoredBoneSize: Size? = null
 )
 
-/** This layer's horizontal parallax, in px, per `doc/plans/020-layer-renderer.md` approach D step 1. */
+/**
+ * This layer's horizontal parallax, in px, per `doc/plans/020-layer-renderer.md` approach D step 1.
+ * A [ZBucket.BACK] layer with no own `parallax` follows its bone and peeks out by
+ * [BoneTransform.backPeekPx] (doc/plans/033).
+ */
 fun layerParallaxPx(p: PlacedLayer, t: BoneTransform): Float {
     val layer = p.layer
     return when {
         layer.parallax != null -> layer.parallax * t.yawPx
-        layer.z == ZBucket.BACK -> BACK_BUCKET_PARALLAX * t.yawPx
+        layer.z == ZBucket.BACK -> t.parallaxPx + t.backPeekPx
         else -> t.parallaxPx
     }
 }

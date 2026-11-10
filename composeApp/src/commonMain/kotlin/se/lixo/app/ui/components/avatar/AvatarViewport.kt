@@ -30,17 +30,21 @@ import se.lixo.app.domain.model.Rarity
 
 /**
  * Interactive turntable viewport for a content-pack avatar (020): draws [content]'s
- * [appearance] with [drawAvatar], the same idle-animation clock and drag-to-rotate gesture as
- * the old `Avatar3DViewport`.
+ * [appearance] with [drawAvatar], the same idle-animation clock as the old `Avatar3DViewport`.
+ * The drag gesture is drag-only (no fling, no spring back) and limited to ±[MAX_YAW_DEG] so
+ * SHOULDERS_BACK gear peeks out beside the body (doc/plans/033): the avatar stays at the angle
+ * where it was released, and there is no back view. [initialYawDeg] is clamped the same way and
+ * is meant for tests and previews; it applies even when [interactiveRotation] is false.
  */
 @Composable
 fun AvatarViewport(
     content: ActiveContent,
     appearance: AvatarAppearance,
     modifier: Modifier = Modifier,
-    interactiveRotation: Boolean = true
+    interactiveRotation: Boolean = true,
+    initialYawDeg: Float = 0f
 ) {
-    var yawDeg by remember { mutableFloatStateOf(0f) }
+    var yawDeg by remember(initialYawDeg) { mutableFloatStateOf(clampYaw(initialYawDeg)) }
 
     val drawList = remember(content, appearance) { buildAvatarDrawList(content, appearance) }
     val description = remember(content, appearance) { avatarContentDescription(content, appearance) }
@@ -63,7 +67,7 @@ fun AvatarViewport(
                 if (interactiveRotation) {
                     Modifier.pointerInput(Unit) {
                         detectHorizontalDragGestures { _, dragAmount ->
-                            yawDeg = (yawDeg + dragAmount * 0.45f) % 360f
+                            yawDeg = clampYaw(yawDeg + dragAmount * 0.45f)
                         }
                     }
                 } else {

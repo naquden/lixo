@@ -45,7 +45,8 @@ def layer(
     """Builds a layer dict, omitting every value equal to its schema default (order 0, shading
     "gradient", mirror "none", patternClip false, fill.shade 0, parallax unset), so the written
     JSON stays small and matches `ContentLayer`'s Kotlin defaults 1:1. [parallax] overrides the
-    bone/z-bucket default horizontal parallax (see `DEFAULT_PARALLAX`/`BACK_BUCKET_PARALLAX`),
+    bone/z-bucket default horizontal parallax (see `DEFAULT_PARALLAX`; BACK-bucket layers without
+    one follow their bone and peek out by `BACK_PEEK_AU` under yaw),
     e.g. BACK-bucket hair uses `parallax=0.9` so it stays attached to the head under yaw."""
     out: dict = {"bone": bone, "z": z, "d": d}
     fill: dict = {"role": role}

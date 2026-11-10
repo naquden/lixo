@@ -242,7 +242,8 @@ fun DrawScope.drawLayerList(
 
 /**
  * Draws [appearance] on [content]'s avatar: the stage, the legendary aura (if any equipped item
- * is LEGENDARY), then its sorted layers with the face inserted at the FACE bucket.
+ * is LEGENDARY), then its sorted layers (squashed horizontally around the feet by [turnScaleX]
+ * when turned, doc/plans/033) with the face inserted at the FACE bucket.
  */
 fun DrawScope.drawAvatar(
     content: ActiveContent,
@@ -256,14 +257,22 @@ fun DrawScope.drawAvatar(
     val bones = boneTransforms(drawList.avatar, pose, yaw, frame)
     drawStage(frame, drawList.hasLegendary)
     if (drawList.hasLegendary) drawLegendaryAura(frame, auraPhase)
-    drawLayerList(
-        content = content,
-        layers = drawList.layers,
-        bones = bones,
-        auraPhase = auraPhase,
-        alpha = 1f,
-        face = { drawFace(drawList.avatar, appearance.eyeIndex, appearance.smileIndex, bones) }
-    )
+    val drawLayers: DrawScope.() -> Unit = {
+        drawLayerList(
+            content = content,
+            layers = drawList.layers,
+            bones = bones,
+            auraPhase = auraPhase,
+            alpha = 1f,
+            face = { drawFace(drawList.avatar, appearance.eyeIndex, appearance.smileIndex, bones) }
+        )
+    }
+    val sx = turnScaleX(yaw)
+    if (sx == 1f) {
+        drawLayers()
+    } else {
+        withTransform({ scale(scaleX = sx, scaleY = 1f, pivot = frame.feet) }) { drawLayers() }
+    }
 }
 
 /**

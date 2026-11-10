@@ -95,8 +95,14 @@ val DEFAULT_PARALLAX: Map<Bone, Float> = mapOf(
     Bone.TAIL to -0.4f
 )
 
-/** Parallax used for layers in [ZBucket.BACK], regardless of bone. */
-const val BACK_BUCKET_PARALLAX = -0.6f
+/**
+ * How far, in standard-torso au, a [ZBucket.BACK] layer without its own `parallax` slides against
+ * its bone at ±90° yaw, opposite to the body's turn (see [se.lixo.app.ui.components.avatar.boneTransforms]).
+ * It is scaled by the bone's `itemScale.x`, so a wide avatar (e.g. the knight) peeks as much as a
+ * narrow one. 48 gives quivers about 10–14au and capes about 34–52au of peek past the arms at
+ * ±90° across all six bundled avatars; keep it within 40..60.
+ */
+const val BACK_PEEK_AU = 48f
 
 /** How far, as a multiple of a bone box's own size, a layer's path may extend on each side. */
 const val BONE_BOX_OVERHANG = 1.5f
