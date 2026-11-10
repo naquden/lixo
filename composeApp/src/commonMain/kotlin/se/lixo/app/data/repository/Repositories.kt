@@ -63,7 +63,9 @@ import se.lixo.app.domain.model.MathProblemType
 import se.lixo.app.domain.model.StruggledWordLog
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
+import se.lixo.app.domain.model.accepts
 import se.lixo.app.domain.model.achievementId
+import se.lixo.app.domain.model.isHand
 import se.lixo.app.domain.model.requiresAiMode
 import se.lixo.app.domain.social.Nickname
 import se.lixo.app.domain.social.parseFriendCode
@@ -469,8 +471,16 @@ class LixoRepository(
                     val nextEquipped = profile.appearance.equipped.toMutableMap()
                     if (itemId == null) {
                         nextEquipped.remove(slot)
-                    } else if (_unlockedItemIds.value.contains(itemId) && itemId in content.active.value.itemsById) {
-                        nextEquipped[slot] = itemId
+                    } else {
+                        // 032: hand items are shared, but one item is held in only one hand; equipping it in the other hand moves it.
+                        val item = content.active.value.itemsById[itemId]
+                        if (_unlockedItemIds.value.contains(itemId) && item != null && slot.accepts(item.slot)) {
+                            if (slot.isHand) {
+                                val otherHand = if (slot == EquipmentSlot.HAND_LEFT) EquipmentSlot.HAND_RIGHT else EquipmentSlot.HAND_LEFT
+                                if (nextEquipped[otherHand] == itemId) nextEquipped.remove(otherHand)
+                            }
+                            nextEquipped[slot] = itemId
+                        }
                     }
                     profile.copy(
                         appearance = profile.appearance.copy(equipped = nextEquipped),

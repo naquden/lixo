@@ -174,6 +174,54 @@ class BundledCatalogRenderTest {
     }
 
     /**
+     * Verifies 032: every HAND_LEFT/HAND_RIGHT style representative, equipped in the opposite
+     * hand, is drawn mirrored onto that hand, at the same size as in the regular
+     * `avatar_*_style*` sheets, on all 6 avatars (doc/plans/032).
+     */
+    @Test
+    fun everyAvatar_holdsHandItemsInOppositeHands() {
+        clearShots("swapped_")
+        val cases = content.avatarsOrdered.flatMap { avatar -> (0..7).map { style -> avatar to style } }
+        val idx = mutableIntStateOf(0)
+        compose.mainClock.autoAdvance = false
+
+        compose.setContent {
+            LixoTheme {
+                key(idx.intValue) {
+                    val (avatar, style) = cases[idx.intValue]
+                    Box(Modifier.background(Color.White)) {
+                        AvatarViewport(
+                            content,
+                            AvatarAppearance(
+                                avatar.id,
+                                equipped = mapOf(
+                                    EquipmentSlot.HAND_RIGHT to STYLE_REPRESENTATIVES.getValue(EquipmentSlot.HAND_LEFT)[style],
+                                    EquipmentSlot.HAND_LEFT to STYLE_REPRESENTATIVES.getValue(EquipmentSlot.HAND_RIGHT)[style]
+                                )
+                            ),
+                            Modifier.size(340.dp),
+                            interactiveRotation = false
+                        )
+                    }
+                }
+            }
+        }
+
+        cases.forEachIndexed { i, (avatar, style) ->
+            compose.runOnUiThread { idx.intValue = i }
+            compose.mainClock.advanceTimeBy(500)
+
+            val leftRepInRightHand = content.itemsById.getValue(STYLE_REPRESENTATIVES.getValue(EquipmentSlot.HAND_LEFT)[style])
+            val rightRepInLeftHand = content.itemsById.getValue(STYLE_REPRESENTATIVES.getValue(EquipmentSlot.HAND_RIGHT)[style])
+            val expected = content.avatarName(avatar.id) + ": " +
+                content.itemName(leftRepInRightHand) + ", " + content.itemName(rightRepInLeftHand)
+            compose.onNodeWithContentDescription(expected).assertExists()
+
+            shot("swapped_${avatar.id}_style$style")
+        }
+    }
+
+    /**
      * Fully equipped avatars look alike (the hat covers the ears, an equipped tail replaces the
      * default one), so render every avatar bare to check its own parts: ears, default tail, skin.
      */

@@ -4,8 +4,17 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
+- [ ] 033 — Rotate avatar up to ±90° sideways so capes/backpacks (SHOULDERS_BACK) peek out (feature) → [plan](doc/plans/033-avatar-turn-90.md)
+- [ ] 034 — Wardrobe item cards sized from screen + font scale, not fixed 124dp (name never clipped) (bug) → [plan](doc/plans/034-wardrobe-card-proportional-size.md)
+- [ ] 034 — Wardrobe: avatar stage and item area proportioned to screen height (Column weights, cards fill grid cells, short-screen/large-font fallback) (feature, after 031) → [plan](doc/plans/034-wardrobe-proportional-layout.md)
 
 ## Done
+
+- [x] 032 — Shared hand items: any HAND_LEFT/HAND_RIGHT item can be equipped in either hand, mirrored onto that side (feature, after 031) → [plan](doc/plans/032-shared-hand-items.md)  
+  _Verified 2026-11-10 (wf_e6e2f7a7-f90) on emulator-5554: `SharedHandItemsTest` 3/3 (incl. swordMovesBetweenHands), `WardrobeScreenContentTest` 5/5, `FriendLiveGearTest` 1/1, `BundledCatalogRenderTest` 4/4 (new everyAvatar_holdsHandItemsInOppositeHands); commonTest SharedHandItemsTest 6/6, ProfileStoreTest 15/15; screenshots temp/verify/031_032/032_*.png, swapped_avatar_*.png. Friend gear list now labels by equipped slot. LOW: friends on pre-032 builds draw swapped hand items on the authored side; on the cat, a right-hand item in the left hand sits slightly inward on the arm._
+
+- [x] 031 — Wardrobe: avatar always visible while browsing and choosing items (pinned avatar, grid fills remaining height) (feature) → [plan](doc/plans/031-wardrobe-avatar-always-visible.md)  
+  _Verified 2026-11-10 (wf_e6e2f7a7-f90) on emulator-5554 (S25 not attached): `WardrobeScreenContentTest` 5/5 (new avatarStaysVisible_whileBrowsingItems, slotSwitch_resetsGridToFirstCard, smallScreen_avatarAndOneRowVisible), `WardrobeRarityCountTest` 2/2 after fixing a 1px row-height mismatch (cards `wrapContentHeight(unbounded)` + fixed 124dp); host tests 333/333; screenshots temp/verify/031_032/. LOW: no vertical scroll fallback, so at large font scale or on a very short window the item area can shrink to nothing; 124dp card height doesn't follow font scale (name line may clip)._
 
 - [x] 030 — Friends that work: anonymous identity, add by code/QR (multi-use 10-min window, no accept step), private names, live avatar + gear, no stars (feature) → [plan](doc/plans/030-friends-that-work.md)  
   _Verified 2026-11-10 on emulator-5554 (S25 not attached): FriendRevealTest 4/4, FriendCodeFlowTest 7/7, FriendLabelTest 2/2, FriendLiveGearTest 1/1, FriendDeepLinkTest 1/1, FirebaseFriendCloudEmulatorTest 1/1 (real FirebaseSyncService vs Auth+Firestore emulator, 14 scenarios) + Screenshot/ProfilePersistence/BottomNav/Wardrobe regression green; host tests 324/324, rules emulator tests 15/15, pytest 50/50; XML temp/verify/030_final/, screenshots temp/verify/lixo_screenshots/friends/. Manual: deploy rules + auth (anonymous), upload pack with nicknameWords, App Check console registration + debug tokens, enforcement last. iOS not compiled (kmp.ios.enabled=false). Simplified: landing anim = ring pulse, portal = fading circle. LOW: L3 device-clock countdown, no per-uid card/invite cap, L4 dirty-card retry in-memory only._

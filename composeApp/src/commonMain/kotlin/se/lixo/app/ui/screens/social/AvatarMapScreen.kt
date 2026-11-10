@@ -586,8 +586,8 @@ private fun FriendDetailSheetContent(
 
         val equippedGear = remember(friend, content) {
             EquipmentSlot.entries
-                .mapNotNull { slot -> friend.appearance.equipped[slot]?.let { content.itemsById[it] } }
-                .sortedByDescending { it.rarity.ordinal }
+                .mapNotNull { slot -> friend.appearance.equipped[slot]?.let { content.itemsById[it] }?.let { slot to it } }
+                .sortedByDescending { it.second.rarity.ordinal }
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -604,7 +604,7 @@ private fun FriendDetailSheetContent(
                 Spacer(Modifier.width(8.dp))
                 TtsIconButton(
                     textToSpeak = "${LixoStrings.FRIEND_SHEET_GEAR_TITLE}. " +
-                        equippedGear.joinToString(". ") { content.itemName(it) },
+                        equippedGear.joinToString(". ") { content.itemName(it.second) },
                     ttsEngine = ttsEngine
                 )
             }
@@ -622,8 +622,8 @@ private fun FriendDetailSheetContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                equippedGear.forEach { item ->
-                    EquippedGearRow(content = content, item = item)
+                equippedGear.forEach { (slot, item) ->
+                    EquippedGearRow(content = content, item = item, slot = slot)
                 }
             }
         }
@@ -1397,7 +1397,7 @@ private fun AddFriendPlot(unrevealedCount: Int, onClick: () -> Unit) {
 
 /** One row in the friend's gear list: a rarity badge, item name and slot, modeled on the wardrobe item card. */
 @Composable
-private fun EquippedGearRow(content: ActiveContent, item: ContentItem) {
+private fun EquippedGearRow(content: ActiveContent, item: ContentItem, slot: EquipmentSlot) {
     val rarityColor = LixoColors.rarityColor(item.rarity)
 
     LixoCard(
@@ -1430,7 +1430,7 @@ private fun EquippedGearRow(content: ActiveContent, item: ContentItem) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = LixoStrings.slotName(item.slot),
+                    text = LixoStrings.slotName(slot),
                     style = MaterialTheme.typography.labelSmall,
                     color = LixoColors.TextSecondary
                 )

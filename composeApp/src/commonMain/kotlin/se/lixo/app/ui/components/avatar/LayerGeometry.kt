@@ -31,6 +31,7 @@ import se.lixo.app.domain.content.mirrorOf
 import se.lixo.app.domain.content.parseContentHex
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.Rarity
+import se.lixo.app.domain.model.isHand
 
 /**
  * Pure (no `DrawScope`, no `Path`) geometry for the generic layer renderer (020): bone placement,
@@ -438,16 +439,24 @@ fun resolveRoleColor(
 fun sortLayers(layers: List<PlacedLayer>): List<PlacedLayer> =
     layers.sortedWith(compareBy({ it.layer.z.ordinal }, { it.layer.order }))
 
+/** [sideSwap] remaps every placed layer to its mirror bone with `mirrored` inverted: a hand item
+ * equipped in the opposite hand's slot is drawn on the mirror bone, mirrored (doc/plans/032). */
 private fun expandMirror(
     layer: ContentLayer,
     item: ContentItem?,
     partName: String?,
     fill: Color,
-    stroke: Color?
+    stroke: Color?,
+    sideSwap: Boolean = false
 ): List<PlacedLayer> {
     val base = PlacedLayer(layer, layer.bone, mirrored = false, item = item, partName = partName, fillColor = fill, strokeColor = stroke)
     val mirrorBone = if (layer.mirror == Mirror.X) layer.bone.mirrorOf() else null
-    return if (mirrorBone != null) listOf(base, base.copy(bone = mirrorBone, mirrored = true)) else listOf(base)
+    val placed = if (mirrorBone != null) listOf(base, base.copy(bone = mirrorBone, mirrored = true)) else listOf(base)
+    return if (sideSwap) {
+        placed.map { it.copy(bone = it.bone.mirrorOf() ?: it.bone, mirrored = !it.mirrored) }
+    } else {
+        placed
+    }
 }
 
 /** The avatar + its equipped items + the sorted layers to draw, plus whether any item is LEGENDARY. */
@@ -458,10 +467,14 @@ data class AvatarDrawList(
     val hasLegendary: Boolean
 )
 
-/** Collects and sorts [appearance]'s layers, per `doc/plans/020-layer-renderer.md` approach E. */
+/** Collects and sorts [appearance]'s layers, per `doc/plans/020-layer-renderer.md` approach E.
+ * A hand item equipped in the hand opposite the one it was authored for (shared hand pool,
+ * doc/plans/032) is drawn mirrored onto that side's bone via [expandMirror]'s `sideSwap`. */
 fun buildAvatarDrawList(content: ActiveContent, appearance: AvatarAppearance): AvatarDrawList {
     val avatar = content.avatarsById[appearance.avatarId] ?: content.defaultAvatar
-    val items = EquipmentSlot.entries.mapNotNull { slot -> appearance.equipped[slot]?.let { content.itemsById[it] } }
+    val equippedItems: List<Pair<EquipmentSlot, ContentItem>> =
+        EquipmentSlot.entries.mapNotNull { slot -> appearance.equipped[slot]?.let { content.itemsById[it] }?.let { slot to it } }
+    val items = equippedItems.map { it.second }
     val hidden = items.flatMap { it.hidesParts }.toSet()
 
     val skin = parseContentHex(avatar.skinHex)?.let(::Color) ?: Color.Gray
@@ -475,8 +488,9 @@ fun buildAvatarDrawList(content: ActiveContent, appearance: AvatarAppearance): A
     val partLayers = avatar.parts.filter { it.part !in hidden }.flatMap { part ->
         part.layers.flatMap { layer -> expandMirror(layer, null, part.part, fillOf(layer, null), strokeOf(layer, null)) }
     }
-    val itemLayers = items.flatMap { item ->
-        item.layers.flatMap { layer -> expandMirror(layer, item, null, fillOf(layer, item), strokeOf(layer, item)) }
+    val itemLayers = equippedItems.flatMap { (slot, item) ->
+        val swap = slot.isHand && item.slot.isHand && slot != item.slot
+        item.layers.flatMap { layer -> expandMirror(layer, item, null, fillOf(layer, item), strokeOf(layer, item), sideSwap = swap) }
     }
 
     val layers = sortLayers(partLayers + itemLayers)

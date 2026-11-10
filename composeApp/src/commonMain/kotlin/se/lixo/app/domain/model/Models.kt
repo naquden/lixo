@@ -39,6 +39,12 @@ enum class EquipmentSlot(
     TAIL("tail", "slot_tail", "socket_tail")
 }
 
+/** Whether this slot is one of the two hand slots that share one item pool (doc/plans/032). */
+val EquipmentSlot.isHand: Boolean get() = this == EquipmentSlot.HAND_LEFT || this == EquipmentSlot.HAND_RIGHT
+
+/** Whether an item authored for [itemSlot] may be equipped in this slot: same slot, or both hand slots (shared hand pool, doc/plans/032). */
+fun EquipmentSlot.accepts(itemSlot: EquipmentSlot): Boolean = this == itemSlot || (isHand && itemSlot.isHand)
+
 /**
  * Fortnite-inspired 2D background color scale as specified in project.md §2 ("Sällsynthet").
  */

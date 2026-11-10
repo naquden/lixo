@@ -217,6 +217,65 @@ class ProfileStoreTest {
     }
 
     @Test
+    fun equipLeftHandItemInRightHand_stored() = runTest {
+        val store = FakeProfileStore()
+        val repoA = newRepo(store, isDebugBuild = false)
+        repoA.profilesLoaded.first { it }
+        val ella = repoA.createProfile("Ella", 7)
+        repoA.awaitPendingProfileWrites()
+
+        repoA.unlockWardrobeItem("item_hand_left_test_shield")
+        repoA.equipItemOnActiveProfile(EquipmentSlot.HAND_RIGHT, "item_hand_left_test_shield")
+        repoA.awaitPendingProfileWrites()
+
+        val profile = repoA.profiles.value.single { it.id == ella.id }
+        assertEquals("item_hand_left_test_shield", profile.appearance.equipped[EquipmentSlot.HAND_RIGHT])
+    }
+
+    @Test
+    fun equipHatInShoes_ignored() = runTest {
+        val store = FakeProfileStore()
+        val repoA = newRepo(store, isDebugBuild = false)
+        repoA.profilesLoaded.first { it }
+        val ella = repoA.createProfile("Ella", 7)
+        repoA.awaitPendingProfileWrites()
+
+        repoA.unlockWardrobeItem("item_hat_test_cone")
+        repoA.equipItemOnActiveProfile(EquipmentSlot.SHOES, "item_hat_test_cone")
+        repoA.awaitPendingProfileWrites()
+
+        val profile = repoA.profiles.value.single { it.id == ella.id }
+        assertTrue(EquipmentSlot.SHOES !in profile.appearance.equipped)
+    }
+
+    @Test
+    fun equipSameHandItemInOtherHand_movesIt() = runTest {
+        val store = FakeProfileStore()
+        val repoA = newRepo(store, isDebugBuild = false)
+        repoA.profilesLoaded.first { it }
+        val ella = repoA.createProfile("Ella", 7)
+        repoA.awaitPendingProfileWrites()
+
+        repoA.unlockWardrobeItem("item_hat_test_cone")
+        repoA.unlockWardrobeItem("item_hand_right_test_wand")
+        repoA.equipItemOnActiveProfile(EquipmentSlot.HAT, "item_hat_test_cone")
+        repoA.equipItemOnActiveProfile(EquipmentSlot.HAND_RIGHT, "item_hand_right_test_wand")
+        repoA.equipItemOnActiveProfile(EquipmentSlot.HAND_LEFT, "item_hand_right_test_wand")
+        repoA.awaitPendingProfileWrites()
+
+        val profile = repoA.profiles.value.single { it.id == ella.id }
+        assertEquals(
+            mapOf(EquipmentSlot.HAT to "item_hat_test_cone", EquipmentSlot.HAND_LEFT to "item_hand_right_test_wand"),
+            profile.appearance.equipped
+        )
+
+        val repoB = newRepo(store, isDebugBuild = false)
+        repoB.profilesLoaded.first { it }
+        val reloaded = repoB.profiles.value.single { it.id == ella.id }
+        assertEquals(profile.appearance.equipped, reloaded.appearance.equipped)
+    }
+
+    @Test
     fun selectProfile_persistsActiveId() = runTest {
         val store = FakeProfileStore()
         val repoA = newRepo(store, isDebugBuild = false)
