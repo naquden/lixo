@@ -60,7 +60,8 @@ object GeographyChoices {
                 correctAnswer = q.countryIso2,
                 choices = (q.distractorIso2 + q.countryIso2).shuffled(random),
                 hintStep1Sv = "${country.nameSv} ligger i ${country.region.swedishName}.",
-                hintStep2Sv = colourHintSv(country.colorsSv)
+                hintStep2Sv = colourHintSv(country.colorsSv),
+                promptEmphasisSv = country.nameSv
             )
         }
 }

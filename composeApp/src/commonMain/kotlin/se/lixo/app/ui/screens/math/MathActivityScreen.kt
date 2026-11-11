@@ -100,6 +100,7 @@ import se.lixo.app.ui.theme.TtsIconButton
  */
 const val MATH_CHOICE_TAG_PREFIX = "choice_"
 const val MATH_TIMER_TAG = "math_timer"
+const val MATH_PROMPT_TAG = "math_prompt"
 
 private const val MATH_TIMER_TICK_MS = 100L
 
@@ -292,12 +293,26 @@ fun MathActivityScreen(
                 Spacer(Modifier.height(8.dp))
 
                 // Problem Question Prompt
-                Text(
-                    text = problem.promptSv,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = LixoColors.TextPrimary
-                )
+                val emphasizedPrompt = remember(problem.promptSv, problem.promptEmphasisSv) {
+                    promptWithEmphasis(problem.promptSv, problem.promptEmphasisSv)
+                }
+                if (emphasizedPrompt != null) {
+                    Text(
+                        text = emphasizedPrompt,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Normal,
+                        color = LixoColors.TextPrimary,
+                        modifier = Modifier.testTag(MATH_PROMPT_TAG)
+                    )
+                } else {
+                    Text(
+                        text = problem.promptSv,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = LixoColors.TextPrimary,
+                        modifier = Modifier.testTag(MATH_PROMPT_TAG)
+                    )
+                }
 
                 // Visual Manipulative: Clock Face
                 if (problem.visualClockHour != null && problem.visualClockMinute != null) {

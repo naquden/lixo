@@ -58,6 +58,17 @@ class GeographyChoicesTest {
         assertEquals("Sverige ligger i Norden.", problem.hintStep1Sv)
         assertEquals("Flaggan har färgerna blå och gul.", problem.hintStep2Sv)
         assertEquals(MathProblemType.FLAG, problem.type)
+        assertEquals("Sverige", problem.promptEmphasisSv)
+    }
+
+    @Test
+    fun promptEmphasis_isCountryNameContainedInPrompt_forAllLevel1Questions() {
+        val problems = GeographyChoices.buildProblems(level1Questions, Random(0))
+        problems.forEach { p ->
+            val expectedName = GeographyCountries.byIso(p.correctAnswer).nameSv
+            assertEquals(expectedName, p.promptEmphasisSv)
+            assertTrue(p.promptSv.contains(p.promptEmphasisSv!!))
+        }
     }
 
     @Test

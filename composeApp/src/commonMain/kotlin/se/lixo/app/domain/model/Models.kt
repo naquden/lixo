@@ -272,7 +272,9 @@ data class MathProblem(
     val hintStep2Sv: String,
     val visualClockHour: Int? = null,
     val visualClockMinute: Int? = null,
-    val visualMoneyBreakdownKr: List<Int> = emptyList()
+    val visualMoneyBreakdownKr: List<Int> = emptyList(),
+    /** Substring of [promptSv] shown in bold while the rest of the prompt is normal weight (plan 040, flag questions). Null = whole prompt bold. */
+    val promptEmphasisSv: String? = null
 )
 
 /**
