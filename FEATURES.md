@@ -5,6 +5,7 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 ## Pending
 
 - [ ] 042 — iOS support: buildable/runnable iOS app (XcodeGen project, Firebase SPM), real STT/TTS/QR, lixo:// deep links, App Check, server time/clock, no iCloud backup of child data (feature) → [plan](doc/plans/042-ios-support.md)
+  _Run 1 (wf_24e78e9b-2c6, 2026-11-11): main iOS + Android code compiles (`compileKotlinIosSimulatorArm64`, `compileDebugKotlin`), WIP commit 8ed3ae9. Not verified: iosTest source set fails to compile (11 errors — `waitUntil` positional arg, local `hasText` helper shadowing matcher, member-function imports `assertExists`/`onNode`, wrong `CampaignLevel` package) and commonTest `HttpDateParseTest.validRfc1123Date_roundTripsAgainstInstantParse` fails. Plus 7 LOW review findings (STT double-start leak, lost error state, audio session deactivation cuts TTS, App Attest without entitlement, QR dismiss-during-present hang, STT_PREFER_ON_DEVICE ignored, CancellationException swallowed, unverified Firebase zip download). Details temp/verify/042/run1_findings.json. Retrying._
 
 ## Done
 
