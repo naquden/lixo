@@ -40,7 +40,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import se.lixo.app.data.local.ContentPackCache
 import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase

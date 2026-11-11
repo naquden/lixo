@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import se.lixo.app.data.content.BundledContentPack
 import se.lixo.app.data.local.ContentPackCache
 import se.lixo.app.data.remote.CloudSyncGateway

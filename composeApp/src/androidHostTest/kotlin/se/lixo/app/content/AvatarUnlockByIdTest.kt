@@ -1,6 +1,6 @@
 package se.lixo.app.content
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import se.lixo.app.BundledTestContent

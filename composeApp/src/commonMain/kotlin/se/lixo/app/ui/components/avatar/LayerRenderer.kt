@@ -195,7 +195,7 @@ fun DrawScope.drawLayerList(
     val lastIndexByItem = HashMap<String, Int>()
     layers.forEachIndexed { i, p ->
         val id = p.item?.id ?: return@forEachIndexed
-        firstIndexByItem.putIfAbsent(id, i)
+        firstIndexByItem.getOrPut(id) { i }
         lastIndexByItem[id] = i
     }
     val unionCache = HashMap<String, Rect?>()

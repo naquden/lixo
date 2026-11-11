@@ -1,21 +1,41 @@
 import SwiftUI
 import UIKit
+import DeviceCheck
 import FirebaseCore
+import FirebaseAppCheck
 import ComposeApp
+
+/// Release App Check provider factory: App Attest where the device supports it, DeviceCheck
+/// otherwise. App Check enforcement stays off for now, same as Android 030 §2a.
+final class LixoAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
+    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+        if DCAppAttestService.shared.isSupported {
+            return AppAttestProvider(app: app)
+        }
+        return DeviceCheckProvider(app: app)
+    }
+}
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // Initialize Firebase FIRST before any state or view controllers touch Firebase
+        // Initialize Firebase FIRST before any state or view controllers touch Firebase. The App
+        // Check provider must be installed before FirebaseApp.configure() (doc/plans/042 §6).
         if FirebaseApp.app() == nil {
+#if DEBUG
+            AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
+#else
+            AppCheck.setAppCheckProviderFactory(LixoAppCheckProviderFactory())
+#endif
             FirebaseApp.configure()
         }
         return true
     }
 
-    // Handle Universal Links for Firebase Email Link Authentication (https://firebase.google.com/docs/auth/ios/email-link-auth)
+    // Handle Universal Links for Firebase Email Link Authentication
+    // (https://firebase.google.com/docs/auth/ios/email-link-auth) and `lixo://friend/<code>`.
     func application(
         _ application: UIApplication,
         continue userActivity: NSUserActivity,
@@ -25,16 +45,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
               let incomingURL = userActivity.webpageURL else {
             return false
         }
-        return MainViewControllerKt.handleIncomingEmailSignInLink(url: incomingURL.absoluteString)
+        return MainViewControllerKt.handleIncomingUrl(url: incomingURL.absoluteString)
     }
 
-    // Handle custom URL scheme fallback for Firebase Email Link Authentication
+    // Handle the custom `lixo://` URL scheme (friend deep link) and the Email Link Auth fallback.
     func application(
         _ app: UIApplication,
         open url: URL,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
-        return MainViewControllerKt.handleIncomingEmailSignInLink(url: url.absoluteString)
+        return MainViewControllerKt.handleIncomingUrl(url: url.absoluteString)
     }
 }
 
@@ -42,24 +62,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct iOSApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
-    init() {
-        // Initialize Firebase FIRST before any state or view controllers touch Firebase
-        if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
-        }
-    }
-
     var body: some Scene {
         WindowGroup {
             ComposeContentView()
                 .ignoresSafeArea(.all)
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { userActivity in
                     if let incomingURL = userActivity.webpageURL {
-                        _ = MainViewControllerKt.handleIncomingEmailSignInLink(url: incomingURL.absoluteString)
+                        _ = MainViewControllerKt.handleIncomingUrl(url: incomingURL.absoluteString)
                     }
                 }
                 .onOpenURL { url in
-                    _ = MainViewControllerKt.handleIncomingEmailSignInLink(url: url.absoluteString)
+                    _ = MainViewControllerKt.handleIncomingUrl(url: url.absoluteString)
                 }
         }
     }

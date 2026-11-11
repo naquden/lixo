@@ -19,10 +19,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.random.Random
+import kotlin.time.Clock
 import se.lixo.app.data.local.FriendRemovalTombstone
 import se.lixo.app.data.local.LexiconCache
 import se.lixo.app.data.local.ProfileStore
@@ -312,7 +312,7 @@ class LixoRepository(
             if (_cloudUid.value == null) _cloudUid.value = persistedCloudUid
             for (tombstone in persistedTombstones) {
                 pendingRemovalsByProfile.getOrPut(tombstone.profileId) { mutableMapOf() }
-                    .putIfAbsent(tombstone.friendUid, tombstone)
+                    .getOrPut(tombstone.friendUid) { tombstone }
             }
             _tombstonedUidsByProfile.update { mem ->
                 val persistedByProfile = persistedTombstones.groupBy({ it.profileId }, { it.friendUid })

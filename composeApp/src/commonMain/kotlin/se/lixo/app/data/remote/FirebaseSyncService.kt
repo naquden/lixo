@@ -690,7 +690,7 @@ class FirebaseSyncService(
 }
 
 /** Best-effort wall clock for invite expiry math when the HTTP server-time probe is unavailable. */
-private fun nowMillisFallback(): Long = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+private fun nowMillisFallback(): Long = kotlin.time.Clock.System.now().toEpochMilliseconds()
 
 /**
  * An 8-char invite code from [FRIEND_CODE_ALPHABET] (32 symbols = 5 bits), generated from

@@ -80,8 +80,10 @@ the prefix case-insensitively, removes `-`/spaces, upper-cases, and maps the eas
 constructor parameter (not a platform singleton resolved inside the screen) so instrumented tests
 can inject a fake. Android's actual (`createPlatformQrScanner`) uses Google's
 `play-services-code-scanner`, which needs **no `CAMERA` permission** (verified: the assembled
-debug APK has no `CAMERA` entry). iOS's actual always returns `Unavailable` — no iOS scanner is in
-scope for 030; the UI falls back to the typed code field + "Skriv koden i stället".
+debug APK has no `CAMERA` entry). iOS uses an AVFoundation scanner (`IosQrScanner`, a modal
+camera view with an "Avbryt" button, gated on `NSCameraUsageDescription`); it returns
+`Unavailable` without a camera (e.g. the simulator) or without camera permission, and the UI
+falls back to the typed code field + "Skriv koden i stället".
 
 ### Deep link
 
@@ -90,7 +92,10 @@ scope for 030; the UI falls back to the typed code field + "Skriv koden i ställ
 `platform.FriendDeepLinkDispatcher`, which `LixoApp.kt` observes to switch to the Avatar tab and
 prefill the code into "Lägg till kompis" — **nothing is ever redeemed automatically**. This link
 exists only so the system camera app can open Lixo when it scans a code; Lixo itself never
-generates a shareable link.
+generates a shareable link. iOS registers the same `lixo` URL scheme in `Info.plist`
+(`CFBundleURLTypes`) and routes every incoming URL (Universal Link, custom scheme, or
+`onOpenURL`/`onContinueUserActivity`) through `MainViewController.kt`'s `handleIncomingUrl`,
+which tries `FriendDeepLinkDispatcher` first, then `EmailLinkAuthDispatcher`.
 
 ## Local vs. cloud
 

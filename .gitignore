@@ -31,6 +31,7 @@ captures/
 .navigation/
 
 # iOS & Xcode (Kotlin Multiplatform)
+iosApp/iosApp.xcodeproj/
 **/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/

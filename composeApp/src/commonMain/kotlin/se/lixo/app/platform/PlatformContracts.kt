@@ -79,7 +79,7 @@ interface SpeechRecognitionEngine {
 
     /**
      * The upcoming unread normalized words from the reading cursor, used to bias the recognizer's
-     * expected vocabulary at its next (re)start. No-op by default so iOS and fakes compile unchanged.
+     * expected vocabulary at its next (re)start. No-op by default so fakes compile unchanged.
      */
     fun updateExpectedPosition(nextWords: List<String>) {}
 }
@@ -122,30 +122,34 @@ expect fun createPlatformLixoDatabase(): se.lixo.app.data.local.LixoDatabase?
  * The server's wall-clock time (1 s precision) read from the HTTP `Date` header of a lightweight
  * request to [url], or null if offline, unsupported, or the request fails. Used by
  * `ContentRepository.sync` (024) to feed 025's TrustedClock; GitLive's Firestore SDK exposes no
- * document read-time, so this HTTP fallback is the only cross-platform source.
+ * document read-time, so this HTTP fallback is the only cross-platform source. Implemented on
+ * both platforms: Android via `HttpURLConnection`, iOS via a `NSURLSession` HEAD request.
  */
 expect suspend fun fetchHttpServerTimeMillis(url: String): Long?
 
 /**
  * The debug content-pack preview override written to `<filesDir>/content_pack_preview.json`
  * (`doc/plans/021-content-pack-authoring-pipeline.md`'s README preview-from-a-file flow), or
- * null if it doesn't exist / there is no platform `Context` (iOS: always null).
+ * null if it doesn't exist / there is no platform `Context`. iOS reads
+ * `Documents/content_pack_preview.json`, and only in debug binaries (`Platform.isDebugBinary`);
+ * release builds always return null.
  */
 expect fun readDebugContentPreviewFile(): String?
 
 /**
  * A monotonic clock reading in milliseconds, for [se.lixo.app.domain.engine.TrustedClock]:
- * Android `SystemClock.elapsedRealtime()` (counts across sleep), iOS `NSProcessInfo.systemUptime`
- * (does not count across sleep, but that only matters when there is an anchor to carry across
- * one, and this process never anchors on iOS -- see `PlatformIos.kt`).
+ * Android `SystemClock.elapsedRealtime()` (counts across sleep), iOS
+ * `clock_gettime_nsec_np(CLOCK_MONOTONIC)` (also counts across sleep on Darwin).
  */
 expect fun platformMonotonicMillis(): Long
 
 /**
  * An opaque id for the current boot, stable across app restarts within the same boot and
- * different across a reboot, or null when unknown (Android: `Settings.Global.BOOT_COUNT`; iOS:
- * always null). Only when non-null is a persisted [se.lixo.app.domain.engine.TrustedClockAnchor]
- * trusted across a process restart.
+ * different across a reboot, or null when unknown. Android: `Settings.Global.BOOT_COUNT`. iOS:
+ * `sysctlbyname("kern.boottime")` seconds, formatted as a string; this also changes if the user
+ * changes the wall clock, which is acceptable because the anchor then fails safe (it becomes
+ * untrusted rather than silently wrong). Only when non-null is a persisted
+ * [se.lixo.app.domain.engine.TrustedClockAnchor] trusted across a process restart.
  */
 expect fun platformBootId(): String?
 
@@ -183,8 +187,10 @@ sealed interface QrScanResult {
  * Cross-platform QR scanner contract (doc/plans/030 §7), provided to [se.lixo.app.ui.screens.social.AvatarMapScreen]
  * as a plain constructor parameter (not a composition local) so instrumented tests can pass a
  * fake implementation instead of [createPlatformQrScanner]. Android uses the Google code scanner
- * (`play-services-code-scanner`), which needs no `CAMERA` permission; iOS always returns
- * [QrScanResult.Unavailable] (no iOS scanner in scope for 030).
+ * (`play-services-code-scanner`), which needs no `CAMERA` permission; iOS uses an AVFoundation
+ * scanner (`IosQrScanner`, a modal camera view with an "Avbryt" button, gated on
+ * `NSCameraUsageDescription`) and returns [QrScanResult.Unavailable] without a camera (e.g. the
+ * simulator) or without camera permission, in which case the UI falls back to the typed code.
  */
 interface QrScanner {
     suspend fun scan(): QrScanResult

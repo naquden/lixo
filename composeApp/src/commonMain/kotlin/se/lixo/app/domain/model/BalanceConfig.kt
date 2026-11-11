@@ -102,6 +102,9 @@ object BalanceConfig {
     /** Max total entries passed as recognizer biasing strings (`EXTRA_BIASING_STRINGS`). */
     const val STT_BIAS_MAX_STRINGS = 100
 
+    /** iOS SFSpeechRecognitionTask hard limit is ~1 min; end audio and restart before it. */
+    const val STT_IOS_TASK_RESTART_MILLIS = 50_000L
+
     /** Kill-switch: prefer the on-device speech recognizer over the cloud one when available. */
     const val STT_PREFER_ON_DEVICE = true
 

@@ -9,7 +9,7 @@ compose-multiplatform = "1.10.3"
 kotlin = "2.3.20"
 kotlinx-coroutines = "1.10.1"
 kotlinx-serialization = "1.8.0"
-kotlinx-datetime = "0.6.1"
+kotlinx-datetime = "0.7.1"
 koin = "4.0.0"
 room = "2.8.5"
 sqlite = "2.7.1"
@@ -28,6 +28,9 @@ play-services-code-scanner = "16.1.0"
 firebase-appcheck-playintegrity = "18.0.0"
 firebase-appcheck-debug = "18.0.0"
 zxing-core = "3.5.4"
+# Must match `exactVersion` in iosApp/project.yml: the test binary links the same Firebase iOS
+# Carthage frameworks that the Xcode app target fetches via SPM.
+firebase-ios-test = "11.15.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -55,6 +58,7 @@ gitlive-firebase-crashlytics = { module = "dev.gitlive:firebase-crashlytics", ve
 
 androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose-ui-test" }
 androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose-ui-test" }
+compose-ui-test-multiplatform = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "compose-multiplatform" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-test-ext-junit" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }
 androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-test-espresso" }

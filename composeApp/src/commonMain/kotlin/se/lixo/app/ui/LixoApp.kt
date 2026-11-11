@@ -42,8 +42,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
+import kotlin.time.Clock
 import se.lixo.app.data.local.createPlatformContentPackCache
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.repository.ContentRepository

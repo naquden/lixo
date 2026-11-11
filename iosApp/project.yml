@@ -1,0 +1,71 @@
+name: iosApp
+options:
+  bundleIdPrefix: se.lixo
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    exactVersion: 11.15.0
+settings:
+  base:
+    DEVELOPMENT_TEAM: $(LIXO_TEAM_ID)
+    SWIFT_VERSION: "5.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  iosApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: iosApp
+      - path: GoogleService-Info.plist
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_NAME: Lixo
+        PRODUCT_BUNDLE_IDENTIFIER: se.lixo.app
+        INFOPLIST_FILE: iosApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: iosApp/iosApp.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        FRAMEWORK_SEARCH_PATHS: ["$(inherited)", "$(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"]
+        OTHER_LDFLAGS: ["$(inherited)", "-ObjC", "-framework", "ComposeApp"]
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+      configs:
+        Release:
+          DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+    preBuildScripts:
+      - name: Compile Kotlin Framework
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ "YES" = "$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED" ]; then
+            echo "Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \"YES\""
+            exit 0
+          fi
+          cd "$SRCROOT/.."
+          ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
+    postBuildScripts:
+      - name: Upload Crashlytics dSYMs
+        script: |
+          [ "${CONFIGURATION}" = "Release" ] || exit 0
+          "${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
+        inputFiles:
+          - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}
+          - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}
+          - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist
+          - $(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)
+    dependencies:
+      - package: Firebase
+        product: FirebaseCore
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseCrashlytics
+      - package: Firebase
+        product: FirebaseAppCheck

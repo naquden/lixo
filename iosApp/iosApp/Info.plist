@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>sv</string>
 	<key>CFBundleDisplayName</key>
@@ -34,7 +36,19 @@
 				<string>se.lixo.app</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>se.lixo.app.friend-link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lixo</string>
+			</array>
+		</dict>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Lixo använder kameran bara för att skanna en kompiskod. Ingen bild sparas.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Lixo använder mikrofonen för att lyssna i realtid när barnet läser högt. Inget ljud sparas någonsin.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

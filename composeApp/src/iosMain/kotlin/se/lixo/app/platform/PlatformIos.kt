@@ -2,33 +2,50 @@ package se.lixo.app.platform
 
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ULongVar
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.sizeOf
 import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.value
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.datetime.Clock
-import platform.AVFAudio.AVSpeechBoundary
-import platform.AVFAudio.AVSpeechSynthesizer
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import platform.AVFAudio.AVSpeechSynthesisVoice
-import platform.AVFAudio.AVSpeechUtterance
-import platform.Foundation.NSBundle
+import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
+import platform.Foundation.HTTPMethod
+import platform.Foundation.NSHTTPURLResponse
+import platform.Foundation.NSBundle
+import platform.Foundation.NSMutableURLRequest
+import platform.Foundation.NSString
+import platform.Foundation.stringWithContentsOfFile
+import platform.Foundation.NSURL
+import platform.Foundation.NSURLIsExcludedFromBackupKey
+import platform.Foundation.NSURLRequestReloadIgnoringLocalCacheData
+import platform.Foundation.NSURLSession
+import platform.Foundation.dataTaskWithRequest
+import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.NSUserDefaults
 import platform.Foundation.NSUserDomainMask
 import platform.UIKit.UIAccessibilityIsReduceMotionEnabled
+import platform.darwin.sysctlbyname
+import platform.posix.CLOCK_MONOTONIC
+import platform.posix.clock_gettime_nsec_np
+import platform.posix.timeval
 import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
 import se.lixo.app.domain.engine.TrustedClockAnchor
 import se.lixo.app.domain.engine.TrustedClockStore
+import kotlin.coroutines.resume
+import kotlin.native.Platform
 
 /**
  * iOS implementation of PlatformFeatureFlags with graceful degradation support
@@ -40,86 +57,13 @@ actual class PlatformFeatureFlags actual constructor() {
     actual val platformName: String = "iOS"
     actual val isSwedishTtsSupported: Boolean =
         AVSpeechSynthesisVoice.voiceWithLanguage("sv-SE") != null
-    actual val isOnDeviceSttSupported: Boolean = true
+    actual val isOnDeviceSttSupported: Boolean =
+        iosSwedishSpeechRecognizer()?.supportsOnDeviceRecognition ?: false
     actual val isNative3DSceneViewSupported: Boolean = true
-    actual val isDebugBuild: Boolean = kotlin.native.Platform.isDebugBinary
+    actual val isDebugBuild: Boolean = Platform.isDebugBinary
     actual val appVersionCode: Int =
-        (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String)?.toIntOrNull() ?: 0
-}
-
-class IosSpeechRecognitionEngine : SpeechRecognitionEngine {
-    override val activeProvider: SttProviderRank = SttProviderRank.PLATFORM_NATIVE_SPEECH
-
-    private val _state = MutableStateFlow(SttEngineState.IDLE)
-    override val state: StateFlow<SttEngineState> = _state.asStateFlow()
-
-    private val _recognizedTokens = MutableSharedFlow<List<RecognizedSpeechToken>>(extraBufferCapacity = 32)
-    override val recognizedTokens: SharedFlow<List<RecognizedSpeechToken>> = _recognizedTokens.asSharedFlow()
-
-    private val _lastLatencyMillis = MutableStateFlow(55L)
-    override val lastLatencyMillis: StateFlow<Long> = _lastLatencyMillis.asStateFlow()
-
-    override suspend fun requestMicrophonePermission(): Boolean {
-        return true
-    }
-
-    override suspend fun startListening(languageIso: String, expectedWords: List<String>) {
-        _state.value = SttEngineState.LISTENING
-    }
-
-    override suspend fun stopListening() {
-        _state.value = SttEngineState.IDLE
-    }
-
-    override suspend fun emitSimulatedWords(words: List<String>, confidence: Float) {
-        val now = Clock.System.now().toEpochMilliseconds()
-        val tokens = words.map { raw ->
-            RecognizedSpeechToken(
-                rawWord = raw,
-                normalizedWord = raw.lowercase().trim { !it.isLetterOrDigit() },
-                confidence = confidence,
-                timestampMillis = now
-            )
-        }
-        _recognizedTokens.emit(tokens)
-    }
-}
-
-class IosTextToSpeechEngine : TextToSpeechEngine {
-    private val synthesizer = AVSpeechSynthesizer()
-    private val svVoice = AVSpeechSynthesisVoice.voiceWithLanguage("sv-SE")
-
-    private val _isAvailable = MutableStateFlow(svVoice != null)
-    override val isAvailable: StateFlow<Boolean> = _isAvailable.asStateFlow()
-
-    private val _isSpeaking = MutableStateFlow(false)
-    override val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
-
-    override fun speak(text: String, languageIso: String, speechRate: Float) {
-        val voice = AVSpeechSynthesisVoice.voiceWithLanguage(languageIso)
-        if (voice == null) {
-            // Graceful degradation if voice pack is missing on iOS device
-            _isAvailable.value = false
-            return
-        }
-        if (synthesizer.isSpeaking()) {
-            synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
-        }
-        val utterance = AVSpeechUtterance.speechUtteranceWithString(text).apply {
-            this.voice = voice
-            this.rate = (speechRate * 0.5f).coerceIn(0.2f, 0.7f)
-        }
-        _isSpeaking.value = true
-        synthesizer.speakUtterance(utterance)
-        _isSpeaking.value = false
-    }
-
-    override fun stop() {
-        if (synthesizer.isSpeaking()) {
-            synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
-        }
-        _isSpeaking.value = false
-    }
+        (NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String)
+            ?.toIntOrNull() ?: 0
 }
 
 @androidx.compose.runtime.Composable
@@ -143,24 +87,76 @@ actual fun secureRandomBytes(size: Int): ByteArray {
     return result
 }
 
-actual fun readDebugContentPreviewFile(): String? = null
+/** iOS: only in debug binaries, read from `Documents/content_pack_preview.json`. */
+@OptIn(kotlin.experimental.ExperimentalNativeApi::class, ExperimentalForeignApi::class, BetaInteropApi::class)
+actual fun readDebugContentPreviewFile(): String? {
+    if (!Platform.isDebugBinary) return null
+    return try {
+        val dir = NSFileManager.defaultManager.URLForDirectory(
+            directory = NSDocumentDirectory,
+            inDomain = NSUserDomainMask,
+            appropriateForURL = null,
+            create = false,
+            error = null
+        )?.path ?: return null
+        val path = "$dir/content_pack_preview.json"
+        if (!NSFileManager.defaultManager.fileExistsAtPath(path)) return null
+        NSString.stringWithContentsOfFile(path, encoding = NSUTF8StringEncoding, error = null)
+    } catch (_: Throwable) {
+        null
+    }
+}
 
-// iOS: not implemented yet, so no server time (024's ContentRepository.sync treats this as
-// "unavailable" and simply records a null lastServerTimeMillis).
-actual suspend fun fetchHttpServerTimeMillis(url: String): Long? = null
+/** iOS: `NSURLSession` HEAD request, 5 s timeout, no cache; parses the `Date` response header. */
+@OptIn(ExperimentalForeignApi::class)
+actual suspend fun fetchHttpServerTimeMillis(url: String): Long? = try {
+    withTimeoutOrNull(6_000) {
+        suspendCancellableCoroutine<Long?> { cont ->
+            val nsUrl = NSURL.URLWithString(url)
+            if (nsUrl == null) {
+                cont.resume(null)
+                return@suspendCancellableCoroutine
+            }
+            val request = NSMutableURLRequest(uRL = nsUrl).apply {
+                HTTPMethod = "HEAD"
+                setTimeoutInterval(5.0)
+                setCachePolicy(NSURLRequestReloadIgnoringLocalCacheData)
+            }
+            val task = NSURLSession.sharedSession.dataTaskWithRequest(request) { _, response, error ->
+                val millis = (response as? NSHTTPURLResponse)
+                    ?.takeIf { error == null }
+                    ?.valueForHTTPHeaderField("Date")
+                    ?.let(::parseHttpDateMillis)
+                cont.resume(millis)
+            }
+            task.resume()
+            cont.invokeOnCancellation { task.cancel() }
+        }
+    }
+} catch (_: Throwable) {
+    null
+}
 
 private var cachedLixoDatabase: LixoDatabase? = null
 
+/**
+ * The DB lives in `Application Support` (not `Documents`), with the directory marked
+ * `NSURLIsExcludedFromBackupKey` so child data never leaves the device via iCloud backup, same
+ * privacy stance as Android 041 (commit 8ee65d6). This only applies to fresh iOS installs; there
+ * are no existing iOS users to migrate.
+ */
 @OptIn(ExperimentalForeignApi::class)
 actual fun createPlatformLixoDatabase(): LixoDatabase? {
     cachedLixoDatabase?.let { return it }
-    val dir = NSFileManager.defaultManager.URLForDirectory(
-        directory = NSDocumentDirectory,
+    val dirUrl = NSFileManager.defaultManager.URLForDirectory(
+        directory = NSApplicationSupportDirectory,
         inDomain = NSUserDomainMask,
         appropriateForURL = null,
         create = true,
         error = null
-    )?.path ?: return null
+    ) ?: return null
+    dirUrl.setResourceValue(true, forKey = NSURLIsExcludedFromBackupKey, error = null)
+    val dir = dirUrl.path ?: return null
     return try {
         Room.databaseBuilder<LixoDatabase>(name = "$dir/lixo.db")
             .setDriver(BundledSQLiteDriver())
@@ -178,12 +174,28 @@ actual fun createPlatformLixoDatabase(): LixoDatabase? {
     }
 }
 
+/** Counts across sleep on Darwin, unlike `NSProcessInfo.systemUptime`. */
+@OptIn(ExperimentalForeignApi::class)
 actual fun platformMonotonicMillis(): Long =
-    (platform.Foundation.NSProcessInfo.processInfo.systemUptime * 1000.0).toLong()
+    (clock_gettime_nsec_np(CLOCK_MONOTONIC.convert()) / 1_000_000uL).toLong()
 
-// iOS has no stable boot-id API; a persisted TrustedClockAnchor is therefore never trusted
-// across a process restart (see TrustedClock.now()).
-actual fun platformBootId(): String? = null
+/**
+ * `sysctlbyname("kern.boottime")` seconds, formatted as a string. This changes if the user
+ * changes the wall clock, which fails safe: the anchor becomes untrusted rather than silently
+ * wrong (do not "fix" this with an uptime-based heuristic).
+ */
+@OptIn(ExperimentalForeignApi::class)
+actual fun platformBootId(): String? = try {
+    memScoped {
+        val tv = alloc<timeval>()
+        val size = alloc<ULongVar>()
+        size.value = sizeOf<timeval>().convert()
+        val ok = sysctlbyname("kern.boottime", tv.ptr, size.ptr, null, 0u) == 0
+        if (ok) tv.tv_sec.toString() else null
+    }
+} catch (_: Throwable) {
+    null
+}
 
 /**
  * iOS implementation of [TrustedClockStore] backed by `NSUserDefaults.standardUserDefaults`
@@ -259,15 +271,7 @@ actual object PendingEmailLinkStorage {
     }
 }
 
-/**
- * doc/plans/030 §7: no iOS QR scanner is in scope for 030, so this always reports
- * [QrScanResult.Unavailable], which the UI handles by falling back to the typed code field.
- */
-private class IosUnavailableQrScanner : QrScanner {
-    override suspend fun scan(): QrScanResult = QrScanResult.Unavailable
-}
-
-actual fun createPlatformQrScanner(): QrScanner = IosUnavailableQrScanner()
+actual fun createPlatformQrScanner(): QrScanner = IosQrScanner()
 
 /** doc/plans/030 §7: iOS's "reduce motion" accessibility setting. */
 actual fun isReducedMotionEnabled(): Boolean =

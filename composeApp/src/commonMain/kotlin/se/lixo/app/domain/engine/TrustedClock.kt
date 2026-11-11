@@ -1,6 +1,6 @@
 package se.lixo.app.domain.engine
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import se.lixo.app.platform.platformBootId
 import se.lixo.app.platform.platformMonotonicMillis
 

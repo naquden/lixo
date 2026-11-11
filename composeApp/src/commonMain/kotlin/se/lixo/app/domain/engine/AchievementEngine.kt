@@ -219,9 +219,8 @@ class AchievementEngine {
             withProfileProgress(definitions, profile)
                 .filter { it.action != null }
                 .groupBy { it.action!! }
-                .toSortedMap(compareBy { it.ordinal })
-                .values
-                .map { currentTier(it) }
+                .entries.sortedBy { it.key.ordinal }
+                .map { currentTier(it.value) }
 
         /**
          * The next tier of [def]'s chain after it, excluding tiers already in [unlockedIds] (so a

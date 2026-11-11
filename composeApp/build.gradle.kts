@@ -12,6 +12,7 @@ plugins {
 }
 
 // Set `kmp.ios.enabled=false` in local.properties to skip iOS targets (e.g. on Windows/Linux).
+// Defaults to true; see doc/ios.md for the simulator build/test/run workflow.
 val iosEnabled: Boolean = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
@@ -35,8 +36,10 @@ kotlin {
     }
 
     if (iosEnabled) {
+        // iosX64 (Intel simulator) is intentionally excluded: sqlite-bundled 2.7.1 does not
+        // publish an iosX64 artifact, so including it fails dependency resolution before any
+        // code is compiled.
         listOf(
-            iosX64(),
             iosArm64(),
             iosSimulatorArm64()
         ).forEach { iosTarget ->
@@ -83,6 +86,58 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
         }
+        if (iosEnabled) {
+            iosTest.dependencies {
+                implementation(libs.compose.ui.test.multiplatform)
+            }
+        }
+    }
+}
+
+if (iosEnabled) {
+    // Test-only: the iosSimulatorArm64 test binary links GitLive's Firebase cinterop klibs,
+    // which each carry `-framework FirebaseX` linker options. Those frameworks are not present
+    // on a CI/dev machine unless fetched here. The shipped app gets Firebase from SPM instead
+    // (see iosApp/project.yml) — this task never touches the app's framework{} block.
+    val firebaseIosDir = rootProject.layout.buildDirectory.dir("firebase-ios/${libs.versions.firebase.ios.test.get()}")
+    val fetchFirebaseIosTestFrameworks = tasks.register<Exec>("fetchFirebaseIosTestFrameworks") {
+        inputs.file(rootProject.file("tools/ios/fetch-firebase-test-frameworks.sh"))
+        outputs.dir(firebaseIosDir)
+        commandLine(
+            "bash",
+            rootProject.file("tools/ios/fetch-firebase-test-frameworks.sh").absolutePath,
+            firebaseIosDir.get().asFile.absolutePath
+        )
+    }
+
+    val xcodeDev = providers.exec { commandLine("xcode-select", "-p") }.standardOutput.asText.map { it.trim() }
+
+    kotlin.targets.withType<org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget>()
+        .matching { it.name == "iosSimulatorArm64" }
+        .configureEach {
+            binaries.withType<org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable>().configureEach {
+                linkerOpts(
+                    "-F${firebaseIosDir.get().asFile.absolutePath}/simulator",
+                    "-ObjC",
+                    "-lc++",
+                    "-lsqlite3",
+                    "-lz",
+                    "-L${xcodeDev.get()}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator",
+                    "-L${xcodeDev.get()}/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/usr/lib/swift"
+                )
+                listOf(
+                    "FirebaseCore", "FirebaseCoreInternal", "FirebaseInstallations", "GoogleUtilities",
+                    "nanopb", "FBLPromises", "FirebaseAuth", "FirebaseAppCheckInterop", "FirebaseAuthInterop",
+                    "FirebaseCoreExtension", "GTMSessionFetcher", "RecaptchaInterop", "FirebaseFirestore",
+                    "FirebaseFirestoreInternal", "FirebaseSharedSwift", "absl", "grpc", "grpcpp", "leveldb",
+                    "openssl_grpc", "FirebaseCrashlytics", "FirebaseRemoteConfigInterop", "FirebaseSessions",
+                    "GoogleDataTransport", "Promises"
+                ).forEach { framework -> linkerOpts("-framework", framework) }
+            }
+        }
+
+    tasks.matching { it.name == "linkDebugTestIosSimulatorArm64" }.configureEach {
+        dependsOn(fetchFirebaseIosTestFrameworks)
     }
 }
 
@@ -94,7 +149,6 @@ dependencies {
     add("kspAndroid", libs.room.compiler)
     if (iosEnabled) {
         add("kspIosSimulatorArm64", libs.room.compiler)
-        add("kspIosX64", libs.room.compiler)
         add("kspIosArm64", libs.room.compiler)
     }
 }

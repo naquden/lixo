@@ -1,6 +1,6 @@
 package se.lixo.app.data.local
 
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.FriendProfile
