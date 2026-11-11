@@ -99,8 +99,19 @@ generates a shareable link.
 | `friend_cards/*` (nick, appearance) | Cloud (Firestore) | Friends-only read, owner-only write |
 | `friend_invites/*` | Cloud | 10-min TTL, deleted on stop/expiry cleanup |
 | Friend list, cached nick/appearance | Room (`FriendEntity`) | Last-known gear, works offline |
-| **Private label** (`FriendEntity.label`) | **Room only, device-local** | Never sent to any `FriendCloud`/gateway method, never logged. `allowBackup="false"` is already set, so Google device backup doesn't copy it either. The parent list shows it next to the real nickname, e.g. "Kalle (@ModigRäv42)". |
+| **Private label** (`FriendEntity.label`) | **Room only, device-local** | Never sent to any `FriendCloud`/gateway method, never logged. Never in Google cloud backup either (`data_extraction_rules.xml` excludes everything from `<cloud-backup>`; `backup_rules.xml` excludes everything on Android 8–11). The only way it leaves the phone is Android's own device-to-device transfer (Android 12+, old phone → new phone directly, never via Lixo/Firebase servers or Google Drive), and even then it is dropped on first launch, see "Phone transfer" below. The parent list shows it next to the real nickname, e.g. "Kalle (@ModigRäv42)". |
 | `revealedAtEpochMillis` | Room only | Drives the reveal animation, not synced |
+
+### Phone transfer (041)
+
+Android 12+ device-to-device transfer copies the local Room DB (`lixo.db`) to the new phone.
+Firebase Auth state is device-bound and is not transferred, so the new phone gets a new
+anonymous uid. Firestore rules tie every card, reader row and invite to the old uid, so on the
+first cloud call `LixoRepository.ensureCloudIdentity()` sees that the persisted `cloud_uid`
+differs from the signed-in uid and resets the friend state: each profile's `friendCardId`,
+the friends list (including private labels) and removal tombstones are cleared, and a fresh
+card is created under the new uid. Friends have to be re-added in person. Progress, avatars
+and unlocked items carry over. The old card stays orphaned in Firestore (no auth to delete it).
 
 ## App Check (030 §2a)
 

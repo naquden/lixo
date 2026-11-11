@@ -107,7 +107,7 @@ Reserv när AI-lyssning inte räcker (nekad mikrofon, bakgrundsljud, flaky STT, 
 ## **Sociala funktioner**
 
 - **Hemmabruk, ingen skola:** MVP är **inte** kopplat till läroplan, skolplattform eller fysisk klass. Ingen lärarroll/klasskonton.
-- **Kompisgalleri (030):** Vänner läggs till med en **kort kod eller QR** (10-minuters giltighet, visas/skannas i person) — inget användarnamn att söka på. Inget konto krävs (anonym molnidentitet skapas automatiskt). Synligt: endast kompisars avatar + nuvarande utrustning, live medan "Kompisbyn" är öppen. Varje barn kan ge varje vän ett **privat namn** som aldrig lämnar enheten. Inga stjärnor visas. Inga chattar eller DM. Se `doc/friends.md`.
+- **Kompisgalleri (030):** Vänner läggs till med en **kort kod eller QR** (10-minuters giltighet, visas/skannas i person) — inget användarnamn att söka på. Inget konto krävs (anonym molnidentitet skapas automatiskt). Synligt: endast kompisars avatar + nuvarande utrustning, live medan "Kompisbyn" är öppen. Varje barn kan ge varje vän ett **privat namn** som aldrig skickas till molnet eller någon server. Inga stjärnor visas. Inga chattar eller DM. Se `doc/friends.md`.
 - **Klassutmaningar:** Utgår. Om utmaningar återkommer senare mäts de i **antal lästa ord**, inte sidor.
 
 ---
@@ -133,10 +133,10 @@ Reserv när AI-lyssning inte räcker (nekad mikrofon, bakgrundsljud, flaky STT, 
 
 ## **Konton, synk & säkerhet**
 
-- **Lokal-only-läge obligatoriskt som alternativ:** Inget konto, allt stannar på telefonen (kan gå förlorat).
+- **Lokal-only-läge obligatoriskt som alternativ:** Inget konto, allt stannar på telefonen (kan gå förlorat; följer med till ny telefon endast via Androids telefon-till-telefon-överföring, Android 12+).
 - **E-postkonto (valfritt, backup):** UI:t för e-post/molnkonto är **dold tills vidare** (030 §1) — döljer inte funktionen permanent, bara tills email-backup kommer tillbaka som egen feature. Varje installation signerar i stället in **anonymt** (Firebase Anonymous Auth) automatiskt, oberoende av det valfria e-postkontot.
 - **Vänner (030):** Kräver bara den anonyma molnidentiteten, inget konto. Ett barns "kompiskort" (`friend_cards/{cardId}`) är läsbart endast av ägaren och godkända vänner — aldrig publikt/sökbart. Vänner läggs till i person med en kod/QR; se `doc/friends.md`.
-- **Användardata laddas aldrig upp** (framsteg, ord-logg, privata kompisnamn m.m. endast lokalt). Se GDPR-avsnittet.
+- **Användardata laddas aldrig upp** (framsteg, ord-logg, privata kompisnamn m.m. endast lokalt — aldrig till våra/Firebase-servrar och aldrig till Googles molnbackup). Enda undantaget: Androids egen telefon-till-telefon-överföring (Android 12+, direkt från gamla till nya telefonen) kopierar den lokala databasen, så framstegen följer med vid telefonbyte; kompislistan nollställs då (se doc/friends.md). Se GDPR-avsnittet.
 - **När molnsynk används** (t.ex. en väns kompiskort): best practice merge — inventarie = union, stjärnor = bästa resultat, inställningar = last-write-wins.
 - **Serverlogik:** Håll det simpelt (barnapp, inget handelsvärde) — **lita på klienten**. Inga FCM-push. Kontoradering enkelt från appen. Firestore Security Rules: användare läser/skriver endast egen data. **App Check** (Play Integrity + debug provider) begränsar skript utanför den riktiga appen (030 §2a).
 - **Bonusgåvor från förälder:** Utgår helt.
@@ -215,7 +215,7 @@ Mål: genialiskt, användarvänligt, snyggt, mycket animationer, ikondrivet, få
 
 - 100 % gratis, inga IAP, ingen reklam.
 - **Ingen röstlagring:** Ljud bearbetas i realtid och raderas omedelbart; aldrig i loggar/Crashlytics.
-- **Användardata (framsteg, ord-logg m.m.):** Endast lokalt på telefonen — laddas aldrig upp.
+- **Användardata (framsteg, ord-logg m.m.):** Endast lokalt på telefonen — laddas aldrig upp (ingen molnbackup; kopieras bara via Androids telefon-till-telefon-överföring vid telefonbyte).
 - **Avatar** är inte personligt kopplad → behandlas inte som personuppgift i den meningen. **Användarnamn** väljs fritt.
 - **E-post** för valfritt konto är personuppgift (GDPR) → sektion **Data och integritet** under Settings.
 - **Firebase Crashlytics:** Samtyckesdialog efter **3:e appstarten** (stör inte första testsessionerna).

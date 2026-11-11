@@ -2,11 +2,16 @@ package se.lixo.app.social
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import se.lixo.app.FakeProfileStore
+import se.lixo.app.data.local.FriendRemovalTombstone
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.remote.fake.FakeFriendCloud
@@ -39,6 +44,16 @@ class FriendRobustnessTest {
         repo.createProfile("Child_$uid", 8)
         return repo
     }
+
+    private fun buildPersistentRepo(uid: String, cloud: FakeFriendCloudStore, ps: FakeProfileStore) = LixoRepository(
+        fakeGateway(uid),
+        friendCloud = FakeFriendCloud(uid, cloud) { 0L },
+        clockMillis = { 0L },
+        lexiconCache = null,
+        isDebugBuild = false,
+        profileStore = ps,
+        content = ContentRepository(SampleContentPack.activeContent())
+    )
 
     @Test
     fun h5_offlineCardState_doesNotDeleteFriend() = runTest {
@@ -160,5 +175,80 @@ class FriendRobustnessTest {
         assertFalse(store.hasAnyReaderForTest(cardId), "readers of the deleted card must be gone too")
         assertFalse(store.hasAnyInviteForTest(cardId), "invites for the deleted card must be gone too")
         assertFalse(store.hasCardForTest(cardId))
+    }
+
+    @Test
+    fun h041_restoredDbWithForeignCloudUid_resetsFriendStateAndCreatesFreshCard() = runTest {
+        val cloud = FakeFriendCloudStore()
+        val ps = FakeProfileStore()
+
+        val repoOld = buildPersistentRepo("uidOld", cloud, ps)
+        repoOld.profilesLoaded.first { it }
+        repoOld.createProfile("Ella", 8)
+
+        val repoFriend = buildRepo("uidF", cloud)
+
+        val invite = repoOld.createFriendCode().getOrThrow()
+        assertTrue(repoFriend.addFriendByCode(invite.code, fromQr = false).isSuccess)
+        repoOld.refreshFriends()
+        assertEquals(1, repoOld.friendsOfActiveProfile().size)
+
+        repoOld.setFriendLabel(repoOld.friendsOfActiveProfile().first().userId, "Min vän")
+
+        val oldCardId = repoOld.ensureMyCard().getOrThrow()
+
+        val profileId = repoOld.activeProfileId.value!!
+        ps.saveFriendRemovalTombstone(FriendRemovalTombstone(profileId, "uidGhost", oldCardId, "card_ghost", 0L))
+        repoOld.awaitPendingProfileWrites()
+
+        assertEquals("uidOld", ps.cloudUid)
+        assertEquals(oldCardId, ps.loadProfiles().single().friendCardId)
+
+        // Simulate a phone transfer: same Room (ps/cloud), new Firebase Auth user.
+        val repoNew = buildPersistentRepo("uidNew", cloud, ps)
+        repoNew.profilesLoaded.first { it }
+
+        val newCardId = repoNew.ensureMyCard().getOrThrow()
+
+        assertNotEquals(oldCardId, newCardId)
+        assertEquals("uidNew", cloud.cardsByCardId[newCardId]?.ownerUid)
+        assertEquals("uidNew", repoNew.cloudUid.value)
+        assertTrue(repoNew.friendsOfActiveProfile().isEmpty())
+        assertTrue(repoNew.createFriendCode().isSuccess)
+
+        repoNew.awaitPendingProfileWrites()
+        assertEquals("uidNew", ps.cloudUid)
+        assertTrue(ps.loadFriends().values.flatten().isEmpty())
+        assertTrue(ps.loadFriendRemovalTombstones().isEmpty())
+        assertEquals(newCardId, ps.loadProfiles().single().friendCardId)
+    }
+
+    @Test
+    fun h041_sameCloudUid_keepsFriendState() = runTest {
+        val cloud = FakeFriendCloudStore()
+        val ps = FakeProfileStore()
+
+        val repoOld = buildPersistentRepo("uidOld", cloud, ps)
+        repoOld.profilesLoaded.first { it }
+        repoOld.createProfile("Ella", 8)
+
+        val repoFriend = buildRepo("uidF", cloud)
+
+        val invite = repoOld.createFriendCode().getOrThrow()
+        assertTrue(repoFriend.addFriendByCode(invite.code, fromQr = false).isSuccess)
+        repoOld.refreshFriends()
+        assertEquals(1, repoOld.friendsOfActiveProfile().size)
+
+        repoOld.setFriendLabel(repoOld.friendsOfActiveProfile().first().userId, "Min vän")
+
+        val oldCardId = repoOld.ensureMyCard().getOrThrow()
+        repoOld.awaitPendingProfileWrites()
+
+        val repoSame = buildPersistentRepo("uidOld", cloud, ps)
+        repoSame.profilesLoaded.first { it }
+
+        assertEquals(oldCardId, repoSame.ensureMyCard().getOrThrow())
+        assertEquals(1, repoSame.friendsOfActiveProfile().size)
+        assertEquals("Min vän", repoSame.friendsOfActiveProfile().first().label)
     }
 }

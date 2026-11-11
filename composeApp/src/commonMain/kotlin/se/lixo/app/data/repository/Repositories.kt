@@ -187,6 +187,19 @@ class LixoRepository(
     private val ensureMyCardMutex = kotlinx.coroutines.sync.Mutex()
 
     /**
+     * 041 review HIGH 1: serializes [ensureCloudIdentity] so the startup call (LixoApp), the
+     * startup tombstone retry and any friend action can't verify/reset concurrently.
+     */
+    private val cloudIdentityMutex = kotlinx.coroutines.sync.Mutex()
+
+    /**
+     * 041 review HIGH 1: true once [_cloudUid] has been checked against the real Firebase Auth
+     * uid in this process. A persisted uid (e.g. restored onto a new phone via Android
+     * device-to-device transfer) is never trusted before that.
+     */
+    private var cloudUidVerified = false
+
+    /**
      * doc/plans/030 review L4: profile ids whose own card failed to push (debounced upsert, or an
      * offline [shuffleNickname]/[ensureMyCard]); retried from [refreshFriends] rather than lost.
      */
@@ -308,7 +321,19 @@ class LixoRepository(
                     persistedByProfile[pid].orEmpty() + mem[pid].orEmpty()
                 }
             }
-            persistScope.launch { retryPendingFriendRemovals(persistedTombstones) }
+            if (persistedCloudUid != null) {
+                // 041 review HIGH 1: verify the restored uid before replaying removals keyed to it; on a
+                // mismatch ensureCloudIdentity() wipes the tombstones, so replay only what is left.
+                // (ensureCloudIdentity waits for _profilesLoaded, set in `finally` below -- no deadlock,
+                // this is a separate coroutine.)
+                persistScope.launch {
+                    if (ensureCloudIdentity().isSuccess) {
+                        retryPendingFriendRemovals(pendingRemovalsByProfile.values.flatMap { it.values.toList() })
+                    }
+                }
+            } else {
+                persistScope.launch { retryPendingFriendRemovals(persistedTombstones) }
+            }
 
             val merged = _profiles.value
             val resolvedActiveId = _activeProfileId.value?.takeIf { id -> merged.any { it.id == id } }
@@ -653,11 +678,6 @@ class LixoRepository(
     }
 
     /**
-     * doc/plans/030 §1: the current Firebase Auth uid, signing in anonymously if needed. Cached
-     * in [_cloudUid] (and Room, via [ProfileStore.saveCloudUid]) so a failed/offline attempt is
-     * retried lazily the next time a friend action needs it, rather than blocking startup.
-     */
-    /**
      * The same clock [createFriendCode]/[addFriendByCode]/etc. use internally (doc/plans/030 §7),
      * exposed so the UI's invite countdown reads the same time source -- and so instrumented
      * tests that construct this repository with a fake `clockMillis` can fast-forward the
@@ -665,14 +685,61 @@ class LixoRepository(
      */
     fun nowMillis(): Long = clockMillis()
 
+    /**
+     * doc/plans/030 §1: the current Firebase Auth uid, signing in anonymously if needed. Cached
+     * in [_cloudUid] (and Room, via [ProfileStore.saveCloudUid]) so a failed/offline attempt is
+     * retried lazily the next time a friend action needs it, rather than blocking startup.
+     * 041 review HIGH 1: also verifies the persisted uid against the real Firebase Auth uid once
+     * per process, and resets cloud-bound friend state on a mismatch (see [resetLostCloudIdentity]).
+     */
     suspend fun ensureCloudIdentity(): Result<String> {
-        _cloudUid.value?.let { return Result.success(it) }
-        val result = cloudGateway.ensureSignedIn()
-        result.onSuccess { uid ->
-            _cloudUid.value = uid
-            enqueueProfileWrite { saveCloudUid(uid) }
+        // Never resolve the identity before Room is merged: otherwise a fresh sign-in would win the
+        // race with loadPersistedProfiles, overwrite the persisted (stale) uid, and leave stale
+        // friendCardIds in place with no way to detect the mismatch.
+        _profilesLoaded.first { it }
+        return cloudIdentityMutex.withLock {
+            val cached = _cloudUid.value
+            if (cached != null && cloudUidVerified) return@withLock Result.success(cached)
+            val result = cloudGateway.ensureSignedIn()
+            result.onSuccess { uid ->
+                if (cached != null && cached != uid) resetLostCloudIdentity()
+                cloudUidVerified = true
+                if (cached != uid) {
+                    _cloudUid.value = uid
+                    enqueueProfileWrite { saveCloudUid(uid) } // AFTER the reset's deletes (FIFO)
+                }
+            }
+            result
         }
-        return result
+    }
+
+    /**
+     * 041 review HIGH 1: the persisted cloud uid no longer matches the signed-in Firebase Auth user
+     * (Room restored onto a new phone via device transfer, where Auth state is not carried over, or
+     * the Auth user was deleted). Firestore rules key every card/reader/tombstone to the old uid, so
+     * none of it is usable any more: drop it so [ensureMyCard] creates a fresh card under the real uid.
+     * Nicknames are kept (local, generated). Never logs uids. Called only under [cloudIdentityMutex].
+     */
+    private fun resetLostCloudIdentity() {
+        println("LixoProfiles: cloud identity changed; resetting friend cards, friends and tombstones")
+        cardUpsertJob?.cancel()
+        cardUpsertJob = null
+        openInviteByProfile.clear()
+        dirtyCardProfileIds.clear()
+
+        val tombstoneKeys = (
+            _tombstonedUidsByProfile.value.flatMap { (pid, uids) -> uids.map { pid to it } } +
+                pendingRemovalsByProfile.flatMap { (pid, byUid) -> byUid.keys.map { pid to it } }
+            ).toSet()
+        pendingRemovalsByProfile.clear()
+        _tombstonedUidsByProfile.value = emptyMap()
+        tombstoneKeys.forEach { (pid, uid) -> enqueueProfileWrite { deleteFriendRemovalTombstone(pid, uid) } }
+
+        val friendKeys = _friendsByProfile.value.flatMap { (pid, list) -> list.map { pid to it.userId } }
+        _friendsByProfile.value = emptyMap()
+        friendKeys.forEach { (pid, uid) -> enqueueProfileWrite { deleteFriend(pid, uid) } }
+
+        updateProfiles { list -> list.map { if (it.friendCardId != null) it.copy(friendCardId = null) else it } }
     }
 
     private fun cloudFailure(cause: Throwable): Result<Nothing> =
@@ -692,9 +759,11 @@ class LixoRepository(
         // deep-link-prefilled `addFriendByCode` at once) would otherwise both observe
         // `friendCardId == null` and each `upsertMyCard(cardId = null, ...)`, creating two cards
         // for the same profile.
+        if (activeProfileOrNull() == null) return@withLock Result.failure(IllegalStateException("No active profile"))
+        // 041 review HIGH 1: verify identity FIRST -- it may clear a stale (restored) friendCardId.
+        ensureCloudIdentity().onFailure { return@withLock cloudFailure(it) }
         val profile = activeProfileOrNull() ?: return@withLock Result.failure(IllegalStateException("No active profile"))
         profile.friendCardId?.let { return@withLock Result.success(it) }
-        ensureCloudIdentity().onFailure { return@withLock cloudFailure(it) }
 
         val nickname = profile.nickname ?: randomNickname(content.active.value.nicknameWords, Random.Default)
         val created = friendCloud.upsertMyCard(cardId = null, nick = nickname, appearance = profile.appearance)
@@ -711,9 +780,13 @@ class LixoRepository(
 
     /** Rerolls the active profile's generated nickname ("Slumpa") and upserts the card if it has one. */
     suspend fun shuffleNickname(): Result<Nickname> {
-        val profile = activeProfileOrNull() ?: return Result.failure(IllegalStateException("No active profile"))
+        val activeId = activeProfileOrNull()?.id ?: return Result.failure(IllegalStateException("No active profile"))
         val newNick = randomNickname(content.active.value.nicknameWords, Random.Default)
-        updateProfiles { list -> list.map { if (it.id == profile.id) it.copy(nickname = newNick) else it } }
+        updateProfiles { list -> list.map { if (it.id == activeId) it.copy(nickname = newNick) else it } }
+        // 041 review HIGH 1: never upsert onto a card id restored from another device's identity.
+        if (_cloudUid.value != null) ensureCloudIdentity().onFailure { return cloudFailure(it) }
+        val profile = _profiles.value.firstOrNull { it.id == activeId }
+            ?: return Result.failure(IllegalStateException("No active profile"))
         return if (profile.friendCardId != null) {
             friendCloud.upsertMyCard(profile.friendCardId, newNick, profile.appearance).fold(
                 onSuccess = { Result.success(newNick) },
@@ -814,6 +887,10 @@ class LixoRepository(
      * and any dirty own-card push (review L4).
      */
     suspend fun refreshFriends() {
+        _profilesLoaded.first { it }
+        // 041 review HIGH 1: verify the (possibly restored) cloud uid before touching any cloud-bound
+        // state; on a mismatch this resets friendCardId/friends/tombstones, so re-read them below.
+        if (_cloudUid.value != null && ensureCloudIdentity().isFailure) return
         val activeId = _activeProfileId.value ?: return
         val profile = activeProfileOrNull() ?: return
         if (profile.id != activeId) return

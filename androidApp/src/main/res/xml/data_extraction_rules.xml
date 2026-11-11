@@ -1,9 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  041 + review HIGH 2 (Android 12+): only Android's local device-to-device transfer (old phone ->
+  new phone directly) may carry the Room DB. Google cloud backup gets NOTHING: child progress,
+  word/math-error logs and private friend labels must never be uploaded (doc/project.md,
+  doc/friends.md). The section is explicit exclude-all rather than omitted, because an absent or
+  include-less section must not be read as "back up everything".
+-->
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="database" path="lixo.db" />
-        <include domain="database" path="lixo.db-wal" />
-        <include domain="database" path="lixo.db-shm" />
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+        <exclude domain="device_root" path="." />
+        <exclude domain="device_file" path="." />
+        <exclude domain="device_database" path="." />
+        <exclude domain="device_sharedpref" path="." />
     </cloud-backup>
     <device-transfer>
         <include domain="database" path="lixo.db" />
