@@ -4,6 +4,8 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
+- [ ] 042 — iOS support: buildable/runnable iOS app (XcodeGen project, Firebase SPM), real STT/TTS/QR, lixo:// deep links, App Check, server time/clock, no iCloud backup of child data (feature) → [plan](doc/plans/042-ios-support.md)
+
 ## Done
 
 - [x] 041 — Allow local app data (Room DB) to transfer via Android phone transfer / cloud backup (feature) → [plan](doc/plans/041-allow-backup-device-transfer.md)  
