@@ -8,8 +8,10 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -23,7 +25,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import se.lixo.app.domain.content.GeographyCountries
+import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.MathEngine
+import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.platform.AndroidPlatformContext
 import se.lixo.app.platform.createPlatformTextToSpeechEngine
@@ -42,6 +46,7 @@ class GeographyFlagChallengeTest {
     val compose = createComposeRule()
 
     private lateinit var outDir: File
+    private lateinit var outDir038: File
 
     @Before
     fun setUp() {
@@ -53,12 +58,13 @@ class GeographyFlagChallengeTest {
         } catch (_: Throwable) {}
         val baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         outDir = File(baseDir, "lixo_screenshots/verify037").apply { mkdirs() }
+        outDir038 = File(baseDir, "lixo_screenshots/verify038").apply { mkdirs() }
     }
 
-    private fun shot(name: String) {
+    private fun shot(name: String, dir: File = outDir) {
         compose.waitForIdle()
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
-        File(outDir, "$name.png").outputStream().use {
+        File(dir, "$name.png").outputStream().use {
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }
@@ -121,5 +127,80 @@ class GeographyFlagChallengeTest {
         val q1 = task.flagQuestions[1]
         val name1 = GeographyCountries.byIso(q1.countryIso2).nameSv
         compose.onNodeWithText("Vilken flagga har $name1?").assertExists()
+    }
+
+    @Test
+    fun allEightQuestions_answeredCorrectly_everyOptionIsAFlag() {
+        val repo = DummyData.populatedRepository()
+        val level = repo.levels.value.first { it.id == "level_161" }
+        val task = repo.tasksById.value.getValue(level.taskId)
+        assertEquals(8, task.flagQuestions.size)
+
+        var finished = false
+
+        compose.setContent {
+            val content = repo.content.active.value
+            LixoTheme {
+                Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+                    MathActivityScreen(
+                        level = level,
+                        task = task,
+                        mathEngine = remember { MathEngine() },
+                        ttsEngine = createPlatformTextToSpeechEngine(),
+                        showSwedishTtsButtons = false,
+                        onLogMathError = { _, _, _, _ -> },
+                        onFinishMathSession = { _, _ ->
+                            finished = true
+                            LevelCompletionOutcome(
+                                updatedProfile = repo.profiles.value.first(),
+                                updatedLevelProgress = LevelProgress(
+                                    profileId = repo.profiles.value.first().id,
+                                    levelId = level.id,
+                                    levelOrder = level.order,
+                                    starsEarned = 1,
+                                    completedInAiMode = false,
+                                    bestTimeSeconds = 0,
+                                    bestWpm = 0,
+                                    completedTimedChallenge = false,
+                                    timesCompleted = 1,
+                                    updatedAtEpochMillis = 0L
+                                ),
+                                netNewStarsAwarded = 0,
+                                newlyUnlockedAvatarIds = emptyList(),
+                                newlyUnlockedRewards = emptyList(),
+                                giftOutcome = null,
+                                streakIncrementedToday = false
+                            )
+                        },
+                        content = content,
+                        onEquipItem = {},
+                        onSelectAvatar = {},
+                        onCloseToMap = {},
+                        choiceSeed = 38L
+                    )
+                }
+            }
+        }
+
+        for (n in 0..7) {
+            val q = task.flagQuestions[n]
+            val name = GeographyCountries.byIso(q.countryIso2).nameSv
+            compose.onNodeWithText("Vilken flagga har $name?").assertExists()
+
+            val isoChoices = q.distractorIso2 + q.countryIso2
+            isoChoices.forEach { iso ->
+                compose.onNodeWithTag("flag_choice_$iso").assertExists()
+            }
+            compose.onAllNodesWithContentDescription(LixoStrings.FLAG_CHOICE_A11Y).assertCountEquals(4)
+            shot("flag_q${n + 1}", outDir038)
+
+            compose.onNodeWithTag("flag_choice_${q.countryIso2}").performScrollTo().performClick()
+            if (n < 7) {
+                compose.onNodeWithText("Snyggt jobbat!").assertExists()
+                compose.onNodeWithText(LixoStrings.MATH_NEXT_PROBLEM_BTN.uppercase()).performClick()
+            } else {
+                compose.waitUntil(5000) { finished }
+            }
+        }
     }
 }

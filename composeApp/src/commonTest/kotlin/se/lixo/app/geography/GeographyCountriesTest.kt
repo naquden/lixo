@@ -82,4 +82,16 @@ class GeographyCountriesTest {
             assertEquals(country, GeographyCountries.byIso(country.iso2.uppercase()))
         }
     }
+
+    @Test
+    fun everyCountry_hasDistinctFlagResource() {
+        assertEquals(194, GeographyCountries.RANKED.map { it.flag }.toSet().size)
+    }
+
+    @Test
+    fun find_resolvesCaseInsensitiveAndNullForUnknown() {
+        assertEquals("Sverige", GeographyCountries.find("SE")?.nameSv)
+        assertEquals(null, GeographyCountries.find("xx"))
+        assertEquals(null, GeographyCountries.find(""))
+    }
 }

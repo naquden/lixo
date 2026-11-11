@@ -38,6 +38,7 @@ import se.lixo.app.data.remote.isValidFriendCardId
 import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.content.ContentItem
+import se.lixo.app.domain.content.GeographyChoices
 import se.lixo.app.domain.content.GeographyCurriculum
 import se.lixo.app.domain.content.LevelReward
 import se.lixo.app.domain.content.MathCurriculum
@@ -1198,8 +1199,10 @@ class LixoRepository(
             // FirebaseSyncService.fetchTasksForCourse ignores its courseId argument and always
             // returns the full task set, so fetch it exactly once (instead of once per course)
             // and keep only the tasks belonging to the levels we're actually syncing.
-            val remoteTasks = cloudGateway.fetchTasksForCourse(coursesToSync.first().id)
-                .filter { it.levelId in syncedLevelIds }
+            val remoteTasks = sanitizeRemoteFlagTasks(
+                cloudGateway.fetchTasksForCourse(coursesToSync.first().id)
+                    .filter { it.levelId in syncedLevelIds }
+            )
 
             if (remoteTasks.isNotEmpty()) {
                 _tasksById.update { current ->
@@ -1219,6 +1222,36 @@ class LixoRepository(
         }
 
         return coursesToSync.isNotEmpty() || lexiconUpdated
+    }
+
+    /**
+     * Excludes unsafe flag questions (e.g. bad Firestore data) from remote [HomeworkTask]s
+     * before they're merged into [_tasksById] (plan 038). Tasks without flag questions pass
+     * through unchanged. A [TaskType.GEOGRAPHY_FLAGS] task that ends up with zero valid
+     * questions is dropped entirely (`mapNotNull` -> `null`) so the merge keeps whatever local
+     * task already exists (or nothing, if there is none) instead of replacing it with an unusable
+     * one. Any other task just gets its junk questions cleaned, never dropped.
+     */
+    private fun sanitizeRemoteFlagTasks(tasks: List<HomeworkTask>): List<HomeworkTask> {
+        val notes = mutableListOf<String>()
+        val result = tasks.mapNotNull { task ->
+            if (task.type != TaskType.GEOGRAPHY_FLAGS && task.flagQuestions.isEmpty()) {
+                return@mapNotNull task
+            }
+            val total = task.flagQuestions.size
+            val valid = GeographyChoices.sanitize(task.flagQuestions)
+            val dropped = total - valid.size
+            if (task.type == TaskType.GEOGRAPHY_FLAGS && valid.isEmpty()) {
+                if (dropped > 0) notes.add("${task.id}: $dropped/$total dropped, kept local task")
+                return@mapNotNull null
+            }
+            if (dropped > 0) notes.add("${task.id}: $dropped/$total dropped")
+            task.copy(flagQuestions = valid)
+        }
+        if (notes.isNotEmpty()) {
+            println("LixoCurriculum: WARN invalid flag questions excluded from cloud sync: " + notes.joinToString("; "))
+        }
+        return result
     }
 
     companion object {

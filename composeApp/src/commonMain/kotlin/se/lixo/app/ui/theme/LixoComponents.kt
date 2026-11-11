@@ -63,9 +63,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import lixo.composeapp.generated.resources.Res
-import lixo.composeapp.generated.resources.allDrawableResources
 import org.jetbrains.compose.resources.painterResource
+import se.lixo.app.domain.content.Country
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.feedback.SfxCue
@@ -421,10 +420,12 @@ const val FLAG_CHOICE_TAG_PREFIX = "flag_choice_"
  * colour states (always unselected, since the answer is an image, not pre-selected text). The
  * flag image has no `contentDescription` and the card's own description is the generic
  * [LixoStrings.FLAG_CHOICE_A11Y] so the accessible name never reveals the correct answer.
+ * [country] carries its own typed [Country.flag] resource (plan 038), so there is no runtime
+ * name lookup and no blank/missing-flag fallback to render here.
  */
 @Composable
 fun FlagChoiceCard(
-    iso2: String,
+    country: Country,
     modifier: Modifier = Modifier,
     isCorrect: Boolean? = null,
     onClick: () -> Unit
@@ -437,7 +438,7 @@ fun FlagChoiceCard(
 
     Box(
         modifier = modifier
-            .testTag(FLAG_CHOICE_TAG_PREFIX + iso2.lowercase())
+            .testTag(FLAG_CHOICE_TAG_PREFIX + country.iso2)
             .semantics {
                 contentDescription = LixoStrings.FLAG_CHOICE_A11Y
                 role = Role.Button
@@ -451,23 +452,17 @@ fun FlagChoiceCard(
             .clickable { onClick() }
             .padding(10.dp)
     ) {
-        val res = remember(iso2) { Res.allDrawableResources["flag_${iso2.lowercase()}"] }
         val imgMod = Modifier
             .fillMaxWidth()
             .aspectRatio(4f / 3f)
             .clip(RoundedCornerShape(6.dp))
             .border(1.dp, LixoColors.Border, RoundedCornerShape(6.dp))
-        if (res != null) {
-            Image(
-                painter = painterResource(res),
-                contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = imgMod
-            )
-        } else {
-            println("LixoFlags: WARN missing flag_$iso2")
-            Box(imgMod.background(LixoColors.Surface))
-        }
+        Image(
+            painter = painterResource(country.flag),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = imgMod
+        )
     }
 }
 

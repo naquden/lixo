@@ -33,13 +33,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -56,6 +60,7 @@ import kotlin.random.Random
 import kotlinx.coroutines.delay
 import se.lixo.app.domain.content.EnglishChoices
 import se.lixo.app.domain.content.GeographyChoices
+import se.lixo.app.domain.content.GeographyCountries
 import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
@@ -94,6 +99,9 @@ import se.lixo.app.ui.theme.TtsIconButton
  * - Bottom tactile feedback bar (Green = Correct, Red = Growth Mindset hint).
  */
 const val MATH_CHOICE_TAG_PREFIX = "choice_"
+const val MATH_TIMER_TAG = "math_timer"
+
+private const val MATH_TIMER_TICK_MS = 100L
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -139,11 +147,20 @@ fun MathActivityScreen(
         }
     }
 
+    // All flag questions were excluded as unsafe (plan 038); close back to the map instead of
+    // letting an empty attempt list look "already solved" and auto-complete the level.
+    if (isGeographyTask && problems.isEmpty()) {
+        LaunchedEffect(task) { onCloseToMap() }
+        Box(Modifier.fillMaxSize().background(LixoColors.Background))
+        return
+    }
+
     var currentIndex by remember { mutableIntStateOf(0) }
     var attemptStates by remember(problems) {
         mutableStateOf(problems.map { MathProblemAttemptState(it) })
     }
-    var elapsedSeconds by remember { mutableIntStateOf(0) }
+    var elapsedMillis by remember { mutableLongStateOf(0L) }
+    val elapsedSeconds by remember { derivedStateOf { (elapsedMillis / 1000L).toInt() } }
     var wrongChoices by remember { mutableStateOf<Set<String>>(emptySet()) }
     var lastCheckResult by remember { mutableStateOf<Boolean?>(null) }
     var completedResult by remember { mutableStateOf<Pair<MathSessionScoreResult, LevelCompletionOutcome>?>(null) }
@@ -159,12 +176,22 @@ fun MathActivityScreen(
     }
 
     val allSolved = attemptStates.all { it.isSolved }
+    val currentAttempt = attemptStates.getOrNull(currentIndex)
+    // 039: paused while the "Snyggt jobbat!" sheet waits for NÄSTA UPPGIFT. Not paused on a wrong answer.
+    val awaitingNext = currentAttempt?.isSolved == true && !allSolved
+
+    LaunchedEffect(allSolved, awaitingNext) {
+        if (allSolved || awaitingNext) return@LaunchedEffect
+        var last = withFrameMillis { it }
+        while (true) {
+            delay(MATH_TIMER_TICK_MS)
+            val now = withFrameMillis { it }
+            elapsedMillis += now - last
+            last = now
+        }
+    }
 
     LaunchedEffect(allSolved) {
-        while (!allSolved) {
-            delay(1000L)
-            elapsedSeconds++
-        }
         if (allSolved && completedResult == null) {
             val score = mathEngine.evaluateMathSession(
                 states = attemptStates,
@@ -177,7 +204,6 @@ fun MathActivityScreen(
         }
     }
 
-    val currentAttempt = attemptStates.getOrNull(currentIndex)
     val progress = if (attemptStates.isEmpty()) 1f else {
         attemptStates.count { it.isSolved }.toFloat() / attemptStates.size.toFloat()
     }
@@ -222,6 +248,7 @@ fun MathActivityScreen(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
+                        .alpha(if (awaitingNext) 0.5f else 1f)
                         .clip(RoundedCornerShape(10.dp))
                         .background(LixoColors.Surface)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -231,7 +258,8 @@ fun MathActivityScreen(
                     Text(
                         text = "${elapsedSeconds}s",
                         style = MaterialTheme.typography.labelMedium,
-                        color = LixoColors.Orange
+                        color = LixoColors.Orange,
+                        modifier = Modifier.testTag(MATH_TIMER_TAG)
                     )
                 }
             }
@@ -395,7 +423,7 @@ fun MathActivityScreen(
                             ) {
                                 row.forEach { iso ->
                                     FlagChoiceCard(
-                                        iso2 = iso,
+                                        country = GeographyCountries.byIso(iso),
                                         isCorrect = correctnessOf(iso),
                                         onClick = { onChoiceSelected(iso) },
                                         modifier = Modifier.weight(1f)

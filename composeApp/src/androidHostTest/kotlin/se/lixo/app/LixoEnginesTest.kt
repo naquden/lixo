@@ -28,6 +28,8 @@ import se.lixo.app.domain.engine.MathProblemAttemptState
 import se.lixo.app.domain.engine.ReadingAlignmentSessionState
 import se.lixo.app.domain.engine.StoryWordToken
 import se.lixo.app.domain.engine.spellingDiff
+import se.lixo.app.domain.content.GeographyChoices
+import se.lixo.app.domain.content.GeographyCurriculum
 import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.model.AddFriendError
@@ -44,6 +46,7 @@ import se.lixo.app.domain.model.Course
 import se.lixo.app.domain.model.DailyActivityRecord
 import se.lixo.app.domain.model.DictionaryEntry
 import se.lixo.app.domain.model.EquipmentSlot
+import se.lixo.app.domain.model.FlagQuestion
 import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathProblem
@@ -2823,6 +2826,82 @@ class LixoEnginesTest {
         // Level 161 has no levelRewards entry in the pack, so the curated reward is null; the
         // onboarding roll covers it at play time instead (022 behaviour change).
         assertNull(task161.rewardItemId)
+    }
+
+    private fun geoSyncGateway(remoteTasks: List<HomeworkTask>) = object : CloudSyncGateway by FirebaseSyncService() {
+        override suspend fun fetchRemoteCourses(): List<Course> = listOf(
+            Course(
+                id = "course_geo_1",
+                title = "Världsresan",
+                subject = Subject.GEOGRAPHY,
+                minGrade = 1,
+                version = 2,
+                updatedAt = 1793558400000L
+            )
+        )
+
+        override suspend fun fetchLevelsForCourse(courseId: String): List<CampaignLevel> =
+            listOf(GeographyCurriculum.buildLevel(1))
+
+        override suspend fun fetchTasksForCourse(courseId: String): List<HomeworkTask> = remoteTasks
+
+        override suspend fun fetchLexiconMeta(): LexiconMeta? = null
+    }
+
+    @Test
+    fun syncCurriculumFromCloud_excludesInvalidFlagQuestions() = runTest {
+        val validQuestions = listOf(
+            FlagQuestion("r1", "no", listOf("se", "dk", "fi")),
+            FlagQuestion("r2", "dk", listOf("se", "no", "fi")),
+            FlagQuestion("r3", "fi", listOf("se", "no", "dk")),
+            FlagQuestion("r4", "is", listOf("se", "no", "dk")),
+            FlagQuestion("r5", "US", listOf("GB", "DE", "FR"))
+        )
+        val invalidQuestions = listOf(
+            FlagQuestion("bad1", "xx", listOf("se", "no", "dk")),
+            FlagQuestion("bad2", "se", listOf("no", "no", "dk")),
+            FlagQuestion("bad3", "se", listOf("no", "dk"))
+        )
+        val remoteTask = HomeworkTask(
+            id = "task_161",
+            levelId = "level_161",
+            type = TaskType.GEOGRAPHY_FLAGS,
+            subject = Subject.GEOGRAPHY,
+            flagQuestions = validQuestions + invalidQuestions
+        )
+
+        val repo = LixoRepository(geoSyncGateway(listOf(remoteTask)), lexiconCache = null, profileStore = null, content = BundledTestContent.repository())
+        repo.syncCurriculumFromCloud()
+
+        val task161 = repo.tasksById.value.getValue("task_161")
+        assertEquals(listOf("r1", "r2", "r3", "r4", "r5"), task161.flagQuestions.map { it.id })
+        assertTrue(task161.flagQuestions.all(GeographyChoices::isValid))
+        assertEquals("us", task161.flagQuestions.last().countryIso2)
+    }
+
+    @Test
+    fun syncCurriculumFromCloud_allInvalidFlagTask_keepsSeededTask() = runTest {
+        val remoteTask = HomeworkTask(
+            id = "task_161",
+            levelId = "level_161",
+            type = TaskType.GEOGRAPHY_FLAGS,
+            subject = Subject.GEOGRAPHY,
+            flagQuestions = listOf(
+                FlagQuestion("bad1", "xx", listOf("se", "no", "dk")),
+                FlagQuestion("bad2", "se", listOf("no", "no", "dk")),
+                FlagQuestion("bad3", "se", listOf("no", "dk"))
+            )
+        )
+
+        val repo = LixoRepository(geoSyncGateway(listOf(remoteTask)), lexiconCache = null, profileStore = null, content = BundledTestContent.repository())
+        val seeded = repo.tasksById.value.getValue("task_161")
+
+        repo.syncCurriculumFromCloud()
+
+        val task161 = repo.tasksById.value.getValue("task_161")
+        assertEquals(seeded, task161)
+        assertEquals(8, task161.flagQuestions.size)
+        assertTrue(task161.flagQuestions.all(GeographyChoices::isValid))
     }
 
     @Test
