@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.time.Clock
 import platform.AVFAudio.AVAudioEngine
@@ -79,6 +81,7 @@ class IosSpeechRecognitionEngine : SpeechRecognitionEngine {
     private var currentLanguage = "sv-SE"
     private var restartJob: Job? = null
     private var taskLimitJob: Job? = null
+    private val startMutex = Mutex()
 
     override suspend fun requestMicrophonePermission(): Boolean {
         val speechAuthorized = suspendCancellableCoroutine<Boolean> { cont ->
@@ -102,41 +105,50 @@ class IosSpeechRecognitionEngine : SpeechRecognitionEngine {
         return true
     }
 
+    // Double-tap guard: ProfileSelectAndTutorialScreen's mic button launches
+    // `requestMicrophonePermission()` + `startListening()` on every tap, which can overlap. The
+    // mutex serializes starts; the `generation` check below catches a `cancelListening()` (e.g.
+    // from onDispose) that ran while this call was suspended inside the permission request.
     @OptIn(ExperimentalForeignApi::class)
-    override suspend fun startListening(languageIso: String, expectedWords: List<String>) {
-        val rec = iosSwedishSpeechRecognizer(languageIso)
-        if (rec == null || !rec.isAvailable()) {
-            _state.value = SttEngineState.ERROR_ENGINE_UNAVAILABLE
-            return
-        }
-        recognizer = rec
-        if (!requestMicrophonePermission()) return
+    override suspend fun startListening(languageIso: String, expectedWords: List<String>): Unit =
+        startMutex.withLock {
+            if (audioEngine != null || shouldKeepListening) cancelListening()
+            val startGeneration = generation
 
-        currentLanguage = languageIso
-        this.expectedWords = expectedWords
-        shouldKeepListening = true
-        IosAudioSession.activateForRecording()
+            val rec = iosSwedishSpeechRecognizer(languageIso)
+            if (rec == null || !rec.isAvailable()) {
+                _state.value = SttEngineState.ERROR_ENGINE_UNAVAILABLE
+                return@withLock
+            }
+            if (!requestMicrophonePermission()) return@withLock
+            if (generation != startGeneration) return@withLock
 
-        val engine = AVAudioEngine()
-        val fmt = engine.inputNode.outputFormatForBus(0u)
-        if (fmt.sampleRate <= 0.0 || fmt.channelCount == 0u) {
-            _state.value = SttEngineState.ERROR_ENGINE_UNAVAILABLE
-            IosAudioSession.deactivateRecording()
-            return
-        }
-        engine.inputNode.installTapOnBus(0u, bufferSize = 1024u, format = fmt) { buffer, _ ->
-            if (buffer != null) currentRequest.value?.appendAudioPCMBuffer(buffer)
-        }
-        audioEngine = engine
+            recognizer = rec
+            currentLanguage = languageIso
+            this.expectedWords = expectedWords
+            shouldKeepListening = true
+            IosAudioSession.activateForRecording()
 
-        engine.prepare()
-        if (!engine.startAndReturnError(null)) {
-            _state.value = SttEngineState.ERROR_ENGINE_UNAVAILABLE
-            cancelListening()
-            return
+            val engine = AVAudioEngine()
+            val fmt = engine.inputNode.outputFormatForBus(0u)
+            if (fmt.sampleRate <= 0.0 || fmt.channelCount == 0u) {
+                cancelListening()
+                _state.value = SttEngineState.ERROR_ENGINE_UNAVAILABLE
+                return@withLock
+            }
+            engine.inputNode.installTapOnBus(0u, bufferSize = 1024u, format = fmt) { buffer, _ ->
+                if (buffer != null) currentRequest.value?.appendAudioPCMBuffer(buffer)
+            }
+            audioEngine = engine
+
+            engine.prepare()
+            if (!engine.startAndReturnError(null)) {
+                cancelListening()
+                _state.value = SttEngineState.ERROR_ENGINE_UNAVAILABLE
+                return@withLock
+            }
+            beginRecognition()
         }
-        beginRecognition()
-    }
 
     private fun beginRecognition() {
         val rec = recognizer ?: return
@@ -147,7 +159,7 @@ class IosSpeechRecognitionEngine : SpeechRecognitionEngine {
 
         val request = SFSpeechAudioBufferRecognitionRequest().apply {
             shouldReportPartialResults = true
-            requiresOnDeviceRecognition = rec.supportsOnDeviceRecognition
+            requiresOnDeviceRecognition = BalanceConfig.STT_PREFER_ON_DEVICE && rec.supportsOnDeviceRecognition
             contextualStrings = buildBiasStrings(expectedWords, upcomingWords)
             addsPunctuation = false
             taskHint = SFSpeechRecognitionTaskHintDictation

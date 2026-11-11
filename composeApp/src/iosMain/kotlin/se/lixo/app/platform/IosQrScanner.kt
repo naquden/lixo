@@ -40,42 +40,51 @@ import platform.darwin.dispatch_get_main_queue
 
 /**
  * AVFoundation QR scanner (doc/plans/042 §10): a modal full-screen camera view with an "Avbryt"
- * button. Returns [QrScanResult.Unavailable] without a camera (e.g. the simulator) or without
- * camera permission, matching Android's degrade-to-typed-code behaviour.
+ * button. Returns [QrScanResult.Unavailable] without a camera (e.g. the simulator), without
+ * camera permission, or if the capture session fails to set up, matching Android's
+ * degrade-to-typed-code behaviour. The capture session is built and validated BEFORE presenting
+ * the view controller: UIKit ignores a dismiss during an in-progress presentation, so a failure
+ * detected only in `viewDidLoad` would leave `scan()` hanging forever behind a black modal.
  */
 internal class IosQrScanner : QrScanner {
 
     @OptIn(ExperimentalForeignApi::class)
-    override suspend fun scan(): QrScanResult = withContext(Dispatchers.Main) {
-        // No camera (the simulator) must short-circuit before any permission call: the test
-        // binary has no NSCameraUsageDescription, and a permission call would abort it (TCC).
+    override suspend fun scan(): QrScanResult {
+        // No camera (the simulator) must short-circuit before any dispatch to Main or any
+        // permission call: the test binary has no NSCameraUsageDescription, and a permission
+        // call would abort it (TCC). It also must run before withContext(Dispatchers.Main),
+        // since a runBlocking { ... } caller (iosTest) on the main thread would deadlock on the
+        // dispatch_async used by Darwin's Main dispatcher.
         val device = AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo)
-            ?: return@withContext QrScanResult.Unavailable
+            ?: return QrScanResult.Unavailable
 
-        val authorized = when (AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo)) {
-            AVAuthorizationStatusAuthorized -> true
-            AVAuthorizationStatusNotDetermined -> suspendCancellableCoroutine { cont ->
-                AVCaptureDevice.requestAccessForMediaType(AVMediaTypeVideo) { granted ->
-                    cont.resume(granted)
+        return withContext(Dispatchers.Main) {
+            val authorized = when (AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo)) {
+                AVAuthorizationStatusAuthorized -> true
+                AVAuthorizationStatusNotDetermined -> suspendCancellableCoroutine { cont ->
+                    AVCaptureDevice.requestAccessForMediaType(AVMediaTypeVideo) { granted ->
+                        cont.resume(granted)
+                    }
                 }
+                else -> false
             }
-            else -> false
-        }
-        if (!authorized) return@withContext QrScanResult.Unavailable
+            if (!authorized) return@withContext QrScanResult.Unavailable
 
-        val top = topViewController() ?: return@withContext QrScanResult.Unavailable
+            val top = topViewController() ?: return@withContext QrScanResult.Unavailable
+            val capture = buildQrCapture(device) ?: return@withContext QrScanResult.Unavailable
 
-        suspendCancellableCoroutine<QrScanResult> { cont ->
-            var resumed = false
-            val controller = QrScannerViewController(device) { result ->
-                if (resumed) return@QrScannerViewController
-                resumed = true
-                cont.resume(result)
-            }
-            controller.modalPresentationStyle = UIModalPresentationFullScreen
-            top.presentViewController(controller, animated = true, completion = null)
-            cont.invokeOnCancellation {
-                controller.dismissViewControllerAnimated(true, completion = null)
+            suspendCancellableCoroutine<QrScanResult> { cont ->
+                var resumed = false
+                val controller = QrScannerViewController(capture) { result ->
+                    if (resumed) return@QrScannerViewController
+                    resumed = true
+                    cont.resume(result)
+                }
+                controller.modalPresentationStyle = UIModalPresentationFullScreen
+                top.presentViewController(controller, animated = true, completion = null)
+                cont.invokeOnCancellation {
+                    controller.dismissViewControllerAnimated(true, completion = null)
+                }
             }
         }
     }
@@ -95,18 +104,47 @@ internal class IosQrScanner : QrScanner {
     }
 }
 
+/** A validated, ready-to-run capture session, built before any view controller is presented. */
+private class QrCapture(val session: AVCaptureSession, val output: AVCaptureMetadataOutput)
+
 /**
- * Full-screen modal camera view. If any AVFoundation setup step fails, [onResult] is invoked
- * with [QrScanResult.Unavailable] instead of crashing (ObjC exceptions are not catchable from
- * Kotlin/Native).
+ * Builds and validates the capture session for [device]: input/output wiring and the QR
+ * metadata type. Returns null on any failure (e.g. the camera is in use by another app), so the
+ * caller can degrade to [QrScanResult.Unavailable] before presenting anything.
+ */
+@OptIn(ExperimentalForeignApi::class)
+private fun buildQrCapture(device: AVCaptureDevice): QrCapture? {
+    val session = AVCaptureSession()
+
+    val input = try {
+        AVCaptureDeviceInput.deviceInputWithDevice(device, error = null)
+    } catch (_: Throwable) {
+        null
+    }
+    if (input == null || !session.canAddInput(input)) return null
+    session.addInput(input)
+
+    val output = AVCaptureMetadataOutput()
+    if (!session.canAddOutput(output)) return null
+    session.addOutput(output)
+    // metadataObjectTypes may only be set AFTER the output is added to the session; setting it
+    // earlier throws an ObjC exception, which crashes the process.
+    output.metadataObjectTypes = listOf(AVMetadataObjectTypeQRCode)
+
+    return QrCapture(session, output)
+}
+
+/**
+ * Full-screen modal camera view over an already-built, already-validated [capture]. Setup
+ * failures are detected before presentation (in [buildQrCapture]), because UIKit ignores a
+ * dismiss during an in-progress presentation and `scan()` would hang.
  */
 @OptIn(ExperimentalForeignApi::class)
 private class QrScannerViewController(
-    private val device: AVCaptureDevice,
+    private val capture: QrCapture,
     private val onResult: (QrScanResult) -> Unit
 ) : UIViewController(nibName = null, bundle = null) {
 
-    private val session = AVCaptureSession()
     private var previewLayer: AVCaptureVideoPreviewLayer? = null
     private var cancelButton: UIButton? = null
     private val metadataDelegate = MetadataDelegate { raw -> finish(QrScanResult.Success(raw)) }
@@ -115,7 +153,7 @@ private class QrScannerViewController(
     private fun finish(result: QrScanResult) {
         if (finished) return
         finished = true
-        session.stopRunning()
+        capture.session.stopRunning()
         dismissViewControllerAnimated(true) { onResult(result) }
     }
 
@@ -123,29 +161,11 @@ private class QrScannerViewController(
         super.viewDidLoad()
         view.backgroundColor = UIColor.blackColor
 
-        val input = try {
-            AVCaptureDeviceInput.deviceInputWithDevice(device, error = null)
-        } catch (_: Throwable) {
-            null
-        }
-        if (input == null || !session.canAddInput(input)) {
-            finish(QrScanResult.Unavailable)
-            return
-        }
-        session.addInput(input)
+        // metadataDelegate is held weakly by setMetadataObjectsDelegate, so it is kept as a
+        // strong field on this view controller.
+        capture.output.setMetadataObjectsDelegate(metadataDelegate, queue = dispatch_get_main_queue())
 
-        val output = AVCaptureMetadataOutput()
-        if (!session.canAddOutput(output)) {
-            finish(QrScanResult.Unavailable)
-            return
-        }
-        session.addOutput(output)
-        // metadataObjectTypes may only be set AFTER the output is added to the session; setting
-        // it earlier throws an ObjC exception, which crashes the process.
-        output.metadataObjectTypes = listOf(AVMetadataObjectTypeQRCode)
-        output.setMetadataObjectsDelegate(metadataDelegate, queue = dispatch_get_main_queue())
-
-        val layer = AVCaptureVideoPreviewLayer(session = session)
+        val layer = AVCaptureVideoPreviewLayer(session = capture.session)
         layer.videoGravity = AVLayerVideoGravityResizeAspectFill
         view.layer.addSublayer(layer)
         previewLayer = layer
@@ -161,7 +181,7 @@ private class QrScannerViewController(
         view.addSubview(button)
         cancelButton = button
 
-        dispatch_async(dispatch_get_global_queue(0L, 0uL)) { session.startRunning() }
+        dispatch_async(dispatch_get_global_queue(0L, 0uL)) { capture.session.startRunning() }
     }
 
     override fun viewDidLayoutSubviews() {

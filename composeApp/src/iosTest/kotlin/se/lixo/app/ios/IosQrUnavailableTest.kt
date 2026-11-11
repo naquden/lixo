@@ -1,7 +1,6 @@
 package se.lixo.app.ios
 
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.runComposeUiTest
@@ -44,7 +43,7 @@ class IosQrUnavailableTest {
 
         runComposeUiTest {
             setContent { LixoApp(repository = repoB) }
-            waitUntil(5_000) { onAllNodesWithTag("friend_code_field").fetchSemanticsNodes().isNotEmpty() }
+            waitUntil(timeoutMillis = 5_000) { onAllNodesWithTag("friend_code_field").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithTag("friend_code_field").assertExists()
         }
     }

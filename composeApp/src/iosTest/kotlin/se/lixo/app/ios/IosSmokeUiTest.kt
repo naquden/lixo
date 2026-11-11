@@ -1,10 +1,8 @@
 package se.lixo.app.ios
 
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -24,7 +22,8 @@ class IosSmokeUiTest {
 
     @Test
     fun releaseRepo_showsFirstProfileSetup() = runComposeUiTest {
-        setContent { LixoApp(repository = iosRepo()) }
+        val repo = iosRepo()
+        setContent { LixoApp(repository = repo) }
         waitForIdle()
 
         onNodeWithText(LixoStrings.FIRST_PROFILE_TITLE).assertExists()
@@ -33,7 +32,8 @@ class IosSmokeUiTest {
 
     @Test
     fun createProfile_startsTutorial() = runComposeUiTest {
-        setContent { LixoApp(repository = iosRepo()) }
+        val repo = iosRepo()
+        setContent { LixoApp(repository = repo) }
         waitForIdle()
 
         onNode(hasSetTextAction()).performTextInput("Ella")

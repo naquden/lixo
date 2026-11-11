@@ -51,7 +51,16 @@ The first run downloads about 245 MB of Firebase 11.15.0 Carthage frameworks int
 into the `iosSimulatorArm64` test binary only — the shipped app gets Firebase from SPM instead
 (`iosApp/project.yml`). The downloaded version **must match** `project.yml`'s `exactVersion` for
 the `Firebase` SPM package; GitLive 2.1.0 was built against Firebase iOS 11.1.0 headers, and
-11.x is ABI-compatible, so do not bump to 12.x without re-verifying the test link.
+11.x is ABI-compatible, so do not bump to 12.x without re-verifying the test link. Each zip is
+SHA-256 pinned in `tools/ios/fetch-firebase-test-frameworks.sh`; re-pin when bumping the
+version.
+
+By default KGP 2.3.20 runs `iosSimulatorArm64Test` with `--standalone` (a process with no system
+services — no AVFoundation, Speech, or cfprefsd) on an auto-picked simulator. Set
+`kmp.ios.testDevice=<booted UDID>` in `local.properties` (uncommitted) to run the tests inside
+that already-Booted simulator instead, non-standalone; never shut that simulator down while
+running tests this way. Results land in
+`composeApp/build/test-results/iosSimulatorArm64Test/`.
 
 ## App Check
 
@@ -64,10 +73,12 @@ Enforcement stays off (same as Android, doc/plans/030 §2a). In debug builds the
 
 Register that token in Firebase Console → App Check → Apps → iOS app → "Manage debug tokens".
 
-For release, App Attest (`DCAppAttestService.shared.isSupported`) is used where available,
-falling back to DeviceCheck. Adding the App Attest capability
-(`com.apple.developer.devicecheck.appattest-environment`) requires a paid Apple Developer team
-and is not added yet — `DEVELOPMENT_TEAM` may stay empty for simulator-only work.
+For release, `LixoAppCheckProviderFactory` always returns `DeviceCheckProvider`. Switching to App
+Attest (`AppAttestProvider`) needs the App Attest capability
+(`com.apple.developer.devicecheck.appattest-environment`) added to `iosApp.entitlements` first —
+without it, attestation always fails. That capability requires a paid Apple Developer team and
+is not added yet (see the TODO in `iOSApp.swift`); `DEVELOPMENT_TEAM` may stay empty for
+simulator-only work.
 
 ## Privacy
 

@@ -7,7 +7,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.runComposeUiTest
 import kotlinx.coroutines.runBlocking
-import se.lixo.app.MainViewController
 import se.lixo.app.data.remote.fake.FakeFriendCloudStore
 import se.lixo.app.domain.social.buildFriendPayload
 import se.lixo.app.handleIncomingUrl
@@ -69,8 +68,8 @@ class IosDeepLinkRoutingTest {
 
         runComposeUiTest {
             setContent { LixoApp(repository = repoB) }
-            waitUntil(5_000) { hasText(LixoStrings.FRIENDS_TAB_ADD_FRIEND) }
-            waitUntil(5_000) { onAllNodesWithTag("friend_code_field").fetchSemanticsNodes().isNotEmpty() }
+            waitUntil(timeoutMillis = 5_000) { hasNodeWithText(LixoStrings.FRIENDS_TAB_ADD_FRIEND) }
+            waitUntil(timeoutMillis = 5_000) { onAllNodesWithTag("friend_code_field").fetchSemanticsNodes().isNotEmpty() }
             onNodeWithTag("friend_code_field").assert(hasText(invite.code))
         }
 

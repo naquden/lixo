@@ -15,7 +15,14 @@ class HttpDateParseTest {
     @Test
     fun validRfc1123Date_roundTripsAgainstInstantParse() {
         val expected = Instant.parse("2026-11-11T19:54:16Z").toEpochMilliseconds()
-        assertEquals(expected, parseHttpDateMillis("Tue, 11 Nov 2026 19:54:16 GMT"))
+        assertEquals(expected, parseHttpDateMillis("Wed, 11 Nov 2026 19:54:16 GMT"))
+    }
+
+    @Test
+    fun wrongDayOfWeek_returnsNull() {
+        // 2026-11-11 is a Wednesday; kotlinx-datetime's RFC_1123 format rejects a day-of-week
+        // that does not match the date, so this must stay null (the parser is strict on purpose).
+        assertNull(parseHttpDateMillis("Tue, 11 Nov 2026 19:54:16 GMT"))
     }
 
     @Test

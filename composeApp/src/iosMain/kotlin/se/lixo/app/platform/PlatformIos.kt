@@ -44,6 +44,8 @@ import se.lixo.app.data.local.LIXO_MIGRATIONS
 import se.lixo.app.data.local.LixoDatabase
 import se.lixo.app.domain.engine.TrustedClockAnchor
 import se.lixo.app.domain.engine.TrustedClockStore
+import se.lixo.app.domain.model.BalanceConfig
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.resume
 import kotlin.native.Platform
 
@@ -58,7 +60,7 @@ actual class PlatformFeatureFlags actual constructor() {
     actual val isSwedishTtsSupported: Boolean =
         AVSpeechSynthesisVoice.voiceWithLanguage("sv-SE") != null
     actual val isOnDeviceSttSupported: Boolean =
-        iosSwedishSpeechRecognizer()?.supportsOnDeviceRecognition ?: false
+        BalanceConfig.STT_PREFER_ON_DEVICE && (iosSwedishSpeechRecognizer()?.supportsOnDeviceRecognition ?: false)
     actual val isNative3DSceneViewSupported: Boolean = true
     actual val isDebugBuild: Boolean = Platform.isDebugBinary
     actual val appVersionCode: Int =
@@ -133,6 +135,8 @@ actual suspend fun fetchHttpServerTimeMillis(url: String): Long? = try {
             cont.invokeOnCancellation { task.cancel() }
         }
     }
+} catch (e: CancellationException) {
+    throw e
 } catch (_: Throwable) {
     null
 }

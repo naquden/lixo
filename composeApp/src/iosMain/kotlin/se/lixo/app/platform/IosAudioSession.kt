@@ -43,7 +43,9 @@ internal object IosAudioSession {
         session.setActive(true, error = null)
     }
 
+    /** No-op when STT never activated, so onDispose's cancelListening never cuts off TTS. */
     fun deactivateRecording() {
+        if (!sttActive) return
         sttActive = false
         AVAudioSession.sharedInstance().setActive(
             false,

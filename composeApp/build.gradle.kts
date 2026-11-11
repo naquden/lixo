@@ -13,10 +13,11 @@ plugins {
 
 // Set `kmp.ios.enabled=false` in local.properties to skip iOS targets (e.g. on Windows/Linux).
 // Defaults to true; see doc/ios.md for the simulator build/test/run workflow.
-val iosEnabled: Boolean = Properties().apply {
+val localProps: Properties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use { load(it) }
-}.getProperty("kmp.ios.enabled", "true").toBoolean()
+}
+val iosEnabled: Boolean = localProps.getProperty("kmp.ios.enabled", "true").toBoolean()
 
 kotlin {
     android {
@@ -138,6 +139,19 @@ if (iosEnabled) {
 
     tasks.matching { it.name == "linkDebugTestIosSimulatorArm64" }.configureEach {
         dependsOn(fetchFirebaseIosTestFrameworks)
+    }
+
+    // KGP 2.3.20 defaults iosSimulatorArm64Test to `standalone=true`, which runs
+    // `simctl spawn --standalone` with a NULL bootstrap port, so the process has no system
+    // services (AVFoundation, Speech, cfprefsd), and it auto-picks a device from
+    // `simctl list devices available`. Set `kmp.ios.testDevice=<booted UDID>` in
+    // local.properties to run tests inside that already-Booted simulator instead; with the
+    // property absent, KGP's defaults are kept.
+    localProps.getProperty("kmp.ios.testDevice")?.takeIf { it.isNotBlank() }?.let { udid ->
+        tasks.withType<org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest>().configureEach {
+            device.set(udid)
+            standalone.set(false)
+        }
     }
 }
 

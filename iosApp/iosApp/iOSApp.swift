@@ -1,17 +1,16 @@
 import SwiftUI
 import UIKit
-import DeviceCheck
 import FirebaseCore
 import FirebaseAppCheck
 import ComposeApp
 
-/// Release App Check provider factory: App Attest where the device supports it, DeviceCheck
-/// otherwise. App Check enforcement stays off for now, same as Android 030 §2a.
+/// Release App Check provider factory. App Check enforcement stays off for now, same as Android
+/// 030 §2a.
 final class LixoAppCheckProviderFactory: NSObject, AppCheckProviderFactory {
     func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
-        if DCAppAttestService.shared.isSupported {
-            return AppAttestProvider(app: app)
-        }
+        // TODO(doc/ios.md § App Check): return AppAttestProvider(app:) once iosApp.entitlements
+        // has com.apple.developer.devicecheck.appattest-environment; without it attestation
+        // always fails.
         return DeviceCheckProvider(app: app)
     }
 }

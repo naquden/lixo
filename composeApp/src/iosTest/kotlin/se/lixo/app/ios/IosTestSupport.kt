@@ -5,7 +5,6 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.onAllNodesWithText
 import dev.gitlive.firebase.auth.ActionCodeSettings
 import kotlinx.coroutines.runBlocking
-import se.lixo.app.data.remote.CampaignLevel
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.ContentMetaResult
 import se.lixo.app.data.remote.LexiconMeta
@@ -13,6 +12,7 @@ import se.lixo.app.data.remote.fake.FakeFriendCloud
 import se.lixo.app.data.remote.fake.FakeFriendCloudStore
 import se.lixo.app.data.repository.ContentRepository
 import se.lixo.app.data.repository.LixoRepository
+import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.Course
 import se.lixo.app.domain.model.DictionaryEntry
 import se.lixo.app.domain.model.HomeworkTask
@@ -77,5 +77,5 @@ fun iosRepo(
 }
 
 @OptIn(ExperimentalTestApi::class)
-fun ComposeUiTest.hasText(text: String): Boolean =
-    onAllNodesWithText(text, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
+fun ComposeUiTest.hasNodeWithText(text: String): Boolean =
+    onAllNodesWithText(text, substring = false, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
