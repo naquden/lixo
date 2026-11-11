@@ -138,12 +138,14 @@ class LixoEnginesTest {
         )
         assertEquals(5, session.words.size)
 
-        // Child skips the first "en" (idx 0) straight to "katt" (idx 1), within the lookahead window,
-        // which flags "en" (idx 0) yellow/unread. They then continue reading normally through "och"
-        // and the second "en" (idx 3).
+        // Child mumbles something unintelligible for the first "en" (idx 0) -- a misread, not a
+        // swallowed short word (no match, something heard) -- then skips straight to "katt"
+        // (idx 1), within the lookahead window, which flags "en" (idx 0) yellow/unread. They then
+        // continue reading normally through "och" and the second "en" (idx 3).
         session = alignmentEngine.processRecognizedTokens(
             session,
             listOf(
+                RecognizedSpeechToken("xyz", "xyz", 0.95f, 50L),
                 RecognizedSpeechToken("katt", "katt", 0.95f, 100L),
                 RecognizedSpeechToken("och", "och", 0.95f, 200L),
                 RecognizedSpeechToken("en", "en", 0.95f, 300L)
@@ -1363,23 +1365,27 @@ class LixoEnginesTest {
     )
 
     @Test
-    fun seededCampaign_has160LevelsAnd100MathLevels() {
+    fun seededCampaign_has190LevelsIncl100MathAnd30Geography() {
         val (levels, _) = LixoRepository.buildSeedCampaignLevelsAndTasks(BundledTestContent.content.dropRules.levelRewards)
 
         val orders = levels.map { it.order }
         assertEquals(orders.size, orders.distinct().size, "Level orders must be unique")
-        assertEquals((1..160).toList(), orders.sorted())
+        assertEquals((1..190).toList(), orders.sorted())
 
         val mathLevels = levels.filter { it.subject == Subject.MATH }
         val swedishLevels = levels.filter { it.subject == Subject.SWEDISH }
         val englishLevels = levels.filter { it.subject == Subject.ENGLISH }
+        val geographyLevels = levels.filter { it.subject == Subject.GEOGRAPHY }
         // Subject assignment is unchanged from before this refactor: order % 5 == 0 -> ENGLISH,
         // remaining even orders -> MATH (now built separately via MathCurriculum), remaining odd -> SWEDISH.
         // Across orders 1..100 that is 20 ENGLISH, 40 SWEDISH, 40 MATH (n1..40); n41..100 add 60 more MATH
-        // levels at orders 101..160, for 100 MATH levels total and 160 levels overall.
+        // levels at orders 101..160, for 100 MATH levels total. Orders 161..190 add 30 geography levels
+        // (plan 037), for 190 levels overall.
         assertEquals(100, mathLevels.size)
         assertEquals(40, swedishLevels.size)
         assertEquals(20, englishLevels.size)
+        assertEquals(30, geographyLevels.size)
+        assertEquals((161..190).toList(), geographyLevels.map { it.order }.sorted())
 
         val mathIndices = mathLevels.mapNotNull { MathCurriculum.mathIndexForOrder(it.order) }.sorted()
         assertEquals((1..100).toList(), mathIndices)
@@ -1658,10 +1664,10 @@ class LixoEnginesTest {
     }
 
     @Test
-    fun progressionEngine_recordLevelCompletion_order150AdvancesTo151AndOrder160StaysCapped() {
+    fun progressionEngine_recordLevelCompletion_order150AdvancesTo151AndOrder190StaysCapped() {
         val wardrobe = BundledTestContent.content.items
         val levelAt150 = level(order = 150, subject = Subject.MATH)
-        val levelAt160 = level(order = 160, subject = Subject.MATH)
+        val levelAt190 = level(order = 190, subject = Subject.GEOGRAPHY)
         val baseProfile = ChildProfile(
             id = "p1",
             displayName = "Test",
@@ -1688,10 +1694,10 @@ class LixoEnginesTest {
         )
         assertEquals(151, outcome150.updatedProfile.currentLevelOrder)
 
-        val profileAt160 = baseProfile.copy(currentLevelOrder = 160)
-        val outcome160 = progressionEngine.recordLevelCompletion(
-            profile = profileAt160,
-            level = levelAt160,
+        val profileAt190 = baseProfile.copy(currentLevelOrder = 190)
+        val outcome190 = progressionEngine.recordLevelCompletion(
+            profile = profileAt190,
+            level = levelAt190,
             previousProgress = null,
             earnedStarsThisRun = 2,
             completedInAiMode = true,
@@ -1705,7 +1711,53 @@ class LixoEnginesTest {
             todayActivityBeforeRun = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-01-01"),
             nowEpochMillis = 1000L
         )
-        assertEquals(160, outcome160.updatedProfile.currentLevelOrder)
+        assertEquals(190, outcome190.updatedProfile.currentLevelOrder)
+    }
+
+    @Test
+    fun progressionEngine_recordLevelCompletion_geographyLevel_incrementsGeographyNotMathOrReading() {
+        val wardrobe = BundledTestContent.content.items
+        val levelAt161 = level(order = 161, subject = Subject.GEOGRAPHY)
+        val profile = ChildProfile(
+            id = "p1",
+            displayName = "Test",
+            currentLevelOrder = 161,
+            createdAtEpochMillis = 0L,
+            updatedAtEpochMillis = 0L
+        )
+        val todayBeforeRun = DailyActivityRecord(profileId = "p1", calendarDateIso = "2026-01-01")
+
+        // recordLevelCompletion() does not return the updated DailyActivityRecord (callers compute
+        // it themselves, mirroring the engine's internal `when (level.subject)` branch - see
+        // LixoApp.kt's onFinishMathSession). Exercise that same branch here directly.
+        val outcome = progressionEngine.recordLevelCompletion(
+            profile = profile,
+            level = levelAt161,
+            previousProgress = null,
+            earnedStarsThisRun = 3,
+            completedInAiMode = true,
+            elapsedSeconds = 30,
+            achievedWpm = 0,
+            completedTimedChallenge = true,
+            eligibleForRepetitionGift = false,
+            clearedLevelsCountBeforeRun = 0,
+            content = testContentFor(wardrobe),
+            currentlyUnlockedItemIds = emptySet(),
+            todayActivityBeforeRun = todayBeforeRun,
+            nowEpochMillis = 1000L
+        )
+        assertEquals(162, outcome.updatedProfile.currentLevelOrder)
+
+        val updatedDaily = when (levelAt161.subject) {
+            Subject.GEOGRAPHY -> todayBeforeRun.copy(
+                geographyTasksCompleted = todayBeforeRun.geographyTasksCompleted + 1
+            )
+            else -> todayBeforeRun
+        }
+
+        assertEquals(1, updatedDaily.geographyTasksCompleted)
+        assertEquals(0, updatedDaily.mathTasksCompleted)
+        assertEquals(0, updatedDaily.readingTasksCompleted)
     }
 
     @Test
@@ -2660,7 +2712,9 @@ class LixoEnginesTest {
         val levelsById = levels.associateBy { it.id }
 
         val ids = mutableListOf<String>()
-        for (task in tasks.values) {
+        // Geography (orders 161..190, plan 037) has no curated levelRewards: onboarding falls
+        // back to rollOnboardingItem, so those tasks have no rewardItemId.
+        for (task in tasks.values.filter { it.subject != Subject.GEOGRAPHY }) {
             val rewardItemId = task.rewardItemId
             assertNotNull(rewardItemId, "${task.id} must have a rewardItemId")
             val item = content.itemsById[rewardItemId]

@@ -1,6 +1,7 @@
 package se.lixo.app.ui.theme
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,6 +51,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -59,6 +63,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import lixo.composeapp.generated.resources.Res
+import lixo.composeapp.generated.resources.allDrawableResources
+import org.jetbrains.compose.resources.painterResource
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.TextToSpeechEngine
 import se.lixo.app.ui.feedback.SfxCue
@@ -363,7 +370,6 @@ fun ChoiceCard(
     modifier: Modifier = Modifier,
     selected: Boolean = false,
     isCorrect: Boolean? = null,
-    badgeNumber: String? = null,
     onClick: () -> Unit
 ) {
     val (faceColor, borderColor, lipColor, textColor) = when (isCorrect) {
@@ -393,22 +399,6 @@ fun ChoiceCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (badgeNumber != null) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.5.dp, borderColor, RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = badgeNumber,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = textColor
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-            }
             Text(
                 text = text,
                 style = MaterialTheme.typography.titleMedium,
@@ -421,6 +411,65 @@ fun ChoiceCard(
 }
 
 private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+/** Test-tag prefix for geography flag choice cards, keyed by lowercase iso2 (e.g. "flag_choice_se"). */
+const val FLAG_CHOICE_TAG_PREFIX = "flag_choice_"
+
+/**
+ * One flag image choice card for the geography world (plan 037), rendered 2x2 by
+ * `MathActivityScreen` for `MathProblemType.FLAG` questions. Mirrors [ChoiceCard]'s face/lip/border
+ * colour states (always unselected, since the answer is an image, not pre-selected text). The
+ * flag image has no `contentDescription` and the card's own description is the generic
+ * [LixoStrings.FLAG_CHOICE_A11Y] so the accessible name never reveals the correct answer.
+ */
+@Composable
+fun FlagChoiceCard(
+    iso2: String,
+    modifier: Modifier = Modifier,
+    isCorrect: Boolean? = null,
+    onClick: () -> Unit
+) {
+    val (face, border, lip) = when (isCorrect) {
+        true -> Triple(LixoColors.GreenTint, LixoColors.Green, LixoColors.GreenLip)
+        false -> Triple(LixoColors.GoldTint, LixoColors.Gold, LixoColors.GoldLip)
+        null -> Triple(Color.White, LixoColors.Border, LixoColors.BorderDarker)
+    }
+
+    Box(
+        modifier = modifier
+            .testTag(FLAG_CHOICE_TAG_PREFIX + iso2.lowercase())
+            .semantics {
+                contentDescription = LixoStrings.FLAG_CHOICE_A11Y
+                role = Role.Button
+            }
+            .clip(RoundedCornerShape(16.dp))
+            .background(lip)
+            .padding(bottom = 3.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(face)
+            .border(2.dp, border, RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .padding(10.dp)
+    ) {
+        val res = remember(iso2) { Res.allDrawableResources["flag_${iso2.lowercase()}"] }
+        val imgMod = Modifier
+            .fillMaxWidth()
+            .aspectRatio(4f / 3f)
+            .clip(RoundedCornerShape(6.dp))
+            .border(1.dp, LixoColors.Border, RoundedCornerShape(6.dp))
+        if (res != null) {
+            Image(
+                painter = painterResource(res),
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                modifier = imgMod
+            )
+        } else {
+            println("LixoFlags: WARN missing flag_$iso2")
+            Box(imgMod.background(LixoColors.Surface))
+        }
+    }
+}
 
 /**
  * Segmented Tabs with equal widths and clean sliding/pill selection.

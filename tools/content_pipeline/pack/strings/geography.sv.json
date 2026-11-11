@@ -1,0 +1,18 @@
+{
+  "item_hand_right_geo_sverigeflagga.name": "Sverigeflagga",
+  "item_hand_right_geo_sverigeflagga.desc": "En blågul flagga på en liten stång. Du klarade din första flaggbana!",
+  "item_hand_left_geo_norgeflagga.name": "Norgeflagga",
+  "item_hand_left_geo_norgeflagga.desc": "Norges röda flagga med ett vitt och blått kors.",
+  "item_hat_geo_upptackarhatt.name": "Upptäckarhatt",
+  "item_hat_geo_upptackarhatt.desc": "En khakifärgad resehatt med en liten jordglob på bandet.",
+  "item_shoulders_back_geo_resryggsack.name": "Resryggsäck",
+  "item_shoulders_back_geo_resryggsack.desc": "En grön ryggsäck med en hoprullad karta på toppen.",
+  "item_shoulders_back_geo_nordenmantel.name": "Nordenmantel",
+  "item_shoulders_back_geo_nordenmantel.desc": "En blå mantel med ett gult nordiskt kors.",
+  "item_hand_left_geo_kompass.name": "Upptäckarkompass",
+  "item_hand_left_geo_kompass.desc": "En kompass i mässing med en röd nål som pekar mot norr.",
+  "item_armor_shirt_geo_flaggtroja.name": "Flaggtröja",
+  "item_armor_shirt_geo_flaggtroja.desc": "En röd tröja med ett vitt nordiskt kors på bröstet.",
+  "item_hand_right_geo_jordglob.name": "Jordglobsstav",
+  "item_hand_right_geo_jordglob.desc": "En jordglob på en stav med en gyllene ring. Du har rest jorden runt!"
+}

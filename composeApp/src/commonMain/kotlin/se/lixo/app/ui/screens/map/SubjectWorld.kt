@@ -7,8 +7,7 @@ import se.lixo.app.ui.theme.LixoIcons
 import se.lixo.app.ui.theme.LixoStrings
 
 /**
- * Metadata for one subject "world" on the campaign map (plan: "Ämnesväljare med tre världar").
- * Designed so a future fourth world (e.g. geography) only needs one more entry here.
+ * Metadata for one subject "world" on the campaign map (plan: "Ämnesväljare med fyra världar").
  */
 data class SubjectWorld(
     val subject: Subject,
@@ -47,6 +46,15 @@ val SubjectWorlds: List<SubjectWorld> = listOf(
         lipColor = LixoColors.PurpleLip,
         tintColor = LixoColors.PurpleTint,
         icon = LixoIcons.Star
+    ),
+    SubjectWorld(
+        subject = Subject.GEOGRAPHY,
+        title = LixoStrings.WORLD_GEOGRAPHY_TITLE,
+        tagline = LixoStrings.WORLD_GEOGRAPHY_TAGLINE,
+        faceColor = LixoColors.Orange,
+        lipColor = LixoColors.OrangeLip,
+        tintColor = LixoColors.OrangeTint,
+        icon = LixoIcons.Globe
     )
 )
 

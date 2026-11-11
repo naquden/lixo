@@ -131,9 +131,11 @@ object BalanceConfig {
      * 100 math levels live at the even, non-multiple-of-10 orders within 1..100 (n1..n40) and at
      * orders 101..160 (n41..n100) (see [se.lixo.app.domain.content.MathCurriculum]). Unlocking is
      * per subject, using the previous level of the same subject, so the order gap between n40
-     * (order 98) and n41 (order 101) doesn't block math progression.
+     * (order 98) and n41 (order 101) doesn't block math progression. Orders 161..190 are the 30
+     * geography levels (see [se.lixo.app.domain.content.GeographyCurriculum]), also unlocked
+     * per subject.
      */
-    const val CAMPAIGN_MAX_ORDER = 160
+    const val CAMPAIGN_MAX_ORDER = 190
 
     // --- Privacy & Crashlytics Consent (§6) ---
     /**

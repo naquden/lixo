@@ -54,6 +54,21 @@ HANDMADE_ACHIEVEMENT_REWARDS: Dict[str, str] = {
 }
 HANDMADE_SETPIECE_ITEM_ID = "item_hat_weekly_hero"
 
+# Plan 037: hand-authored catalog/geography.json items, maps ach_explore_world_<n> to the reward
+# item id. Appended to the frozen drop_rules.json by a textual edit, never by re-running this
+# script; kept here only so _achievement_rewards() recomputes the same mapping for
+# test_pack_ids_names_rarities_unchanged.
+GEOGRAPHY_ACHIEVEMENT_REWARDS: Dict[str, str] = {
+    "ach_explore_world_1": "item_hand_right_geo_sverigeflagga",
+    "ach_explore_world_3": "item_hand_left_geo_norgeflagga",
+    "ach_explore_world_6": "item_hat_geo_upptackarhatt",
+    "ach_explore_world_10": "item_shoulders_back_geo_resryggsack",
+    "ach_explore_world_15": "item_shoulders_back_geo_nordenmantel",
+    "ach_explore_world_20": "item_hand_left_geo_kompass",
+    "ach_explore_world_25": "item_armor_shirt_geo_flaggtroja",
+    "ach_explore_world_30": "item_hand_right_geo_jordglob",
+}
+
 
 def _hex6(argb: int) -> str:
     return f"#{argb & 0xFFFFFF:06X}"
@@ -219,6 +234,7 @@ def _achievement_rewards(catalog: Dict[str, List[GeneratedItem]]) -> Dict[str, s
             if found is not None:
                 rewards[achievement_id] = found.item_id
                 break
+    rewards.update(GEOGRAPHY_ACHIEVEMENT_REWARDS)
     return rewards
 
 

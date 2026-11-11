@@ -56,12 +56,13 @@ data class LevelCompletionOutcome(
  * Progression, Linear Campaign, Calendar-Day Streak, and Non-Lootbox Gift Engine
  * (`project.md` §2 "Progression & Kampanjstruktur", "Presenter / gåvor", "Streak"):
  *
- * - Campaign (orders 1..160; 40 Swedish, 100 Math, 20 English). Math is independent from
- *   Swedish/English: Swedish and English are interleaved across orders 1..100, while math sits
- *   at the even, non-multiple-of-10 orders within 1..100 (n1..n40) plus orders 101..160
- *   (n41..n100, see [se.lixo.app.domain.content.MathCurriculum]). Unlocking is per subject world:
- *   levels must be completed in order within their subject, regardless of their position among
- *   other subjects.
+ * - Campaign (orders 1..190; 40 Swedish, 100 Math, 20 English, 30 Geography). Math is independent
+ *   from Swedish/English: Swedish and English are interleaved across orders 1..100, while math
+ *   sits at the even, non-multiple-of-10 orders within 1..100 (n1..n40) plus orders 101..160
+ *   (n41..n100, see [se.lixo.app.domain.content.MathCurriculum]). The 30 geography levels sit at
+ *   orders 161..190 (see [se.lixo.app.domain.content.GeographyCurriculum]). Unlocking is per
+ *   subject world: levels must be completed in order within their subject, regardless of their
+ *   position among other subjects.
  * - Anti-Star-Farming: replaying an already 3-starred level awards 0 additional stars;
  *   replaying a 1- or 2-starred level only awards the positive delta (`max(0, newStars - previousBest)`).
  * - Non-Lootbox Gifts: extra repetition awards a gift with an item, rolled rarity-first using the
@@ -450,6 +451,9 @@ class ProgressionAndGiftEngine(
             Subject.ENGLISH -> todayActivityBeforeRun.copy(
                 englishTasksCompleted = todayActivityBeforeRun.englishTasksCompleted + 1,
                 readingTasksCompleted = todayActivityBeforeRun.readingTasksCompleted + 1
+            )
+            Subject.GEOGRAPHY -> todayActivityBeforeRun.copy(
+                geographyTasksCompleted = todayActivityBeforeRun.geographyTasksCompleted + 1
             )
         }
 

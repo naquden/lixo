@@ -652,9 +652,9 @@ class AchievementEngineTest {
     // --- (h) Seed ---
 
     @Test
-    fun seedAchievements_allZeroAndLocked_48Total_rewardItemsDistinctFromLevelPool() {
+    fun seedAchievements_allZeroAndLocked_56Total_rewardItemsDistinctFromLevelPool() {
         val achievements = LixoRepository.buildSeedAchievements(BundledTestContent.content.dropRules.achievementRewards)
-        assertEquals(48, achievements.size)
+        assertEquals(56, achievements.size)
         for (ach in achievements) {
             assertEquals(0, ach.currentCount)
             assertFalse(ach.isUnlocked)
@@ -730,8 +730,8 @@ class AchievementEngineTest {
             }
             tiers.forEach { allIds += achievementId(action, it) }
         }
-        assertEquals(48, allIds.size)
-        assertEquals(allIds.distinct(), allIds, "all 48 ids must be unique")
+        assertEquals(56, allIds.size)
+        assertEquals(allIds.distinct(), allIds, "all 56 ids must be unique")
 
         val legacyExpected = mapOf(
             "ach_speed_reader_5" to (5 to Rarity.EPIC),
@@ -783,6 +783,37 @@ class AchievementEngineTest {
         eval = engine.evaluate(RunFacts(Subject.SWEDISH, "l3", isAiMode = false), state, defs)
         state = eval.state
         assertTrue("ach_read_story_3" in state.unlockedIds)
+    }
+
+    @Test
+    fun exploreWorld_countsDistinctGeographyLevels_notReadStory() {
+        val engine = AchievementEngine()
+        val allDefs = LixoRepository.buildSeedAchievements(BundledTestContent.content.dropRules.achievementRewards)
+        val exploreDefs = allDefs.filter { it.action == AchievementAction.EXPLORE_WORLD }
+        val readStoryDefs = allDefs.filter { it.action == AchievementAction.READ_STORY }
+        var state = AchievementState()
+
+        var eval = engine.evaluate(RunFacts(Subject.GEOGRAPHY, "level_161", isAiMode = false), state, exploreDefs + readStoryDefs)
+        state = eval.state
+        assertTrue("ach_explore_world_1" in state.unlockedIds)
+        val unlockedSverigeflagga = eval.newlyUnlocked.single { it.id == "ach_explore_world_1" }
+        assertEquals("item_hand_right_geo_sverigeflagga", unlockedSverigeflagga.rewardItemId)
+        assertFalse("ach_read_story_1" in state.unlockedIds)
+
+        // Replaying the same level doesn't double-count.
+        eval = engine.evaluate(RunFacts(Subject.GEOGRAPHY, "level_161", isAiMode = false), state, exploreDefs + readStoryDefs)
+        state = eval.state
+        assertEquals(1, state.countedLevelIds["chain:EXPLORE_WORLD"]?.size)
+
+        eval = engine.evaluate(RunFacts(Subject.GEOGRAPHY, "level_162", isAiMode = false), state, exploreDefs + readStoryDefs)
+        state = eval.state
+        assertEquals(2, state.countedLevelIds["chain:EXPLORE_WORLD"]?.size)
+
+        // A Swedish run still advances READ_STORY independently.
+        eval = engine.evaluate(RunFacts(Subject.SWEDISH, "level_1", isAiMode = false), state, exploreDefs + readStoryDefs)
+        state = eval.state
+        assertTrue("ach_read_story_1" in state.unlockedIds)
+        assertEquals(2, state.countedLevelIds["chain:EXPLORE_WORLD"]?.size)
     }
 
     @Test

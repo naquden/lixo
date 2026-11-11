@@ -63,6 +63,7 @@ fun AchievementAction.icon(): ImageVector = when (this) {
     AchievementAction.CLOCK_MONEY -> LixoIcons.Timer
     AchievementAction.READ_FAST -> LixoIcons.Bolt
     AchievementAction.READ_ALOUD -> LixoIcons.Mic
+    AchievementAction.EXPLORE_WORLD -> LixoIcons.Globe
 }
 
 /**

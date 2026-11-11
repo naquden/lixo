@@ -24,6 +24,7 @@ object AchievementStrings {
         AchievementAction.CLOCK_MONEY -> "Klock- & pengaproffs"
         AchievementAction.READ_FAST -> "Snabbläsare"
         AchievementAction.READ_ALOUD -> "Högläsare"
+        AchievementAction.EXPLORE_WORLD -> "Världsresenär"
     }
 
     /** Tier title for a generated (non-handmade) achievement, e.g. "Sagoläsare 3". */
@@ -42,6 +43,7 @@ object AchievementStrings {
             AchievementAction.CLOCK_MONEY -> "Lös $n klock- och pengatal"
             AchievementAction.READ_FAST -> if (n == 1) "Läs 1 saga snabbt" else "Läs $n sagor snabbt"
             AchievementAction.READ_ALOUD -> if (n == 1) "Läs 1 saga högt" else "Läs $n sagor högt"
+            AchievementAction.EXPLORE_WORLD -> if (n == 1) "Klara 1 flaggbana" else "Klara $n flaggbanor"
         }
     }
 
@@ -58,6 +60,7 @@ object AchievementStrings {
             AchievementAction.CLOCK_MONEY -> "Lös $n tal om klockan och pengar rätt direkt."
             AchievementAction.READ_FAST -> if (n == 1) "Läs 1 saga snabbt och högt." else "Läs $n sagor snabbt och högt."
             AchievementAction.READ_ALOUD -> if (n == 1) "Läs 1 saga högt utan att hoppa över ord." else "Läs $n sagor högt utan att hoppa över ord."
+            AchievementAction.EXPLORE_WORLD -> if (n == 1) "Klara 1 flaggbana." else "Klara $n flaggbanor."
         }
         return "$actionSentence Då får du en ${rarityNameSv(rarity).lowercase()} skatt!"
     }

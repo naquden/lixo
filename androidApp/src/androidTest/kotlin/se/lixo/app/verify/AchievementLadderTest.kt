@@ -111,7 +111,7 @@ class AchievementLadderTest {
         }
         compose.waitForIdle()
 
-        assertTrue(compose.onAllNodes(challengeCardTag).fetchSemanticsNodes().size == 9)
+        assertTrue(compose.onAllNodes(challengeCardTag).fetchSemanticsNodes().size == 10)
         assertTrue(compose.onAllNodesWithText("Läs 1 saga", substring = true).fetchSemanticsNodes().isNotEmpty())
         compose.onNodeWithTag("ladder_tier_ach_read_story_50").assertExists()
         assertTrue(compose.onAllNodesWithContentDescription("Läs upp").fetchSemanticsNodes().isNotEmpty())

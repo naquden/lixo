@@ -95,7 +95,7 @@ import se.lixo.app.ui.theme.TtsIconButton
 const val MAP_LEVEL_NODE_TAG_PREFIX = "map_level_node_"
 
 /**
- * Duolingo-style Campaign Map with three subject "worlds" (plan: "Ämnesväljare med tre världar"):
+ * Duolingo-style Campaign Map with four subject "worlds" (plan: "Ämnesväljare med fyra världar"):
  * - Clean top HUD with avatar badge, stars, and streak.
  * - WorldSelector: tactile 3D world picker synced with a HorizontalPager.
  * - Per-world snaking path of circular 3D lesson nodes with stars, locks, and mascot placement.
@@ -826,6 +826,7 @@ private fun CampaignLevelNode(
             Subject.SWEDISH -> Triple(LixoColors.Green, LixoColors.GreenLip, Color.White)
             Subject.MATH -> Triple(LixoColors.Blue, LixoColors.BlueLip, Color.White)
             Subject.ENGLISH -> Triple(LixoColors.Purple, LixoColors.PurpleLip, Color.White)
+            Subject.GEOGRAPHY -> Triple(LixoColors.Orange, LixoColors.OrangeLip, Color.White)
         }
     }
 
@@ -833,6 +834,7 @@ private fun CampaignLevelNode(
         !isUnlocked -> LixoIcons.Lock
         level.subject == Subject.SWEDISH -> LixoIcons.Book
         level.subject == Subject.MATH -> LixoIcons.Calculator
+        level.subject == Subject.GEOGRAPHY -> LixoIcons.Globe
         else -> LixoIcons.Star
     }
 

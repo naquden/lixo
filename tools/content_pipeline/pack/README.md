@@ -110,8 +110,10 @@ upload, not an app release.
   own `layers` array directly (hand-authored, no `template` key -- and `palette.accent` must be
   given explicitly, since there's no template to derive it from) plus `"pool": "event"` and
   `"eventId": "<event id>"`. Every `catalog/*.json` file other than `handmade.json`/
-  `generated.json` is loaded (sorted by filename) and appended after them, so existing items'
-  indices and `mini_pack.json` stay unchanged.
+  `generated.json` is loaded and appended after them, in `build_pack.EXTRA_CATALOG_FILES_ORDER`
+  order (listed files first, in that order; any other file follows, sorted by filename) -- new
+  files go at the END of that tuple, so adding one never shifts an existing item's index or
+  `mini_pack.json`.
 - `strings/<id>.sv.json` — the event's `nameKey`/`banner.titleKey` plus every item's
   `<id>.name`/`<id>.desc`. Every `strings/*.sv.json` file other than `sv.json`/
   `generated.sv.json` is merged in (sorted by filename), with a collision check across all of
@@ -142,3 +144,13 @@ upload, not an app release.
 `published/` holds every previously-uploaded pack (`pack_v<N>.json`), the stability diff's
 baseline; it starts empty and `upload_pack.py` writes the first entry after the first successful
 upload.
+
+**Geography (037)**
+
+The "Världsresan" geography world's 8 achievement-reward items live in
+`catalog/geography.json` (hand-authored `layers`, `pool: "achievement"`,
+`subjectTheme: "GEOGRAPHY"`) with names/descriptions in `strings/geography.sv.json`. Their
+`ach_explore_world_*` achievement rewards were appended, by a textual edit, to the end of the
+frozen `drop_rules.json`; `gen_catalog.GEOGRAPHY_ACHIEVEMENT_REWARDS` mirrors that mapping so
+`_achievement_rewards()` still recomputes it (never re-run `gen_catalog.py`, which would try to
+regenerate `catalog/generated.json`).

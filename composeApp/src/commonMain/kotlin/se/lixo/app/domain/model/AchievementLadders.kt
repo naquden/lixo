@@ -19,7 +19,8 @@ val AchievementAction.counting: ChainCounting
         AchievementAction.SOLVE_MATH,
         AchievementAction.PERFECT_LEVEL,
         AchievementAction.READ_FAST,
-        AchievementAction.READ_ALOUD -> ChainCounting.DISTINCT_LEVELS
+        AchievementAction.READ_ALOUD,
+        AchievementAction.EXPLORE_WORLD -> ChainCounting.DISTINCT_LEVELS
         AchievementAction.FIRST_TRY,
         AchievementAction.CLOCK_MONEY -> ChainCounting.CUMULATIVE
         AchievementAction.COLLECT_STARS,
@@ -37,7 +38,7 @@ val AchievementAction.chainKey: String
 /** One rung of a ladder: the counter value needed to unlock it, its reward rarity, and its legacy id (if any). */
 data class LadderTier(val target: Int, val rarity: Rarity, val legacyId: String? = null)
 
-/** All 9 challenge ladders, in [AchievementAction] order. 48 tiers total. */
+/** All 10 challenge ladders, in [AchievementAction] order. 56 tiers total. */
 val ACHIEVEMENT_LADDERS: Map<AchievementAction, List<LadderTier>> = mapOf(
     AchievementAction.READ_STORY to listOf(
         LadderTier(1, Rarity.COMMON),
@@ -104,6 +105,16 @@ val ACHIEVEMENT_LADDERS: Map<AchievementAction, List<LadderTier>> = mapOf(
         LadderTier(4, Rarity.RARE),
         LadderTier(10, Rarity.LEGENDARY, "ach_pronunciation_master_10"),
         LadderTier(20, Rarity.LEGENDARY)
+    ),
+    AchievementAction.EXPLORE_WORLD to listOf(
+        LadderTier(1, Rarity.COMMON),
+        LadderTier(3, Rarity.COMMON),
+        LadderTier(6, Rarity.UNCOMMON),
+        LadderTier(10, Rarity.UNCOMMON),
+        LadderTier(15, Rarity.RARE),
+        LadderTier(20, Rarity.RARE),
+        LadderTier(25, Rarity.EPIC),
+        LadderTier(30, Rarity.LEGENDARY)
     )
 )
 

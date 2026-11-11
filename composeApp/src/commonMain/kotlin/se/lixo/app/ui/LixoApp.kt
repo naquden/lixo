@@ -411,10 +411,16 @@ fun LixoApp(
                             repository.saveLevelProgress(outcome.updatedLevelProgress)
                             outcome.newlyUnlockedItems.forEach { repository.unlockWardrobeItem(it.id) }
                             repository.saveDailyActivity(
-                                todayRecord.copy(
-                                    mathTasksCompleted = todayRecord.mathTasksCompleted + 1,
-                                    mathProblemsCompleted = todayRecord.mathProblemsCompleted + scoreResult.totalProblems
-                                )
+                                if (playingLevel.subject == Subject.GEOGRAPHY) {
+                                    todayRecord.copy(
+                                        geographyTasksCompleted = todayRecord.geographyTasksCompleted + 1
+                                    )
+                                } else {
+                                    todayRecord.copy(
+                                        mathTasksCompleted = todayRecord.mathTasksCompleted + 1,
+                                        mathProblemsCompleted = todayRecord.mathProblemsCompleted + scoreResult.totalProblems
+                                    )
+                                }
                             )
                             outcome
                         },

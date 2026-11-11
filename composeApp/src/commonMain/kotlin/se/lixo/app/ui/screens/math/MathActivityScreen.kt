@@ -55,6 +55,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 import kotlinx.coroutines.delay
 import se.lixo.app.domain.content.EnglishChoices
+import se.lixo.app.domain.content.GeographyChoices
 import se.lixo.app.domain.engine.LevelCompletionOutcome
 import se.lixo.app.domain.engine.MathEngine
 import se.lixo.app.domain.engine.MathProblemAttemptState
@@ -74,6 +75,7 @@ import se.lixo.app.ui.components.celebration.chestMeterStartDelayMillis
 import se.lixo.app.ui.feedback.SfxCue
 import se.lixo.app.ui.feedback.rememberLixoHaptics
 import se.lixo.app.ui.theme.ChoiceCard
+import se.lixo.app.ui.theme.FlagChoiceCard
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
 import se.lixo.app.ui.theme.LixoCard
@@ -107,27 +109,33 @@ fun MathActivityScreen(
     onEquipItem: (ContentItem) -> Unit,
     onSelectAvatar: (String) -> Unit,
     onCloseToMap: () -> Unit,
-    /** Seeds the shuffled English answer order. Null (default) means a random seed per session; tests pass a fixed value. */
+    /** Seeds the shuffled English/geography answer order. Null (default) means a random seed per session; tests pass a fixed value. */
     choiceSeed: Long? = null
 ) {
     val isEnglishTask = task.type == TaskType.ENGLISH_VOCAB
+    val isGeographyTask = task.type == TaskType.GEOGRAPHY_FLAGS
     val problems = remember(task, choiceSeed) {
-        if (isEnglishTask) {
-            val random = Random(choiceSeed ?: Random.nextLong())
-            val choiceLists = EnglishChoices.buildForTask(task.englishItems, random)
-            task.englishItems.mapIndexed { idx, item ->
-                se.lixo.app.domain.model.MathProblem(
-                    id = item.id,
-                    type = MathProblemType.WORD_PROBLEM,
-                    promptSv = "Vad betyder ordet \"${item.englishWord}\"?\n(${item.simpleSentenceEn})",
-                    correctAnswer = item.swedishTranslation,
-                    choices = choiceLists[idx],
-                    hintStep1Sv = "\"${item.simpleSentenceEn}\" = \"${item.simpleSentenceSv}\"",
-                    hintStep2Sv = "\"${item.englishWord}\" betyder \"${item.swedishTranslation}\""
-                )
+        when {
+            isEnglishTask -> {
+                val random = Random(choiceSeed ?: Random.nextLong())
+                val choiceLists = EnglishChoices.buildForTask(task.englishItems, random)
+                task.englishItems.mapIndexed { idx, item ->
+                    se.lixo.app.domain.model.MathProblem(
+                        id = item.id,
+                        type = MathProblemType.WORD_PROBLEM,
+                        promptSv = "Vad betyder ordet \"${item.englishWord}\"?\n(${item.simpleSentenceEn})",
+                        correctAnswer = item.swedishTranslation,
+                        choices = choiceLists[idx],
+                        hintStep1Sv = "\"${item.simpleSentenceEn}\" = \"${item.simpleSentenceSv}\"",
+                        hintStep2Sv = "\"${item.englishWord}\" betyder \"${item.swedishTranslation}\""
+                    )
+                }
             }
-        } else {
-            task.mathProblems
+            isGeographyTask -> {
+                val random = Random(choiceSeed ?: Random.nextLong())
+                GeographyChoices.buildProblems(task.flagQuestions, random)
+            }
+            else -> task.mathProblems
         }
     }
 
@@ -348,43 +356,64 @@ fun MathActivityScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // Multiple Choice Answers
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    problem.choices.forEachIndexed { index, choice ->
-                        val isCorrectChoice = when {
-                            currentAttempt.isSolved && choice == problem.correctAnswer -> true
-                            choice in wrongChoices -> false
-                            else -> null
-                        }
-                        ChoiceCard(
-                            text = choice,
-                            modifier = Modifier.testTag(MATH_CHOICE_TAG_PREFIX + index),
-                            isCorrect = isCorrectChoice,
-                            badgeNumber = "${index + 1}",
-                            onClick = {
-                                if (!currentAttempt.isSolved && choice !in wrongChoices) {
-                                    val (updatedState, isCorrect) = mathEngine.checkAnswer(currentAttempt, choice)
-                                    val copyList = attemptStates.toMutableList()
-                                    copyList[currentIndex] = updatedState
-                                    attemptStates = copyList
-                                    lastCheckResult = isCorrect
+                val onChoiceSelected: (String) -> Unit = { choice ->
+                    if (!currentAttempt.isSolved && choice !in wrongChoices) {
+                        val (updatedState, isCorrect) = mathEngine.checkAnswer(currentAttempt, choice)
+                        val copyList = attemptStates.toMutableList()
+                        copyList[currentIndex] = updatedState
+                        attemptStates = copyList
+                        lastCheckResult = isCorrect
 
-                                    if (isCorrect) {
-                                        haptics.success(SfxCue.ANSWER_CORRECT)
-                                        if (updatedState.wrongAttempts > 0 || updatedState.hintsRevealed > 0) {
-                                            onLogMathError(
-                                                currentAttempt.problem.type,
-                                                currentAttempt.problem.promptSv,
-                                                updatedState.wrongAttempts,
-                                                updatedState.hintsRevealed
-                                            )
-                                        }
-                                    } else {
-                                        haptics.reject(SfxCue.ANSWER_WRONG)
-                                        wrongChoices = wrongChoices + choice
-                                    }
+                        if (isCorrect) {
+                            haptics.success(SfxCue.ANSWER_CORRECT)
+                            if (updatedState.wrongAttempts > 0 || updatedState.hintsRevealed > 0) {
+                                onLogMathError(
+                                    currentAttempt.problem.type,
+                                    currentAttempt.problem.promptSv,
+                                    updatedState.wrongAttempts,
+                                    updatedState.hintsRevealed
+                                )
+                            }
+                        } else {
+                            haptics.reject(SfxCue.ANSWER_WRONG)
+                            wrongChoices = wrongChoices + choice
+                        }
+                    }
+                }
+                fun correctnessOf(choice: String): Boolean? = when {
+                    currentAttempt.isSolved && choice == problem.correctAnswer -> true
+                    choice in wrongChoices -> false
+                    else -> null
+                }
+
+                if (problem.type == MathProblemType.FLAG) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        problem.choices.chunked(2).forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                row.forEach { iso ->
+                                    FlagChoiceCard(
+                                        iso2 = iso,
+                                        isCorrect = correctnessOf(iso),
+                                        onClick = { onChoiceSelected(iso) },
+                                        modifier = Modifier.weight(1f)
+                                    )
                                 }
                             }
-                        )
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        problem.choices.forEachIndexed { index, choice ->
+                            ChoiceCard(
+                                text = choice,
+                                modifier = Modifier.testTag(MATH_CHOICE_TAG_PREFIX + index),
+                                isCorrect = correctnessOf(choice),
+                                onClick = { onChoiceSelected(choice) }
+                            )
+                        }
                     }
                 }
 

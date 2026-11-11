@@ -1,0 +1,595 @@
+[
+  {
+    "id": "item_hand_right_geo_sverigeflagga",
+    "slot": "HAND_RIGHT",
+    "rarity": "COMMON",
+    "subjectTheme": "GEOGRAPHY",
+    "palette": {
+      "primary": "#006AA7",
+      "secondary": "#FECC02",
+      "accent": "#8D6E63"
+    },
+    "pattern": "NONE",
+    "ornament": "NONE",
+    "scale": 1.0,
+    "pool": "achievement",
+    "layers": [
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 18 54 L 20 54 C 21.1 54 22 54.9 22 56 L 22 72 C 22 73.1 21.1 74 20 74 L 18 74 C 16.9 74 16 73.1 16 72 L 16 56 C 16 54.9 16.9 54 18 54 Z",
+        "fill": {
+          "role": "outline"
+        },
+        "order": 10,
+        "shading": "flat"
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 17 -30 L 21 -30 L 21 56 L 17 56 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 11,
+        "shading": "flat"
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 21 -28 L 57 -28 L 57 -4 L 21 -4 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "order": 12,
+        "shading": "flat",
+        "patternClip": true
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 32 -28 L 37 -28 L 37 -4 L 32 -4 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 13,
+        "shading": "flat"
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 21 -18 L 57 -18 L 57 -13 L 21 -13 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 14,
+        "shading": "flat"
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 19 -35 C 20.66 -35 22 -33.66 22 -32 C 22 -30.34 20.66 -29 19 -29 C 17.34 -29 16 -30.34 16 -32 C 16 -33.66 17.34 -35 19 -35 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 15,
+        "shading": "flat"
+      }
+    ]
+  },
+  {
+    "id": "item_hand_left_geo_norgeflagga",
+    "slot": "HAND_LEFT",
+    "rarity": "COMMON",
+    "subjectTheme": "GEOGRAPHY",
+    "palette": {
+      "primary": "#BA0C2F",
+      "secondary": "#FFFFFF",
+      "accent": "#00205B"
+    },
+    "pattern": "NONE",
+    "ornament": "NONE",
+    "scale": 1.0,
+    "pool": "achievement",
+    "layers": [
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 17 -50 L 21 -50 L 21 38 L 17 38 Z",
+        "fill": {
+          "role": "outline"
+        },
+        "order": 10,
+        "shading": "flat"
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 21 -48 L 54 -48 L 54 -24 L 21 -24 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "order": 11,
+        "shading": "flat",
+        "patternClip": true
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 30 -48 L 36 -48 L 36 -24 L 30 -24 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 12,
+        "shading": "flat"
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 21 -39 L 54 -39 L 54 -33 L 21 -33 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 13,
+        "shading": "flat"
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 31.5 -48 L 34.5 -48 L 34.5 -24 L 31.5 -24 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 14,
+        "shading": "flat"
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 21 -37.5 L 54 -37.5 L 54 -34.5 L 21 -34.5 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 15,
+        "shading": "flat"
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 19 -53.5 C 20.38 -53.5 21.5 -52.38 21.5 -51 C 21.5 -49.62 20.38 -48.5 19 -48.5 C 17.62 -48.5 16.5 -49.62 16.5 -51 C 16.5 -52.38 17.62 -53.5 19 -53.5 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 16,
+        "shading": "flat"
+      }
+    ]
+  },
+  {
+    "id": "item_hat_geo_upptackarhatt",
+    "slot": "HAT",
+    "rarity": "UNCOMMON",
+    "subjectTheme": "GEOGRAPHY",
+    "palette": {
+      "primary": "#C8B27D",
+      "secondary": "#6D4C41",
+      "accent": "#2E86DE"
+    },
+    "pattern": "NONE",
+    "ornament": "NONE",
+    "scale": 1.0,
+    "pool": "achievement",
+    "layers": [
+      {
+        "bone": "HEAD",
+        "z": "HAT",
+        "d": "M 28 -7 C 47.88 -7 64 -3.87 64 0 C 64 3.87 47.88 7 28 7 C 8.12 7 -8 3.87 -8 0 C -8 -3.87 8.12 -7 28 -7 Z",
+        "fill": {
+          "role": "primary",
+          "shade": -0.2
+        }
+      },
+      {
+        "bone": "HEAD",
+        "z": "HAT",
+        "d": "M 4 0 C 4 -30 52 -30 52 0 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "order": 1,
+        "patternClip": true
+      },
+      {
+        "bone": "HEAD",
+        "z": "HAT",
+        "d": "M 5 -8 L 51 -8 L 51 -2 L 5 -2 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 2,
+        "shading": "flat"
+      },
+      {
+        "bone": "HEAD",
+        "z": "HAT",
+        "d": "M 28 -10 C 30.76 -10 33 -7.76 33 -5 C 33 -2.24 30.76 0 28 0 C 25.24 0 23 -2.24 23 -5 C 23 -7.76 25.24 -10 28 -10 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 3,
+        "shading": "flat"
+      }
+    ]
+  },
+  {
+    "id": "item_shoulders_back_geo_resryggsack",
+    "slot": "SHOULDERS_BACK",
+    "rarity": "UNCOMMON",
+    "subjectTheme": "GEOGRAPHY",
+    "palette": {
+      "primary": "#2E7D32",
+      "secondary": "#8D6E63",
+      "accent": "#F5E6C8"
+    },
+    "pattern": "NONE",
+    "ornament": "NONE",
+    "scale": 1.0,
+    "pool": "achievement",
+    "layers": [
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M 22 6 L 58 6 C 62.42 6 66 9.58 66 14 L 66 72 C 66 76.42 62.42 80 58 80 L 22 80 C 17.58 80 14 76.42 14 72 L 14 14 C 14 9.58 17.58 6 22 6 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "patternClip": true
+      },
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M 27 44 L 53 44 C 55.76 44 58 46.24 58 49 L 58 65 C 58 67.76 55.76 70 53 70 L 27 70 C 24.24 70 22 67.76 22 65 L 22 49 C 22 46.24 24.24 44 27 44 Z",
+        "fill": {
+          "role": "primary",
+          "shade": -0.2
+        },
+        "order": 1
+      },
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M 20 6 L 60 6 C 63.31 6 66 8.69 66 12 L 66 14 C 66 17.31 63.31 20 60 20 L 20 20 C 16.69 20 14 17.31 14 14 L 14 12 C 14 8.69 16.69 6 20 6 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 2,
+        "shading": "flat"
+      },
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M 16 -6 L 64 -6 C 67.31 -6 70 -3.31 70 0 L 70 0 C 70 3.31 67.31 6 64 6 L 16 6 C 12.69 6 10 3.31 10 0 L 10 0 C 10 -3.31 12.69 -6 16 -6 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 3,
+        "shading": "flat",
+        "stroke": {
+          "role": "outline",
+          "width": 1.5
+        }
+      },
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M 24 -7 L 28 -7 L 28 7 L 24 7 Z M 52 -7 L 56 -7 L 56 7 L 52 7 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 4,
+        "shading": "flat"
+      }
+    ]
+  },
+  {
+    "id": "item_shoulders_back_geo_nordenmantel",
+    "slot": "SHOULDERS_BACK",
+    "rarity": "RARE",
+    "subjectTheme": "GEOGRAPHY",
+    "palette": {
+      "primary": "#006AA7",
+      "secondary": "#FECC02",
+      "accent": "#F4C430"
+    },
+    "pattern": "NONE",
+    "ornament": "NONE",
+    "scale": 1.0,
+    "pool": "achievement",
+    "layers": [
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M -10 2 L 90 2 L 110 110 L -30 110 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "shading": "flat",
+        "patternClip": true
+      },
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M 15 2 L 65 2 L 75 110 L 5 110 Z",
+        "fill": {
+          "role": "primary",
+          "shade": -0.25
+        },
+        "order": 1,
+        "shading": "flat"
+      },
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M 24 2 L 38 2 L 40 110 L 18 110 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 2,
+        "shading": "flat"
+      },
+      {
+        "bone": "TORSO",
+        "z": "BACK",
+        "d": "M -17 40 L 97 40 L 100 54 L -20 54 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 3,
+        "shading": "flat"
+      },
+      {
+        "bone": "TORSO",
+        "z": "TORSO_OVER",
+        "d": "M 6 1 C 8.76 1 11 3.24 11 6 C 11 8.76 8.76 11 6 11 C 3.24 11 1 8.76 1 6 C 1 3.24 3.24 1 6 1 Z M 74 1 C 76.76 1 79 3.24 79 6 C 79 8.76 76.76 11 74 11 C 71.24 11 69 8.76 69 6 C 69 3.24 71.24 1 74 1 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 4,
+        "shading": "flat"
+      }
+    ]
+  },
+  {
+    "id": "item_hand_left_geo_kompass",
+    "slot": "HAND_LEFT",
+    "rarity": "RARE",
+    "subjectTheme": "GEOGRAPHY",
+    "palette": {
+      "primary": "#C9A227",
+      "secondary": "#D32F2F",
+      "accent": "#FFF8E1"
+    },
+    "pattern": "NONE",
+    "ornament": "NONE",
+    "scale": 1.0,
+    "pool": "achievement",
+    "layers": [
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 18 -1 C 20.21 -1 22 0.79 22 3 C 22 5.21 20.21 7 18 7 C 15.79 7 14 5.21 14 3 C 14 0.79 15.79 -1 18 -1 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "order": 9,
+        "shading": "flat",
+        "stroke": {
+          "role": "outline",
+          "width": 1.5
+        }
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 18 4 C 29.05 4 38 12.95 38 24 C 38 35.05 29.05 44 18 44 C 6.95 44 -2 35.05 -2 24 C -2 12.95 6.95 4 18 4 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "order": 10,
+        "shading": "flat",
+        "stroke": {
+          "role": "outline",
+          "width": 2
+        },
+        "patternClip": true
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 18 9 C 26.28 9 33 15.72 33 24 C 33 32.28 26.28 39 18 39 C 9.72 39 3 32.28 3 24 C 3 15.72 9.72 9 18 9 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 11,
+        "shading": "flat"
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 18 11 L 21.5 24 L 14.5 24 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 12,
+        "shading": "flat"
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 18 37 L 21.5 24 L 14.5 24 Z",
+        "fill": {
+          "role": "outline"
+        },
+        "order": 13,
+        "shading": "flat"
+      },
+      {
+        "bone": "HAND_L",
+        "z": "HAND",
+        "d": "M 18 22 C 19.1 22 20 22.9 20 24 C 20 25.1 19.1 26 18 26 C 16.9 26 16 25.1 16 24 C 16 22.9 16.9 22 18 22 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "order": 14,
+        "shading": "flat"
+      }
+    ]
+  },
+  {
+    "id": "item_armor_shirt_geo_flaggtroja",
+    "slot": "ARMOR_SHIRT",
+    "rarity": "EPIC",
+    "subjectTheme": "GEOGRAPHY",
+    "palette": {
+      "primary": "#C8102E",
+      "secondary": "#FFFFFF",
+      "accent": "#8B0A1E"
+    },
+    "pattern": "NONE",
+    "ornament": "TRIM",
+    "scale": 1.0,
+    "pool": "achievement",
+    "layers": [
+      {
+        "bone": "TORSO",
+        "z": "TORSO_OVER",
+        "d": "M 0 0 L 80 0 L 80 80 L 0 80 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "shading": "block",
+        "depth": 6,
+        "patternClip": true
+      },
+      {
+        "bone": "ARM_L",
+        "z": "ARM",
+        "d": "M 0 0 L 38 0 L 38 48 L 0 48 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "order": 1,
+        "shading": "block",
+        "depth": 4,
+        "mirror": "x"
+      },
+      {
+        "bone": "TORSO",
+        "z": "TORSO_OVER",
+        "d": "M 24 0 L 36 0 L 36 80 L 24 80 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 2,
+        "shading": "flat"
+      },
+      {
+        "bone": "TORSO",
+        "z": "TORSO_OVER",
+        "d": "M 0 30 L 80 30 L 80 42 L 0 42 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 3,
+        "shading": "flat"
+      },
+      {
+        "bone": "TORSO",
+        "z": "TORSO_OVER",
+        "d": "M 31 -2 L 49 -2 C 50.66 -2 52 -0.66 52 1 L 52 1 C 52 2.66 50.66 4 49 4 L 31 4 C 29.34 4 28 2.66 28 1 L 28 1 C 28 -0.66 29.34 -2 31 -2 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 4,
+        "shading": "flat"
+      }
+    ]
+  },
+  {
+    "id": "item_hand_right_geo_jordglob",
+    "slot": "HAND_RIGHT",
+    "rarity": "LEGENDARY",
+    "subjectTheme": "GEOGRAPHY",
+    "palette": {
+      "primary": "#1E88E5",
+      "secondary": "#43A047",
+      "accent": "#F4C430"
+    },
+    "pattern": "NONE",
+    "ornament": "SPARKLE",
+    "scale": 1.0,
+    "pool": "achievement",
+    "layers": [
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 18 54 L 20 54 C 21.1 54 22 54.9 22 56 L 22 72 C 22 73.1 21.1 74 20 74 L 18 74 C 16.9 74 16 73.1 16 72 L 16 56 C 16 54.9 16.9 54 18 54 Z",
+        "fill": {
+          "role": "outline"
+        },
+        "order": 10,
+        "shading": "flat"
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 16 -4 L 22 -4 L 22 56 L 16 56 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 11,
+        "shading": "flat"
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 19 -38 C 27.84 -38 35 -30.84 35 -22 C 35 -13.16 27.84 -6 19 -6 C 10.16 -6 3 -13.16 3 -22 C 3 -30.84 10.16 -38 19 -38 Z",
+        "fill": {
+          "role": "primary"
+        },
+        "order": 12,
+        "patternClip": true
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 10 -32 L 18 -34 L 22 -28 L 16 -22 L 9 -25 Z M 20 -16 L 28 -20 L 32 -12 L 24 -9 Z",
+        "fill": {
+          "role": "secondary"
+        },
+        "order": 13,
+        "shading": "flat"
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 19 -43 C 34 -43 42 -33 42 -22 C 42 -11 34 -1 19 -1 L 19 -4 C 32 -4 39 -12 39 -22 C 39 -32 32 -40 19 -40 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 14,
+        "shading": "flat"
+      },
+      {
+        "bone": "ARM_R",
+        "z": "HAND",
+        "d": "M 19 -4 C 20.66 -4 22 -2.66 22 -1 C 22 0.66 20.66 2 19 2 C 17.34 2 16 0.66 16 -1 C 16 -2.66 17.34 -4 19 -4 Z",
+        "fill": {
+          "role": "accent"
+        },
+        "order": 15,
+        "shading": "flat"
+      }
+    ]
+  }
+]

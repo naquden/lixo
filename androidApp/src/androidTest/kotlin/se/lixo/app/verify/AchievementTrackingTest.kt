@@ -94,8 +94,8 @@ class AchievementTrackingTest {
             it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("challenge_") == true
         }
         assertTrue(
-            "Expected 9 challenge_* cards, one per chain",
-            compose.onAllNodes(challengeCardTag).fetchSemanticsNodes().size == 9
+            "Expected 10 challenge_* cards, one per chain",
+            compose.onAllNodes(challengeCardTag).fetchSemanticsNodes().size == 10
         )
         shot("verify_014_trophies_zero")
 

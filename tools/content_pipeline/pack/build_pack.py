@@ -34,6 +34,10 @@ MINI_PACK_FIXTURE_PATH = REPO_ROOT / "tools" / "tests" / "fixtures" / "mini_pack
 
 SCHEMA_VERSION = 1
 
+# append-only: new catalog files go at the END so adding one never shifts an existing item's
+# index; unlisted files follow, sorted by filename.
+EXTRA_CATALOG_FILES_ORDER = ("jul_2026.json", "geography.json")
+
 
 def _round3(v: float) -> float:
     return round(float(v), 3)
@@ -164,9 +168,13 @@ def _expand_item_row(row: dict) -> dict:
 
 def load_extra_catalog_items() -> List[dict]:
     """Every `catalog/*.json` except `handmade.json`/`generated.json` (e.g. a holiday special's
-    catalog file), sorted by filename, concatenated in that order."""
+    catalog file), concatenated in [EXTRA_CATALOG_FILES_ORDER] order (append-only: new catalog
+    files are listed at the end there, so adding one never shifts an existing item's index) with
+    any unlisted file following, sorted by filename."""
+    rank = {name: i for i, name in enumerate(EXTRA_CATALOG_FILES_ORDER)}
     extra_files = sorted(
-        f for f in CATALOG_DIR.glob("*.json") if f.name not in ("handmade.json", "generated.json")
+        (f for f in CATALOG_DIR.glob("*.json") if f.name not in ("handmade.json", "generated.json")),
+        key=lambda f: (rank.get(f.name, len(rank)), f.name),
     )
     rows: List[dict] = []
     for f in extra_files:
@@ -176,7 +184,8 @@ def load_extra_catalog_items() -> List[dict]:
 
 def build_items() -> List[dict]:
     # Handmade + generated first, so their indices/mini_pack selection stay unchanged; any extra
-    # catalog file (e.g. a holiday special) is appended after.
+    # catalog file (e.g. a holiday special, or plan 037's geography.json) is appended after, in
+    # EXTRA_CATALOG_FILES_ORDER so existing files' indices never shift.
     items = [_expand_item_row(r) for r in load_handmade_items()]
     items += [_expand_item_row(r) for r in load_generated_items()]
     items += [_expand_item_row(r) for r in load_extra_catalog_items()]

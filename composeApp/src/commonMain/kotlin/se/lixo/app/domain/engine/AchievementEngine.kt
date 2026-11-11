@@ -87,12 +87,13 @@ class AchievementEngine {
                 ChainCounting.DISTINCT_LEVELS -> {
                     val prevIds = chainLevelIds(action, currentState)
                     val qualifies = when (action) {
-                        AchievementAction.READ_STORY -> facts.subject != Subject.MATH
+                        AchievementAction.READ_STORY -> facts.subject == Subject.SWEDISH || facts.subject == Subject.ENGLISH
                         AchievementAction.SOLVE_MATH -> facts.subject == Subject.MATH
                         AchievementAction.PERFECT_LEVEL -> facts.earnedStarsThisRun >= 3
                         AchievementAction.READ_FAST -> facts.isAiMode && facts.referenceWpm > 0 &&
                             facts.achievedWpm.toFloat() >= facts.referenceWpm * BalanceConfig.READING_THREE_STAR_WPM_RATIO
                         AchievementAction.READ_ALOUD -> facts.isAiMode && facts.pronunciationEligible
+                        AchievementAction.EXPLORE_WORLD -> facts.subject == Subject.GEOGRAPHY
                         else -> false
                     }
                     val nextIds = if (qualifies && facts.levelId !in prevIds) prevIds + facts.levelId else prevIds

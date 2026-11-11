@@ -1021,7 +1021,15 @@
     "ach_read_fast_12": "item_pants_kilt_regnbags",
     "ach_read_aloud_1": "item_shoes_hogastovlar_solgyllene",
     "ach_read_aloud_4": "item_hand_right_stav_barnstensgul",
-    "ach_read_aloud_20": "item_hand_left_kompass_kosmisk"
+    "ach_read_aloud_20": "item_hand_left_kompass_kosmisk",
+    "ach_explore_world_1": "item_hand_right_geo_sverigeflagga",
+    "ach_explore_world_3": "item_hand_left_geo_norgeflagga",
+    "ach_explore_world_6": "item_hat_geo_upptackarhatt",
+    "ach_explore_world_10": "item_shoulders_back_geo_resryggsack",
+    "ach_explore_world_15": "item_shoulders_back_geo_nordenmantel",
+    "ach_explore_world_20": "item_hand_left_geo_kompass",
+    "ach_explore_world_25": "item_armor_shirt_geo_flaggtroja",
+    "ach_explore_world_30": "item_hand_right_geo_jordglob"
   },
   "tutorialRewardItemId": "item_hat_starter_explorer",
   "weeklyStreakSetPieceItemIds": [

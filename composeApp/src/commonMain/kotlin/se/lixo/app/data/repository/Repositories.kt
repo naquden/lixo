@@ -38,6 +38,7 @@ import se.lixo.app.data.remote.isValidFriendCardId
 import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.content.ContentItem
+import se.lixo.app.domain.content.GeographyCurriculum
 import se.lixo.app.domain.content.LevelReward
 import se.lixo.app.domain.content.MathCurriculum
 import se.lixo.app.domain.engine.ForcedAlignmentEngine
@@ -390,10 +391,11 @@ class LixoRepository(
             Course("course_math_1", "Matteäventyret: Plus, Minus & Tiokompisar", Subject.MATH, minGrade = 1, version = 1, updatedAt = seedTimestamp),
             Course("course_math_2", "Klocktornet & Guldbörsen: Tiotal, Tid och Pengar", Subject.MATH, minGrade = 1, version = 1, updatedAt = seedTimestamp),
             Course("course_math_3", "Sifferdalens Kluringar: Hundratal, Gåtor & Klockmästaren", Subject.MATH, minGrade = 2, version = 1, updatedAt = seedTimestamp),
-            Course("course_en_1", "Engelska Glosresan", Subject.ENGLISH, minGrade = 2, version = 1, updatedAt = seedTimestamp)
+            Course("course_en_1", "Engelska Glosresan", Subject.ENGLISH, minGrade = 2, version = 1, updatedAt = seedTimestamp),
+            Course("course_geo_1", "Världsresan: Länder & flaggor", Subject.GEOGRAPHY, minGrade = 1, version = 1, updatedAt = seedTimestamp)
         )
 
-        // Seed 160 Campaign Levels (40 Swedish, 100 Math, 20 English) + Tasks
+        // Seed 190 Campaign Levels (40 Swedish, 100 Math, 20 English, 30 Geography) + Tasks
         val (generatedLevels, generatedTasks) = buildSeedCampaignLevelsAndTasks(content.active.value.dropRules.levelRewards)
         _levels.value = generatedLevels
         _tasksById.value = generatedTasks
@@ -1250,10 +1252,11 @@ class LixoRepository(
         }
 
         /**
-         * Builds the 160 campaign levels + tasks. Swedish (40) and English (20) are interleaved
+         * Builds the 190 campaign levels + tasks. Swedish (40) and English (20) are interleaved
          * across orders 1..100 (order%5==0 -> English, else even -> math slot, else Swedish);
          * the 100 math levels are built separately from [MathCurriculum] and sit at the even,
-         * non-multiple-of-10 orders within 1..100 (n1..n40) plus orders 101..160 (n41..n100).
+         * non-multiple-of-10 orders within 1..100 (n1..n40) plus orders 101..160 (n41..n100). The
+         * 30 geography levels are built from [GeographyCurriculum] and sit at orders 161..190.
          */
         fun buildSeedCampaignLevelsAndTasks(
             levelRewards: List<LevelReward>
@@ -1441,6 +1444,11 @@ class LixoRepository(
                     mathProblems = MathCurriculum.buildMathProblems(n, order),
                     rewardItemId = rewardItemId
                 )
+            }
+
+            for ((level, task) in GeographyCurriculum.buildLevelsAndTasks(levelRewardByOrder)) {
+                levels.add(level)
+                tasks[task.id] = task
             }
 
             return levels.sortedBy { it.order } to tasks

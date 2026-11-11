@@ -800,6 +800,63 @@ class ContentPackPipelineTests(unittest.TestCase):
 
         self.assertEqual(self.validate_pack.validate(pack), [])
 
+    def test_geography_items_in_bundled_pack(self) -> None:
+        bundled_path = (
+            REPO_ROOT
+            / "composeApp"
+            / "src"
+            / "commonMain"
+            / "composeResources"
+            / "files"
+            / "content_pack.json"
+        )
+        pack = json.loads(bundled_path.read_text(encoding="utf-8"))
+
+        expected_rarities = {
+            "item_hand_right_geo_sverigeflagga": "COMMON",
+            "item_hand_left_geo_norgeflagga": "COMMON",
+            "item_hat_geo_upptackarhatt": "UNCOMMON",
+            "item_shoulders_back_geo_resryggsack": "UNCOMMON",
+            "item_shoulders_back_geo_nordenmantel": "RARE",
+            "item_hand_left_geo_kompass": "RARE",
+            "item_armor_shirt_geo_flaggtroja": "EPIC",
+            "item_hand_right_geo_jordglob": "LEGENDARY",
+        }
+        items_by_id = {item["id"]: item for item in pack["items"]}
+        for item_id, rarity in expected_rarities.items():
+            self.assertIn(item_id, items_by_id)
+            item = items_by_id[item_id]
+            self.assertEqual(item["pool"], "achievement")
+            self.assertEqual(item["subjectTheme"], "GEOGRAPHY")
+            self.assertEqual(item["rarity"], rarity)
+
+        rewards = pack["dropRules"]["achievementRewards"]
+        expected_rewards = {
+            "ach_explore_world_1": "item_hand_right_geo_sverigeflagga",
+            "ach_explore_world_3": "item_hand_left_geo_norgeflagga",
+            "ach_explore_world_6": "item_hat_geo_upptackarhatt",
+            "ach_explore_world_10": "item_shoulders_back_geo_resryggsack",
+            "ach_explore_world_15": "item_shoulders_back_geo_nordenmantel",
+            "ach_explore_world_20": "item_hand_left_geo_kompass",
+            "ach_explore_world_25": "item_armor_shirt_geo_flaggtroja",
+            "ach_explore_world_30": "item_hand_right_geo_jordglob",
+        }
+        for ach_id, item_id in expected_rewards.items():
+            self.assertEqual(rewards.get(ach_id), item_id)
+
+        sv = pack["strings"]["sv"]
+        for item_id in expected_rarities:
+            item = items_by_id[item_id]
+            self.assertIn(item["nameKey"], sv)
+            self.assertIn(item["descKey"], sv)
+
+        jul_items = [i for i in pack["items"] if i.get("eventId") == "event_jul_2026"]
+        jul_indices = [pack["items"].index(i) for i in jul_items]
+        geo_indices = [pack["items"].index(items_by_id[item_id]) for item_id in expected_rarities]
+        self.assertTrue(max(jul_indices) < min(geo_indices))
+
+        self.assertEqual(self.validate_pack.validate(pack), [])
+
     def test_event_errors_reject_bad_event(self) -> None:
         pack = json.loads(self.build_pack.build(1).decode("utf-8"))
         event = next(e for e in pack["events"] if e["id"] == "event_jul_2026")

@@ -57,7 +57,12 @@ object LixoStrings {
     const val WORLD_MATH_TAGLINE = "Tal, klockan & mattegåtor"
     const val WORLD_ENGLISH_TITLE = "Glosornas Hamn"
     const val WORLD_ENGLISH_TAGLINE = "Engelska ord & fraser"
+    const val WORLD_GEOGRAPHY_TITLE = "Världsresan"
+    const val WORLD_GEOGRAPHY_TAGLINE = "Länder & flaggor"
     const val WORLD_SELECTOR_HEADER_PREFIX = "VÄRLD"
+
+    // Geography (flag) activity
+    const val FLAG_CHOICE_A11Y = "Flaggalternativ"
 
     // Reading Activity
     const val READING_MODE_SELECT_TITLE = "Hur vill du läsa?"
@@ -272,6 +277,7 @@ object LixoStrings {
         Subject.SWEDISH -> "Svenska"
         Subject.MATH -> "Matematik"
         Subject.ENGLISH -> "Engelska"
+        Subject.GEOGRAPHY -> "Geografi"
     }
 
     fun mathTypeName(type: MathProblemType): String = when (type) {
@@ -283,6 +289,7 @@ object LixoStrings {
         MathProblemType.CLOCK -> "Klockan"
         MathProblemType.MONEY -> "Pengar"
         MathProblemType.WORD_PROBLEM -> "Problemlösning"
+        MathProblemType.FLAG -> "Flaggor"
     }
 
     /** Accessibility label for a challenge progress indicator, e.g. "12 av 30". */

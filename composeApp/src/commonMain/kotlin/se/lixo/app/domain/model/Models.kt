@@ -66,7 +66,7 @@ enum class Rarity(
 
 /**
  * MVP Subjects as specified in project.md §1 & §2.
- * Geography and Art/Creation are deferred.
+ * Geography (plan 037) ships as a 4th world; Art/Creation is still deferred.
  */
 @Serializable
 enum class Subject(
@@ -100,6 +100,14 @@ enum class Subject(
         primaryRewardSlots = listOf(
             EquipmentSlot.HAT
         )
+    ),
+    GEOGRAPHY(
+        id = "geography",
+        swedishNameKey = "subject_geography",
+        primaryRewardSlots = listOf(
+            EquipmentSlot.SHOULDERS_BACK,
+            EquipmentSlot.HAT
+        )
     )
 }
 
@@ -124,8 +132,22 @@ enum class MathProblemType(val id: String, val swedishNameKey: String) {
     DIVISION("division", "math_type_division"),
     CLOCK("clock", "math_type_clock"),
     MONEY("money", "math_type_money"),
-    WORD_PROBLEM("word_problem", "math_type_word_problem")
+    WORD_PROBLEM("word_problem", "math_type_word_problem"),
+    FLAG("flag", "math_type_flag")
 }
+
+/**
+ * A single "which flag does X have?" question for the geography world (plan 037).
+ * `countryIso2` is the correct answer; `distractorIso2` are the 3 wrong choices. Both are
+ * lowercase ISO-3166-1 alpha-2 codes, matching `GeographyCountries` and the bundled
+ * `flag_<iso2>.webp` drawable resources.
+ */
+@Serializable
+data class FlagQuestion(
+    val id: String,
+    val countryIso2: String,
+    val distractorIso2: List<String>
+)
 
 /**
  * Local child profile. Supports sibling profiles on the same device (project.md §5).
@@ -218,7 +240,8 @@ data class Course(
  * from Swedish/English: Swedish (40 levels) and English (20 levels) are interleaved across
  * orders 1..100, while the 100 math levels sit at the even, non-multiple-of-10 orders within
  * 1..100 (n1..n40) plus orders 101..160 (n41..n100). See
- * [se.lixo.app.domain.content.MathCurriculum]. Unlocking is per subject (previous level of the
+ * [se.lixo.app.domain.content.MathCurriculum]. Orders 161..190 are the 30 geography levels, see
+ * [se.lixo.app.domain.content.GeographyCurriculum]. Unlocking is per subject (previous level of the
  * same subject), independent of other subjects' positions.
  */
 @Serializable
@@ -277,14 +300,17 @@ data class HomeworkTask(
     val mathProblems: List<MathProblem> = emptyList(),
     val englishItems: List<EnglishGlosaItem> = emptyList(),
     /** Assigned from content.dropRules.levelRewards; curriculum JSON/Firestore must not carry it. Used as the onboarding-track item, see doc/plans/002. */
-    val rewardItemId: String? = null
+    val rewardItemId: String? = null,
+    /** Geography flag questions (plan 037); only populated when [type] is [TaskType.GEOGRAPHY_FLAGS]. */
+    val flagQuestions: List<FlagQuestion> = emptyList()
 )
 
 @Serializable
 enum class TaskType {
     READING,
     MATH,
-    ENGLISH_VOCAB
+    ENGLISH_VOCAB,
+    GEOGRAPHY_FLAGS
 }
 
 /**
@@ -360,6 +386,7 @@ data class DailyActivityRecord(
     val mathProblemsCompleted: Int = 0,
     val mathTasksCompleted: Int = 0,
     val englishTasksCompleted: Int = 0,
+    val geographyTasksCompleted: Int = 0,
     val wordsReadCount: Int = 0
 )
 
@@ -369,7 +396,7 @@ data class DailyActivityRecord(
  */
 @Serializable
 enum class AchievementAction {
-    READ_STORY, SOLVE_MATH, COLLECT_STARS, PERFECT_LEVEL, FIRST_TRY, STREAK_DAY, CLOCK_MONEY, READ_FAST, READ_ALOUD
+    READ_STORY, SOLVE_MATH, COLLECT_STARS, PERFECT_LEVEL, FIRST_TRY, STREAK_DAY, CLOCK_MONEY, READ_FAST, READ_ALOUD, EXPLORE_WORLD
 }
 
 /**
