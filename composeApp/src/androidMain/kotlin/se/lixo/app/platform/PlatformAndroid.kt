@@ -1,17 +1,23 @@
 package se.lixo.app.platform
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.annotation.TargetApi
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.speech.RecognitionListener
+import android.speech.RecognitionSupport
+import android.speech.RecognitionSupportCallback
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
@@ -31,7 +37,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.Clock
 import se.lixo.app.data.local.ContentPackCache
 import se.lixo.app.data.local.LIXO_MIGRATIONS
@@ -42,9 +50,11 @@ import se.lixo.app.data.local.RoomProfileStore
 import se.lixo.app.domain.engine.InMemoryTrustedClockStore
 import se.lixo.app.domain.engine.TrustedClockAnchor
 import se.lixo.app.domain.engine.TrustedClockStore
+import se.lixo.app.domain.model.BalanceConfig
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import kotlin.coroutines.resume
 
 object AndroidPlatformContext {
     var applicationContext: Context? = null
@@ -148,6 +158,44 @@ actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) {
     BackHandler(enabled = enabled, onBack = onBack)
 }
 
+/**
+ * Debug-only Logcat line (never audio or transcripts, project.md §6 GDPR) for diagnosing which
+ * recognizer was chosen and whether/how biasing was applied, only when the app is debuggable.
+ */
+private fun sttDebugLog(ctx: Context, msg: String) {
+    if ((ctx.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+        Log.d(AndroidSpeechRecognitionEngine.LOG_TAG, msg)
+    }
+}
+
+/**
+ * Builds the `RecognizerIntent` shared by the cloud and on-device recognizers: the existing
+ * language-model/partial-results/calling-package extras, `EXTRA_MAX_RESULTS` for N-best (A), and
+ * (API 33+) `EXTRA_BIASING_STRINGS`/`EXTRA_PREFER_OFFLINE` for the expected-vocabulary bias (D).
+ * `EXTRA_BIASING_STRINGS` is `@SuppressLint`-guarded as `InlinedApi` since it's only ever read
+ * behind the `sdkInt >= 33` check.
+ */
+@SuppressLint("InlinedApi")
+fun buildRecognizerIntent(
+    ctx: Context,
+    language: String,
+    biasStrings: List<String>,
+    sdkInt: Int,
+    preferOffline: Boolean = false
+): Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+    putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
+    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+    putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, ctx.packageName)
+    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, BalanceConfig.STT_MAX_RESULTS)
+    if (sdkInt >= 33 && biasStrings.isNotEmpty()) {
+        putStringArrayListExtra(RecognizerIntent.EXTRA_BIASING_STRINGS, ArrayList(biasStrings))
+    }
+    if (preferOffline) {
+        putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+    }
+}
+
 class AndroidSpeechRecognitionEngine(
     private val context: Context?
 ) : SpeechRecognitionEngine {
@@ -172,9 +220,23 @@ class AndroidSpeechRecognitionEngine(
     private var utteranceStartMillis = 0L
     private var restartJob: Job? = null
 
+    private var expectedWords: List<String> = emptyList()
+    private var upcomingWords: List<String> = emptyList()
+    private var usingOnDevice = false
+    private var onDeviceReadyOnce = false
+    private var onDeviceFailed = false
+
+    companion object {
+        // Process-lifetime cache; only ever touched on the main thread.
+        private val onDeviceSupportByLanguage = mutableMapOf<String, Boolean>()
+        private val modelDownloadTriggered = mutableSetOf<String>()
+        const val LOG_TAG = "LixoStt"
+    }
+
     private val listener = object : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) {
             _state.value = SttEngineState.LISTENING
+            if (usingOnDevice) onDeviceReadyOnce = true
         }
 
         override fun onBeginningOfSpeech() {}
@@ -187,6 +249,12 @@ class AndroidSpeechRecognitionEngine(
 
         override fun onError(error: Int) {
             if (!shouldKeepListening) return
+            if (usingOnDevice &&
+                (error == 12 || error == 13 || (error == SpeechRecognizer.ERROR_CLIENT && !onDeviceReadyOnce))
+            ) {
+                fallBackToCloudRecognizer()
+                return
+            }
             when (error) {
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
                     shouldKeepListening = false
@@ -235,8 +303,134 @@ class AndroidSpeechRecognitionEngine(
         if (!requestMicrophonePermission()) return
 
         currentLanguage = languageIso
+        this.expectedWords = expectedWords
+        resolveOnDeviceSupport(ctx, languageIso)
         shouldKeepListening = true
         withContext(Dispatchers.Main.immediate) { beginRecognition(ctx) }
+    }
+
+    /** The current recognizer biasing list (the upcoming phrase, then upcoming words, then the rest). */
+    fun currentBiasStrings(): List<String> = buildBiasStrings(expectedWords, upcomingWords)
+
+    /** The intent [beginRecognition] would use right now, exposed for tests. */
+    fun buildCurrentRecognizerIntent(ctx: Context): Intent =
+        buildRecognizerIntent(ctx, currentLanguage, currentBiasStrings(), Build.VERSION.SDK_INT, preferOffline = usingOnDevice)
+
+    override fun updateExpectedPosition(nextWords: List<String>) {
+        upcomingWords = nextWords
+    }
+
+    /**
+     * Chooses between the on-device and cloud recognizer for [language]. Must be called on the
+     * main thread -- `SpeechRecognizer` create/check/destroy calls are all main-thread-only.
+     */
+    fun chooseRecognizer(ctx: Context, language: String = currentLanguage): Pair<SpeechRecognizer, Boolean> {
+        val useOnDevice = BalanceConfig.STT_PREFER_ON_DEVICE &&
+            !onDeviceFailed &&
+            Build.VERSION.SDK_INT >= 33 &&
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx) &&
+            onDeviceSupportByLanguage[language] == true
+        sttDebugLog(ctx, "chooseRecognizer onDevice=$useOnDevice language=$language")
+        return if (useOnDevice) {
+            SpeechRecognizer.createOnDeviceSpeechRecognizer(ctx) to true
+        } else {
+            SpeechRecognizer.createSpeechRecognizer(ctx) to false
+        }
+    }
+
+    /**
+     * Probes (and caches, for the process lifetime) whether the on-device recognizer actually has
+     * an installed model for [language]. `supportedOnDeviceLanguages` means downloadable but NOT
+     * installed -- using that alone would start a recognizer with no model, so only
+     * `installedOnDeviceLanguages` counts as "true"; a supported-but-not-installed language
+     * triggers a best-effort download and falls back to the cloud recognizer for this session.
+     */
+    suspend fun resolveOnDeviceSupport(ctx: Context, language: String): Boolean {
+        if (!BalanceConfig.STT_PREFER_ON_DEVICE) return false
+        if (Build.VERSION.SDK_INT < 33) return false
+        if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx)) return false
+        onDeviceSupportByLanguage[language]?.let { return it }
+
+        return try {
+            withContext(Dispatchers.Main.immediate) { probeOnDeviceSupport33(ctx, language) }
+        } catch (_: Throwable) {
+            onDeviceSupportByLanguage[language] = false
+            false
+        }
+    }
+
+    @TargetApi(33)
+    private suspend fun probeOnDeviceSupport33(ctx: Context, language: String): Boolean {
+        val probe = SpeechRecognizer.createOnDeviceSpeechRecognizer(ctx)
+        try {
+            val intent = buildRecognizerIntent(ctx, language, emptyList(), 33, preferOffline = true)
+            val support = withTimeoutOrNull(BalanceConfig.STT_ON_DEVICE_SUPPORT_TIMEOUT_MS) {
+                suspendCancellableCoroutine<RecognitionSupport?> { cont ->
+                    probe.checkRecognitionSupport(
+                        intent,
+                        ctx.mainExecutor,
+                        object : RecognitionSupportCallback {
+                            override fun onSupportResult(support: RecognitionSupport) {
+                                if (cont.isActive) cont.resume(support)
+                            }
+
+                            override fun onError(error: Int) {
+                                if (cont.isActive) cont.resume(null)
+                            }
+                        }
+                    )
+                }
+            }
+
+            val result = when {
+                support == null -> false
+                languageTagsMatch(language, support.installedOnDeviceLanguages) -> true
+                languageTagsMatch(language, support.supportedOnDeviceLanguages) &&
+                    language !in modelDownloadTriggered -> {
+                    modelDownloadTriggered.add(language)
+                    try {
+                        probe.triggerModelDownload(intent)
+                    } catch (_: Throwable) {
+                        // Best-effort only; model download failure doesn't change the fallback.
+                    }
+                    false
+                }
+                else -> false
+            }
+            onDeviceSupportByLanguage[language] = result
+            sttDebugLog(ctx, "resolveOnDeviceSupport language=$language onDevice=$result")
+            return result
+        } finally {
+            probe.destroy()
+        }
+    }
+
+    private fun languageTagsMatch(language: String, tags: List<String>): Boolean {
+        val target = language.replace('_', '-').lowercase()
+        val targetPrimary = target.substringBefore('-')
+        return tags.any { tag ->
+            val t = tag.replace('_', '-').lowercase()
+            t == target || t.substringBefore('-') == targetPrimary
+        }
+    }
+
+    private fun fallBackToCloudRecognizer() {
+        onDeviceFailed = true
+        onDeviceSupportByLanguage[currentLanguage] = false
+        usingOnDevice = false
+        context?.let { sttDebugLog(it, "fallBackToCloudRecognizer language=$currentLanguage") }
+
+        restartJob?.cancel()
+        restartJob = scope.launch {
+            delay(100)
+            val old = speechRecognizer
+            speechRecognizer = null
+            old?.cancel()
+            old?.destroy()
+            if (shouldKeepListening) {
+                context?.let { beginRecognition(it) }
+            }
+        }
     }
 
     private fun beginRecognition(ctx: Context) {
@@ -244,17 +438,21 @@ class AndroidSpeechRecognitionEngine(
         emittedInUtterance = 0
         utteranceStartMillis = Clock.System.now().toEpochMilliseconds()
 
-        val recognizer = speechRecognizer ?: SpeechRecognizer.createSpeechRecognizer(ctx).also {
-            it.setRecognitionListener(listener)
-            speechRecognizer = it
+        val recognizer = speechRecognizer ?: chooseRecognizer(ctx).let { (r, onDevice) ->
+            r.setRecognitionListener(listener)
+            usingOnDevice = onDevice
+            onDeviceReadyOnce = false
+            speechRecognizer = r
+            r
         }
 
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, currentLanguage)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, ctx.packageName)
-        }
+        val bias = currentBiasStrings()
+        val intent = buildCurrentRecognizerIntent(ctx)
+        sttDebugLog(
+            ctx,
+            "start onDevice=$usingOnDevice biasing=${Build.VERSION.SDK_INT >= 33 && bias.isNotEmpty()} " +
+                "biasCount=${bias.size} phrase=\"${bias.firstOrNull().orEmpty()}\""
+        )
         recognizer.startListening(intent)
     }
 
@@ -272,25 +470,18 @@ class AndroidSpeechRecognitionEngine(
 
     private fun handleSpeechBundle(bundle: Bundle?) {
         val matches = bundle?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION) ?: return
-        val topTranscript = matches.firstOrNull() ?: return
+        if (matches.isEmpty()) return
         val now = Clock.System.now().toEpochMilliseconds()
         _lastLatencyMillis.value = (now - utteranceStartMillis).coerceIn(20L, 250L)
 
-        val allTokens = topTranscript
-            .split(Regex("\\s+"))
-            .filter { it.isNotBlank() }
-            .map { raw ->
-                RecognizedSpeechToken(
-                    rawWord = raw,
-                    normalizedWord = raw.lowercase().trim { !it.isLetterOrDigit() },
-                    confidence = 0.88f,
-                    timestampMillis = now
-                )
-            }
-
-        // Partial results are cumulative for the utterance; only forward words not yet delivered.
-        val fresh = allTokens.drop(emittedInUtterance)
-        emittedInUtterance = maxOf(emittedInUtterance, allTokens.size)
+        val total = tokenizeSttTranscript(matches.first()).size
+        val fresh = parseSpeechBundle(
+            matches,
+            bundle.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES),
+            emittedInUtterance,
+            now
+        )
+        emittedInUtterance = maxOf(emittedInUtterance, total)
         if (fresh.isNotEmpty()) {
             _recognizedTokens.tryEmit(fresh)
         }
@@ -309,6 +500,8 @@ class AndroidSpeechRecognitionEngine(
             it.destroy()
         }
         speechRecognizer = null
+        upcomingWords = emptyList()
+        usingOnDevice = false
         _state.value = SttEngineState.IDLE
     }
 

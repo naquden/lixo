@@ -13,7 +13,9 @@ data class StoryWordToken(
     val normalizedText: String,
     val isCompleted: Boolean = false,
     val needsPractice: Boolean = false,
-    val heardText: String? = null
+    val heardText: String? = null,
+    val aliases: List<String> = emptyList(),
+    val isProperNoun: Boolean = false
 )
 
 data class ReadingAlignmentSessionState(
@@ -57,6 +59,22 @@ data class ReadingAlignmentSessionState(
 
     val isManualCompleteButtonEnabled: Boolean
         get() = mode == ReadingMode.MANUAL && elapsedMillis >= manualModeMinRequiredMillis
+
+    /**
+     * The upcoming unread normalized words from the reading cursor, used as the speech
+     * recognizer's "expected phrase" bias hint. Falls back to the unread yellow words when the
+     * cursor has reached the end but there are still yellow words to go back and read.
+     */
+    val upcomingWordsForStt: List<String>
+        get() {
+            val fromCursor = words.drop(currentWordIndex).filter { !it.isCompleted }.map { it.normalizedText }
+            if (fromCursor.isNotEmpty()) return fromCursor
+            return words.filter { !it.isCompleted }.map { it.normalizedText }.distinct()
+        }
+
+    /** The full expected vocabulary for this story (every word's normalized text plus its aliases). */
+    val sttExpectedWords: List<String>
+        get() = words.flatMap { listOf(it.normalizedText) + it.aliases }.filter { it.isNotBlank() }.distinct()
 }
 
 data class ReadingScoreResult(
@@ -83,12 +101,13 @@ class ForcedAlignmentEngine {
     fun startSession(
         storyText: String,
         mode: ReadingMode,
-        isTimedChallengeRequested: Boolean
+        isTimedChallengeRequested: Boolean,
+        wordAliases: Map<String, List<String>> = BalanceConfig.STT_WORD_ALIASES
     ): ReadingAlignmentSessionState {
         // Timed challenges in reading require AI mode (project.md §2 "Tidsuppdrag i läsning kräver AI-läge")
         val effectiveTimedChallenge = isTimedChallengeRequested && mode == ReadingMode.AI_LISTENING
 
-        val tokens = tokenizeStory(storyText)
+        val tokens = tokenizeStory(storyText, wordAliases)
         val minManualMillis = calculateMinimumManualReadingMillis()
 
         return ReadingAlignmentSessionState(
@@ -104,18 +123,42 @@ class ForcedAlignmentEngine {
         )
     }
 
-    fun tokenizeStory(storyText: String): List<StoryWordToken> {
-        return storyText
+    fun tokenizeStory(
+        storyText: String,
+        wordAliases: Map<String, List<String>> = BalanceConfig.STT_WORD_ALIASES
+    ): List<StoryWordToken> {
+        val raws = storyText
             .trim()
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
-            .mapIndexed { idx, raw ->
-                StoryWordToken(
-                    index = idx,
-                    displayText = raw,
-                    normalizedText = normalizeForAlignment(raw)
-                )
-            }
+
+        return raws.mapIndexed { idx, raw ->
+            val norm = normalizeForAlignment(raw)
+            StoryWordToken(
+                index = idx,
+                displayText = raw,
+                normalizedText = norm,
+                aliases = wordAliases[norm].orEmpty(),
+                isProperNoun = isProperNounAt(raws, idx, norm)
+            )
+        }
+    }
+
+    /**
+     * True when the raw token at [idx] (already [normalizeForAlignment]d into [norm]) is a proper
+     * noun / name: capitalized and not sentence-initial. Used to loosen matching for names and
+     * invented words the recognizer can't pronounce (e.g. "Lixo").
+     */
+    private fun isProperNounAt(raws: List<String>, idx: Int, norm: String): Boolean {
+        if (idx == 0) return false
+        if (norm.length < 2) return false
+        val firstLetter = raws[idx].firstOrNull { it.isLetter() } ?: return false
+        if (!firstLetter.isUpperCase()) return false
+        val prevNorm = normalizeForAlignment(raws[idx - 1])
+        if (prevNorm.isEmpty()) return false
+        val prevLastChar = raws[idx - 1].trimEnd { it in "\"'”’»)" }.lastOrNull()
+        if (prevLastChar != null && prevLastChar in ".!?…:") return false
+        return true
     }
 
     fun calculateMinimumManualReadingMillis(): Long = BalanceConfig.MANUAL_MODE_UNLOCK_SECONDS * 1000L
@@ -142,11 +185,21 @@ class ForcedAlignmentEngine {
             val spokenNorm = normalizeForAlignment(spoken.normalizedWord.ifBlank { spoken.rawWord })
             if (spokenNorm.isEmpty()) continue
 
+            val candidates = (listOf(spokenNorm) + spoken.alternatives.map { normalizeForAlignment(it) })
+                .filter { it.isNotEmpty() }
+                .distinct()
+
             // 1. The current cursor word takes priority: a child correctly reading the word they're
             // actually on must never be credited to an earlier yellow word just because it repeats
             // elsewhere in the story (e.g. "en", "i", "och").
-            val cursorMatched = cursor < workingWords.size &&
-                isMatch(spokenNorm, workingWords[cursor].normalizedText, spoken.confidence, confidenceThreshold)
+            val cursorToken = workingWords.getOrNull(cursor)
+            val cursorMatched = cursorToken != null && (
+                candidates.any { matchesWord(it, cursorToken, spoken.confidence, confidenceThreshold, false) } ||
+                    (
+                        candidates.any { matchesWord(it, cursorToken, spoken.confidence, confidenceThreshold, true) } &&
+                            !matchesUpcomingStrict(candidates, workingWords, cursor, spoken.confidence, confidenceThreshold)
+                        )
+                )
             if (cursorMatched) {
                 workingWords[cursor] = workingWords[cursor].copy(isCompleted = true)
                 clearedStuck = false
@@ -158,12 +211,14 @@ class ForcedAlignmentEngine {
 
             // 2. The child can go back and read an earlier yellow (needsPractice, unread) word at any time.
             var yellowMatchedIndex = -1
-            for (i in workingWords.indices) {
-                val candidate = workingWords[i]
-                if (!candidate.needsPractice || candidate.isCompleted) continue
-                if (isMatch(spokenNorm, candidate.normalizedText, spoken.confidence, confidenceThreshold)) {
-                    yellowMatchedIndex = i
-                    break
+            outer@ for (cand in candidates) {
+                for (i in workingWords.indices) {
+                    val candidateWord = workingWords[i]
+                    if (!candidateWord.needsPractice || candidateWord.isCompleted) continue
+                    if (matchesWord(cand, candidateWord, spoken.confidence, confidenceThreshold, false)) {
+                        yellowMatchedIndex = i
+                        break@outer
+                    }
                 }
             }
             if (yellowMatchedIndex != -1) {
@@ -181,30 +236,37 @@ class ForcedAlignmentEngine {
                     cursor + BalanceConfig.STT_LOOKAHEAD_WINDOW_WORDS - 1
                 )
 
-                for (candidateIdx in cursor..maxLookaheadIndex) {
-                    val targetNorm = workingWords[candidateIdx].normalizedText
-                    if (isMatch(spokenNorm, targetNorm, spoken.confidence, confidenceThreshold)) {
-                        matchedIndex = candidateIdx
-                        break
+                lookahead@ for (cand in candidates) {
+                    for (candidateIdx in cursor..maxLookaheadIndex) {
+                        if (matchesWord(cand, workingWords[candidateIdx], spoken.confidence, confidenceThreshold, false)) {
+                            matchedIndex = candidateIdx
+                            break@lookahead
+                        }
                     }
                 }
             }
 
             if (matchedIndex != -1) {
-                // Words between the cursor and the match were skipped over (misread/not heard): flag them
-                // yellow, but they stay unread (not completed) so the child is never blocked.
+                // Words between the cursor and the match were skipped over (misread/not heard/swallowed): flag
+                // them yellow, but they stay unread (not completed) so the child is never blocked. A short word
+                // the recognizer heard nothing for is silently credited instead (B).
                 if (matchedIndex > cursor) {
                     val skipped = matchedIndex - cursor
                     for (i in cursor until matchedIndex) {
                         val off = i - cursor
+                        val w = workingWords[i]
                         val heard = if (off == skipped - 1 && pending.size > skipped) {
                             pending.drop(off).joinToString(" ")
                         } else {
                             pending.getOrNull(off)
                         }
-                        workingWords[i] = workingWords[i].copy(
+                        if (heard == null && !w.needsPractice && w.normalizedText.length <= BalanceConfig.STT_SHORT_WORD_MAX_LETTERS) {
+                            workingWords[i] = w.copy(isCompleted = true)
+                            continue
+                        }
+                        workingWords[i] = w.copy(
                             needsPractice = true,
-                            heardText = heard ?: workingWords[i].heardText
+                            heardText = heard ?: w.heardText
                         )
                         struggled = struggled + workingWords[i].normalizedText
                     }
@@ -244,10 +306,73 @@ class ForcedAlignmentEngine {
      * [processRecognizedTokens]: true when the spoken token is close enough (raw or confidence-weighted)
      * to the target word.
      */
-    private fun isMatch(spokenNorm: String, targetNorm: String, confidence: Float, confidenceThreshold: Float): Boolean {
+    private fun isMatch(
+        spokenNorm: String,
+        targetNorm: String,
+        confidence: Float,
+        confidenceThreshold: Float,
+        lenientShort: Boolean = false
+    ): Boolean {
         val similarity = computeSwedishPhoneticSimilarity(spokenNorm, targetNorm)
         val weightedScore = similarity * confidence.coerceIn(0.6f, 1.0f)
-        return similarity >= confidenceThreshold || weightedScore >= confidenceThreshold
+        if (similarity >= confidenceThreshold || weightedScore >= confidenceThreshold) return true
+        return lenientShort &&
+            targetNorm.length <= BalanceConfig.STT_SHORT_WORD_MAX_LETTERS &&
+            similarity >= BalanceConfig.STT_SHORT_WORD_LENIENT_THRESHOLD
+    }
+
+    /**
+     * Matches a spoken (already normalized) word against a story [token], applying the
+     * proper-noun threshold, alias list, and (only at the cursor) the loose proper-noun
+     * first-letter rule.
+     */
+    private fun matchesWord(
+        spokenNorm: String,
+        token: StoryWordToken,
+        confidence: Float,
+        threshold: Float,
+        lenientShort: Boolean
+    ): Boolean {
+        val effective = if (token.isProperNoun) min(threshold, BalanceConfig.STT_PROPER_NOUN_THRESHOLD) else threshold
+        if (isMatch(spokenNorm, token.normalizedText, confidence, effective, lenientShort)) return true
+        if (token.aliases.any { isMatch(spokenNorm, it, confidence, effective, false) }) return true
+        if (lenientShort && token.isProperNoun && isLooseProperNounMatch(spokenNorm, token.normalizedText)) return true
+        return false
+    }
+
+    /**
+     * Cursor-only loose fallback for proper nouns: same folded first letter and length within 2,
+     * e.g. "bå" for "bo". Must never run outside the cursor pass, or it would steal a later
+     * occurrence of a name from the word actually being read (see [matchesUpcomingStrict]).
+     */
+    private fun isLooseProperNounMatch(spoken: String, target: String): Boolean {
+        if (spoken.length < 2) return false
+        val foldedSpoken = foldSwedishPhonetics(spoken)
+        val foldedTarget = foldSwedishPhonetics(target)
+        if (foldedSpoken.isEmpty() || foldedTarget.isEmpty()) return false
+        if (foldedSpoken[0] != foldedTarget[0]) return false
+        return kotlin.math.abs(spoken.length - target.length) <= 2
+    }
+
+    /**
+     * True when any of [candidates] already strictly matches (non-lenient) one of the upcoming
+     * lookahead-window words beyond the cursor. Guards the lenient cursor match from stealing a
+     * word that clearly belongs further ahead (e.g. "läser" must not credit a lenient-matched
+     * "Lixo" at the cursor when "läser" is really the next story word).
+     */
+    private fun matchesUpcomingStrict(
+        candidates: List<String>,
+        words: List<StoryWordToken>,
+        cursor: Int,
+        confidence: Float,
+        threshold: Float
+    ): Boolean {
+        val maxIdx = min(words.size - 1, cursor + BalanceConfig.STT_LOOKAHEAD_WINDOW_WORDS - 1)
+        for (idx in (cursor + 1)..maxIdx) {
+            val word = words[idx]
+            if (candidates.any { matchesWord(it, word, confidence, threshold, false) }) return true
+        }
+        return false
     }
 
     /**

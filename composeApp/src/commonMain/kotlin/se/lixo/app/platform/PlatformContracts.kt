@@ -39,7 +39,9 @@ data class RecognizedSpeechToken(
     val rawWord: String,
     val normalizedWord: String,
     val confidence: Float,
-    val timestampMillis: Long
+    val timestampMillis: Long,
+    /** Normalized words at this same position from lower-ranked N-best transcripts; matching only. */
+    val alternatives: List<String> = emptyList()
 )
 
 /**
@@ -74,6 +76,12 @@ interface SpeechRecognitionEngine {
      * Allows feeding simulated spoken words (for emulator testing or demo mode).
      */
     suspend fun emitSimulatedWords(words: List<String>, confidence: Float = 0.95f)
+
+    /**
+     * The upcoming unread normalized words from the reading cursor, used to bias the recognizer's
+     * expected vocabulary at its next (re)start. No-op by default so iOS and fakes compile unchanged.
+     */
+    fun updateExpectedPosition(nextWords: List<String>) {}
 }
 
 /**

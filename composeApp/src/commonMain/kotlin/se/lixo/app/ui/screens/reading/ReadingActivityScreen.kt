@@ -145,11 +145,13 @@ fun ReadingActivityScreen(
                     if (sessionState.currentWordIndex > prevIndex) {
                         millisSinceLastWordAdvance = 0L
                     }
+                    sttEngine.updateExpectedPosition(sessionState.upcomingWordsForStt)
                 }
             }
+            sttEngine.updateExpectedPosition(sessionState.upcomingWordsForStt)
             sttEngine.startListening(
                 languageIso = speechLanguageIso,
-                expectedWords = sessionState.words.map { it.normalizedText }
+                expectedWords = sessionState.sttExpectedWords
             )
         }
     }

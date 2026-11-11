@@ -76,6 +76,38 @@ object BalanceConfig {
     /** Max recent unmatched STT words kept to show "Jag hörde" for yellow words. */
     const val STT_HEARD_TEXT_BUFFER_MAX_WORDS = 4
 
+    /** Target words at or below this letter count are eligible for the short-word swallow/lenient rules. */
+    const val STT_SHORT_WORD_MAX_LETTERS = 3
+
+    /** Minimum raw phonetic similarity accepted for a short word, but only at the reading cursor. */
+    const val STT_SHORT_WORD_LENIENT_THRESHOLD = 0.5f
+
+    /** Minimum match threshold used for proper-noun tokens (names, invented words) instead of the default. */
+    const val STT_PROPER_NOUN_THRESHOLD = 0.5f
+
+    /** Per-word alternate spellings the recognizer commonly produces for names/invented words, keyed by [se.lixo.app.domain.engine.ForcedAlignmentEngine.Companion.normalizeForAlignment]d target word. */
+    val STT_WORD_ALIASES: Map<String, List<String>> = mapOf(
+        "lixo" to listOf("lixå", "lisso", "liksso", "lixxo", "licko", "lix", "lissa", "lixa", "liso", "leckso")
+    )
+
+    /** Requested number of N-best transcripts from the speech recognizer (`EXTRA_MAX_RESULTS`). */
+    const val STT_MAX_RESULTS = 5
+
+    /** Fallback token confidence used when the recognizer bundle has no `CONFIDENCE_SCORES`. */
+    const val STT_DEFAULT_TOKEN_CONFIDENCE = 0.88f
+
+    /** Max words joined into the single "upcoming phrase" bias string. */
+    const val STT_BIAS_PHRASE_MAX_WORDS = 12
+
+    /** Max total entries passed as recognizer biasing strings (`EXTRA_BIASING_STRINGS`). */
+    const val STT_BIAS_MAX_STRINGS = 100
+
+    /** Kill-switch: prefer the on-device speech recognizer over the cloud one when available. */
+    const val STT_PREFER_ON_DEVICE = true
+
+    /** Timeout for `checkRecognitionSupport` when probing on-device recognizer language support. */
+    const val STT_ON_DEVICE_SUPPORT_TIMEOUT_MS = 2_000L
+
     /**
      * Milliseconds without word progress before showing gentle support options
      * (listen via TTS, see syllables, see explanation, or move on without penalty).

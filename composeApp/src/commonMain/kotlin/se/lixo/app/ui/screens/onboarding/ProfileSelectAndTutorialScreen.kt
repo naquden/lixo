@@ -308,6 +308,7 @@ fun ProfileSelectAndTutorialScreen(
             if (selectedMode == ReadingMode.AI_LISTENING) {
                 sttEngine.recognizedTokens.collect { tokens ->
                     sessionState = alignmentEngine.processRecognizedTokens(sessionState, tokens)
+                    sttEngine.updateExpectedPosition(sessionState.upcomingWordsForStt)
                 }
             }
         }
@@ -382,9 +383,10 @@ fun ProfileSelectAndTutorialScreen(
                                 isTimedChallengeRequested = false
                             )
                             if (mode == ReadingMode.AI_LISTENING) {
+                                sttEngine.updateExpectedPosition(sessionState.upcomingWordsForStt)
                                 sttEngine.startListening(
                                     languageIso = "sv-SE",
-                                    expectedWords = sessionState.words.map { it.normalizedText }
+                                    expectedWords = sessionState.sttExpectedWords
                                 )
                             }
                         }
