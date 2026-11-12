@@ -39,33 +39,35 @@ internal class IosProfileFilePicker : ProfileFilePicker {
             )
             if (!wrote) return@withContext FileSaveResult.Failed("could not write temp file")
 
-            val top = topViewController() ?: return@withContext FileSaveResult.Failed("no window")
-            val picker = UIDocumentPickerViewController(forExportingURLs = listOf(url), asCopy = true)
+            try {
+                val top = topViewController() ?: return@withContext FileSaveResult.Failed("no window")
+                val picker = UIDocumentPickerViewController(forExportingURLs = listOf(url), asCopy = true)
 
-            val result = suspendCancellableCoroutine<FileSaveResult> { cont ->
-                var resumed = false
-                val delegate = DocumentPickerDelegate(
-                    onPicked = { _ ->
-                        if (resumed) return@DocumentPickerDelegate
-                        resumed = true
-                        cont.resume(FileSaveResult.Saved)
-                    },
-                    onCancelled = {
-                        if (resumed) return@DocumentPickerDelegate
-                        resumed = true
-                        cont.resume(FileSaveResult.Cancelled)
+                suspendCancellableCoroutine<FileSaveResult> { cont ->
+                    var resumed = false
+                    val delegate = DocumentPickerDelegate(
+                        onPicked = { _ ->
+                            if (resumed) return@DocumentPickerDelegate
+                            resumed = true
+                            cont.resume(FileSaveResult.Saved)
+                        },
+                        onCancelled = {
+                            if (resumed) return@DocumentPickerDelegate
+                            resumed = true
+                            cont.resume(FileSaveResult.Cancelled)
+                        }
+                    )
+                    activeDelegate = delegate
+                    picker.delegate = delegate
+                    top.presentViewController(picker, animated = true, completion = null)
+                    cont.invokeOnCancellation {
+                        picker.dismissViewControllerAnimated(true, completion = null)
                     }
-                )
-                activeDelegate = delegate
-                picker.delegate = delegate
-                top.presentViewController(picker, animated = true, completion = null)
-                cont.invokeOnCancellation {
-                    picker.dismissViewControllerAnimated(true, completion = null)
                 }
+            } finally {
+                activeDelegate = null
+                NSFileManager.defaultManager.removeItemAtURL(url, error = null)
             }
-            activeDelegate = null
-            NSFileManager.defaultManager.removeItemAtURL(url, error = null)
-            result
         }
 
     @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
@@ -77,40 +79,44 @@ internal class IosProfileFilePicker : ProfileFilePicker {
                 asCopy = true
             )
 
-            suspendCancellableCoroutine<FileOpenResult> { cont ->
-                var resumed = false
-                val delegate = DocumentPickerDelegate(
-                    onPicked = { urls ->
-                        if (resumed) return@DocumentPickerDelegate
-                        resumed = true
-                        val url = urls.firstOrNull()
-                        if (url == null) {
-                            cont.resume(FileOpenResult.Failed("no file"))
-                            return@DocumentPickerDelegate
-                        }
-                        val text = NSString.stringWithContentsOfURL(url, NSUTF8StringEncoding, null)
-                        cont.resume(
-                            when {
-                                text == null -> FileOpenResult.Failed("could not read file")
-                                text.length > MAX_IMPORT_BYTES -> FileOpenResult.Failed("too large")
-                                else -> FileOpenResult.Opened(text)
+            try {
+                suspendCancellableCoroutine<FileOpenResult> { cont ->
+                    var resumed = false
+                    val delegate = DocumentPickerDelegate(
+                        onPicked = { urls ->
+                            if (resumed) return@DocumentPickerDelegate
+                            resumed = true
+                            val url = urls.firstOrNull()
+                            if (url == null) {
+                                cont.resume(FileOpenResult.Failed("no file"))
+                                return@DocumentPickerDelegate
                             }
-                        )
-                    },
-                    onCancelled = {
-                        if (resumed) return@DocumentPickerDelegate
-                        resumed = true
-                        cont.resume(FileOpenResult.Cancelled)
+                            val text = NSString.stringWithContentsOfURL(url, NSUTF8StringEncoding, null)
+                            cont.resume(
+                                when {
+                                    text == null -> FileOpenResult.Failed("could not read file")
+                                    text.length > MAX_IMPORT_BYTES -> FileOpenResult.Failed("too large")
+                                    else -> FileOpenResult.Opened(text)
+                                }
+                            )
+                        },
+                        onCancelled = {
+                            if (resumed) return@DocumentPickerDelegate
+                            resumed = true
+                            cont.resume(FileOpenResult.Cancelled)
+                        }
+                    )
+                    activeDelegate = delegate
+                    picker.delegate = delegate
+                    top.presentViewController(picker, animated = true, completion = null)
+                    cont.invokeOnCancellation {
+                        picker.dismissViewControllerAnimated(true, completion = null)
                     }
-                )
-                activeDelegate = delegate
-                picker.delegate = delegate
-                top.presentViewController(picker, animated = true, completion = null)
-                cont.invokeOnCancellation {
-                    picker.dismissViewControllerAnimated(true, completion = null)
                 }
+            } finally {
+                activeDelegate = null
             }
-        }.also { activeDelegate = null }
+        }
 
     // picker.delegate is a weak reference; hold the delegate strongly here so it isn't
     // deallocated before the callback fires (same pattern as IosQrScanner's MetadataDelegate).

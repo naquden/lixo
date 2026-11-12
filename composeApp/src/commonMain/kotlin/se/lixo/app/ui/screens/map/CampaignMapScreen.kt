@@ -65,7 +65,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -325,7 +326,6 @@ fun CampaignMapScreen(
                     progressionEngine = progressionEngine,
                     profile = profile,
                     content = content,
-                    renderAvatar = pagerState.settledPage == page,
                     isActivePage = pagerState.settledPage == page,
                     playPopInAnimation = !alreadyRevealed,
                     pageOffset = pageOffset,
@@ -677,7 +677,6 @@ private fun WorldPage(
     progressionEngine: ProgressionAndGiftEngine,
     profile: ChildProfile,
     content: ActiveContent,
-    renderAvatar: Boolean,
     isActivePage: Boolean,
     playPopInAnimation: Boolean,
     pageOffset: Float,
@@ -767,7 +766,7 @@ private fun WorldPage(
                 contentAlignment = Alignment.Center
             ) {
                 // Current level mascot placed beside the active node
-                if (isCurrentActiveNode && renderAvatar) {
+                if (isCurrentActiveNode && isActivePage) {
                     Box(
                         modifier = Modifier
                             .align(if (waveOffsetDp >= 0.dp) Alignment.CenterStart else Alignment.CenterEnd)
@@ -843,7 +842,9 @@ private fun WorldPage(
 /**
  * Circular 72dp 3D lesson node with distinct bottom lip. Pulses gently while it's the active
  * node. Shows the world-local level [number]: a shaded 3D digit on unlocked nodes (replacing the
- * subject icon), or a lock plus a small flat number on locked nodes (doc/plans/046).
+ * subject icon), or a lock plus a small flat number on locked nodes (doc/plans/046). The node's
+ * content description is "Bana N" (plus ", låst" when locked); descendant number text is cleared
+ * from the merged tree so TalkBack reads it once, not twice (doc/plans/047).
  */
 @Composable
 private fun CampaignLevelNode(
@@ -886,7 +887,18 @@ private fun CampaignLevelNode(
         modifier = Modifier
             .size(72.dp)
             .testTag(MAP_LEVEL_NODE_TAG_PREFIX + level.id)
-            .semantics { contentDescription = "${LixoStrings.MAP_LEVEL_NODE_CD_PREFIX} $number" }
+            .clearAndSetSemantics {
+                contentDescription = if (isUnlocked) {
+                    "${LixoStrings.MAP_LEVEL_NODE_CD_PREFIX} $number"
+                } else {
+                    "${LixoStrings.MAP_LEVEL_NODE_CD_PREFIX} $number, ${LixoStrings.MAP_LEVEL_NODE_LOCKED_SUFFIX}"
+                }
+                if (isUnlocked) {
+                    onClick(label = null) { onClick.invoke(); true }
+                } else {
+                    disabled()
+                }
+            }
             .graphicsLayer {
                 scaleX = pulseScale
                 scaleY = pulseScale

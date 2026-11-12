@@ -9,7 +9,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,7 +21,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -37,6 +39,8 @@ import se.lixo.app.ui.theme.LixoTheme
 /**
  * Verifies the per-node world-local level number (replacing the subject icon on unlocked nodes)
  * and the auto-scroll to the next available level on entering a world page (doc/plans/046).
+ * The node semantics assertions (no merged number text, single-read content description,
+ * click/enabled state) follow doc/plans/047.
  */
 class CampaignMapLevelNumberScrollTest {
 
@@ -117,14 +121,16 @@ class CampaignMapLevelNumberScrollTest {
 
         val unlockedNode = compose.onNodeWithTag(MAP_LEVEL_NODE_TAG_PREFIX + "level_161")
         val texts = unlockedNode.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Text).orEmpty()
-        assertEquals(1, texts.size)
-        assertEquals("1", texts.joinToString("") { it.text })
+        assertTrue(texts.isEmpty())
         unlockedNode.assertContentDescriptionEquals("Bana 1")
+        unlockedNode.assertHasClickAction()
+        unlockedNode.assertIsEnabled()
         nodeShot(MAP_LEVEL_NODE_TAG_PREFIX + "level_161", "node_unlocked")
 
         val lockedNode = compose.onNodeWithTag(MAP_LEVEL_NODE_TAG_PREFIX + "level_162")
         val lockedTexts = lockedNode.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Text).orEmpty()
-        assertEquals("2", lockedTexts.joinToString("") { it.text })
+        assertTrue(lockedTexts.isEmpty())
+        lockedNode.assertContentDescriptionEquals("Bana 2, låst")
         lockedNode.assertIsNotEnabled()
         nodeShot(MAP_LEVEL_NODE_TAG_PREFIX + "level_162", "node_locked")
 

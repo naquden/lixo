@@ -966,11 +966,14 @@ fun ParentGateAndDashboardScreen(
                         pendingImport = null
                         scope.launch {
                             backupBusy = true
-                            backupStatus = onImportBackup(backup, mode).fold(
-                                onSuccess = { restored -> LixoStrings.parentBackupRestored(restored.displayName) },
-                                onFailure = { LixoStrings.PARENT_BACKUP_IMPORT_FAILED }
-                            )
-                            backupBusy = false
+                            try {
+                                backupStatus = onImportBackup(backup, mode).fold(
+                                    onSuccess = { restored -> LixoStrings.parentBackupRestored(restored.displayName) },
+                                    onFailure = { LixoStrings.PARENT_BACKUP_IMPORT_FAILED }
+                                )
+                            } finally {
+                                backupBusy = false
+                            }
                         }
                     },
                     variant = if (conflict) LixoButtonVariant.DANGER else LixoButtonVariant.PRIMARY,

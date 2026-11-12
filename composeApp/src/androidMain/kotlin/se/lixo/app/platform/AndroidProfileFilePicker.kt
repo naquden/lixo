@@ -1,7 +1,9 @@
 package se.lixo.app.platform
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.net.Uri
+import android.provider.DocumentsContract
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,11 +30,21 @@ internal class AndroidProfileFilePicker : ProfileFilePicker {
             try {
                 val bytes = text.encodeToByteArray()
                 val wrote = writeBytes(uri, "wt", bytes) || writeBytes(uri, "w", bytes)
-                if (wrote) FileSaveResult.Saved else FileSaveResult.Failed("could not open output stream")
+                if (wrote) {
+                    FileSaveResult.Saved
+                } else {
+                    deleteCreatedDocument(context, uri)
+                    FileSaveResult.Failed("could not open output stream")
+                }
             } catch (e: Exception) {
+                deleteCreatedDocument(context, uri)
                 FileSaveResult.Failed(e.message ?: e::class.simpleName ?: "unknown error")
             }
         }
+    }
+
+    private fun deleteCreatedDocument(context: Context, uri: Uri) {
+        runCatching { DocumentsContract.deleteDocument(context.contentResolver, uri) }
     }
 
     private fun writeBytes(uri: Uri, mode: String, bytes: ByteArray): Boolean {

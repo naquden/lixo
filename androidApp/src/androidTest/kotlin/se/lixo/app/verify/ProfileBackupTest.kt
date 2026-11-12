@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.isDialog
@@ -33,11 +34,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import se.lixo.app.data.local.ImportMode
+import se.lixo.app.data.local.ProfileBackup
 import se.lixo.app.data.local.decodeProfileBackup
 import se.lixo.app.data.local.encodeProfileBackup
 import se.lixo.app.data.repository.LixoRepository
 import se.lixo.app.data.remote.fake.FakeFriendCloud
 import se.lixo.app.domain.engine.MathEngine
+import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.platform.AndroidPlatformContext
 import se.lixo.app.platform.FileOpenResult
@@ -118,7 +122,13 @@ class ProfileBackupTest {
     )
 
     @Composable
-    private fun BackupTestHost(repo: LixoRepository, picker: ProfileFilePicker) {
+    private fun BackupTestHost(
+        repo: LixoRepository,
+        picker: ProfileFilePicker,
+        onImportBackup: suspend (ProfileBackup, ImportMode) -> Result<ChildProfile> = { backup, mode ->
+            repo.importProfileBackup(backup, mode)
+        }
+    ) {
         val profiles by repo.profiles.collectAsState()
         val activeProfileId by repo.activeProfileId.collectAsState()
         val content by repo.content.active.collectAsState()
@@ -151,7 +161,7 @@ class ProfileBackupTest {
                     repo.buildProfileBackup(repo.activeProfileId.value ?: activeProfile.id)?.let(::encodeProfileBackup)
                 },
                 onPrepareImport = ::decodeProfileBackup,
-                onImportBackup = { backup, mode -> repo.importProfileBackup(backup, mode) },
+                onImportBackup = onImportBackup,
                 backupConflicts = repo::backupConflictsWithExisting
             )
         }
@@ -327,6 +337,37 @@ class ProfileBackupTest {
         compose.waitUntil(5_000) { compose.onAllNodesWithTextCompat(LixoStrings.PARENT_BACKUP_NOT_A_BACKUP) }
         compose.onNodeWithText(LixoStrings.PARENT_BACKUP_NOT_A_BACKUP).performScrollTo().assertExists()
         shot("import_invalid")
+    }
+
+    @Test
+    fun importConfirm_whenImportCancelled_reEnablesBackupButtons() {
+        val repo = newRepo(TEST_DB, "uid_047_cancel")
+        compose.waitUntil(5_000) { repo.profilesLoaded.value }
+        seedElla(repo)
+        val picker = InMemoryProfileFilePicker()
+
+        compose.setContent {
+            BackupTestHost(
+                repo,
+                picker,
+                onImportBackup = { _, _ -> throw kotlinx.coroutines.CancellationException("test") }
+            )
+        }
+        compose.waitForIdle()
+        unlockGate()
+
+        compose.onNodeWithTag("parent_export_profile").performScrollTo().performClick()
+        compose.waitUntil(5_000) { picker.saved != null }
+
+        picker.nextOpen = FileOpenResult.Opened(picker.saved!!)
+        compose.onNodeWithTag("parent_import_profile").performScrollTo().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithTextCompat("Återställ Ella?") }
+        compose.onNodeWithTag("parent_import_confirm").performClick()
+        compose.waitForIdle()
+
+        compose.onNodeWithTag("parent_export_profile").performScrollTo().assertIsEnabled()
+        compose.onNodeWithTag("parent_import_profile").performScrollTo().assertIsEnabled()
+        shot("import_cancelled_reenabled")
     }
 }
 

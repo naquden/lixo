@@ -50,6 +50,7 @@ object LixoStrings {
     const val MAP_MAXED_STARS_HINT = "Klarad · Spela igen för gåva"
     const val MAP_LOCKED_HINT = "Klara banan innan först"
     const val MAP_LEVEL_NODE_CD_PREFIX = "Bana"
+    const val MAP_LEVEL_NODE_LOCKED_SUFFIX = "låst"
 
     // Campaign Map - Subject Worlds (ämnesväljare)
     const val WORLD_SWEDISH_TITLE = "Sagoskogen"
