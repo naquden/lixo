@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -51,12 +52,21 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -64,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.absoluteValue
 import kotlin.math.sin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.domain.model.CampaignLevel
 import se.lixo.app.domain.model.ChildProfile
@@ -93,6 +104,13 @@ import se.lixo.app.ui.theme.TtsIconButton
  * locate a specific level node and assert its locked/unlocked state (doc/plans/010).
  */
 const val MAP_LEVEL_NODE_TAG_PREFIX = "map_level_node_"
+
+/**
+ * World-local index to auto-scroll a [WorldPage] to: the position of [currentLevelId] in
+ * [levels], or 0 when there's no progress yet or the id isn't found (doc/plans/046).
+ */
+internal fun mapScrollTargetIndex(levels: List<CampaignLevel>, currentLevelId: String?): Int =
+    levels.indexOfFirst { it.id == currentLevelId }.coerceAtLeast(0)
 
 /**
  * Duolingo-style Campaign Map with four subject "worlds" (plan: "Ämnesväljare med fyra världar"):
@@ -308,6 +326,7 @@ fun CampaignMapScreen(
                     profile = profile,
                     content = content,
                     renderAvatar = pagerState.settledPage == page,
+                    isActivePage = pagerState.settledPage == page,
                     playPopInAnimation = !alreadyRevealed,
                     pageOffset = pageOffset,
                     onNodeClick = { level -> selectedLevelForSheet = level }
@@ -659,6 +678,7 @@ private fun WorldPage(
     profile: ChildProfile,
     content: ActiveContent,
     renderAvatar: Boolean,
+    isActivePage: Boolean,
     playPopInAnimation: Boolean,
     pageOffset: Float,
     onNodeClick: (CampaignLevel) -> Unit
@@ -670,8 +690,24 @@ private fun WorldPage(
             progressByLevelId = progressByLevelId
         )
     }
+    val targetIndex = mapScrollTargetIndex(levels, currentLevel?.id)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (targetIndex - 1).coerceAtLeast(0))
+
+    // Auto-scroll to the next available level whenever this page becomes active (first open,
+    // world switch, or returning from a level with new progress). Keyed only on isActivePage
+    // and the target id so a manual scroll never snaps back (doc/plans/046).
+    LaunchedEffect(isActivePage, currentLevel?.id) {
+        if (!isActivePage || levels.isEmpty()) return@LaunchedEffect
+        snapshotFlow { listState.layoutInfo.viewportSize.height }.first { it > 0 }
+        val info = listState.layoutInfo
+        val viewport = info.viewportSize.height
+        val itemSize = info.visibleItemsInfo.firstOrNull { it.index == targetIndex }?.size
+            ?: info.visibleItemsInfo.firstOrNull()?.size ?: 0
+        listState.animateScrollToItem(targetIndex, scrollOffset = -(viewport / 2 - itemSize / 2))
+    }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
@@ -712,7 +748,8 @@ private fun WorldPage(
             )
             LaunchedEffect(level.id) {
                 if (shouldStagger) {
-                    delay((localIndex * 35L).coerceAtMost(900L))
+                    val firstVisible = listState.firstVisibleItemIndex
+                    delay(((localIndex - firstVisible).coerceAtLeast(0) * 35L).coerceAtMost(900L))
                     popInScale.value = 1f
                 } else {
                     popInScale.value = 1f
@@ -769,6 +806,7 @@ private fun WorldPage(
                     CampaignLevelNode(
                         level = level,
                         world = world,
+                        number = localIndex + 1,
                         isUnlocked = isUnlocked,
                         isCurrent = isCurrentActiveNode,
                         stars = stars,
@@ -803,12 +841,15 @@ private fun WorldPage(
 }
 
 /**
- * Circular 72dp 3D lesson node with distinct bottom lip. Pulses gently while it's the active node.
+ * Circular 72dp 3D lesson node with distinct bottom lip. Pulses gently while it's the active
+ * node. Shows the world-local level [number]: a shaded 3D digit on unlocked nodes (replacing the
+ * subject icon), or a lock plus a small flat number on locked nodes (doc/plans/046).
  */
 @Composable
 private fun CampaignLevelNode(
     level: CampaignLevel,
     world: SubjectWorld,
+    number: Int,
     isUnlocked: Boolean,
     isCurrent: Boolean,
     stars: Int,
@@ -830,14 +871,6 @@ private fun CampaignLevelNode(
         }
     }
 
-    val icon = when {
-        !isUnlocked -> LixoIcons.Lock
-        level.subject == Subject.SWEDISH -> LixoIcons.Book
-        level.subject == Subject.MATH -> LixoIcons.Calculator
-        level.subject == Subject.GEOGRAPHY -> LixoIcons.Globe
-        else -> LixoIcons.Star
-    }
-
     val infiniteTransition = rememberInfiniteTransition(label = "lixo_node_pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -853,6 +886,7 @@ private fun CampaignLevelNode(
         modifier = Modifier
             .size(72.dp)
             .testTag(MAP_LEVEL_NODE_TAG_PREFIX + level.id)
+            .semantics { contentDescription = "${LixoStrings.MAP_LEVEL_NODE_CD_PREFIX} $number" }
             .graphicsLayer {
                 scaleX = pulseScale
                 scaleY = pulseScale
@@ -876,11 +910,82 @@ private fun CampaignLevelNode(
                 .background(faceColor),
             contentAlignment = Alignment.Center
         ) {
-            LixoIcon(
-                icon = icon,
-                tint = iconColor,
-                size = 32.dp
+            if (!isUnlocked) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    LixoIcon(
+                        icon = LixoIcons.Lock,
+                        tint = iconColor,
+                        size = 24.dp
+                    )
+                    Text(
+                        text = number.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = LixoColors.TextDisabled,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+            } else {
+                Number3D(number = number, faceColor = faceColor, lipColor = lipColor)
+            }
+        }
+    }
+}
+
+/**
+ * The level number drawn as a shaded 3D block to match the node's own lip/face style, built
+ * from layered [Text]s so it works on both Android and iOS (no AGSL/RuntimeShader,
+ * doc/plans/046).
+ */
+@Composable
+private fun Number3D(
+    number: Int,
+    faceColor: Color,
+    lipColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val text = number.toString()
+    val fontSize = if (number >= 100) 24.sp else 30.sp
+    val base = TextStyle(
+        fontSize = fontSize,
+        lineHeight = fontSize,
+        fontWeight = FontWeight.Black,
+        textAlign = TextAlign.Center
+    )
+    val extrusionColor = lerp(lipColor, Color.Black, 0.25f)
+
+    Box(modifier, contentAlignment = Alignment.Center) {
+        for (dy in listOf(3.dp, 2.dp, 1.dp)) {
+            Text(
+                text = text,
+                style = base,
+                color = extrusionColor,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.offset(y = dy).clearAndSetSemantics {}
             )
         }
+        Text(
+            text = text,
+            style = base.copy(
+                brush = Brush.verticalGradient(listOf(Color.White, lerp(Color.White, faceColor, 0.35f))),
+                shadow = Shadow(color = Color.Black.copy(alpha = 0.25f), offset = Offset(0f, 6f), blurRadius = 8f)
+            ),
+            maxLines = 1,
+            softWrap = false
+        )
+        Text(
+            text = text,
+            style = base.copy(
+                brush = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.6f), 0.45f to Color.Transparent)
+            ),
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.clearAndSetSemantics {}
+        )
     }
 }
