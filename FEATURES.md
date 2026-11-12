@@ -4,9 +4,11 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
-- [ ] 048 — Set app version to 0.1.0 (Android versionName, iOS CFBundleShortVersionString; build number stays 1) (feature) → [plan](doc/plans/048-version-0-1-0.md)
 
 ## Done
+
+- [x] 048 — Set app version to 0.1.0 (Android versionName, iOS CFBundleShortVersionString; build number stays 1) (feature) → [plan](doc/plans/048-version-0-1-0.md)  
+  _Verified 2026-11-12, run wf_97683416-bb9: `AppVersionTest` 1/1 on emulator-5554 (Pixel_10); dumpsys `versionName=0.1.0`, `versionCode=1`; iOS `xcodebuild` BUILD SUCCEEDED, built Info.plist CFBundleShortVersionString 0.1.0 / CFBundleVersion 1. Commit 23e0c89. Evidence temp/verify/048/. Review: no findings._
 
 - [x] 047 — Fix LOW review findings from 045/046: import-confirm try/finally, delete empty SAF file on failed export, iOS picker cleanup on cancel, TalkBack "Bana 1, 1" double read (+ "låst" in locked CD), drop redundant WorldPage renderAvatar param (bug) → [plan](doc/plans/047-review-low-fixes-045-046.md)  
   _Verified 2026-11-12 on emulator-5554 (Pixel_10), run wf_a1471e2b-5ae + manual re-verify: `CampaignMapLevelNumberScrollTest` 4/4 (no merged number text on node, locked CD "Bana 2, låst"), `ProfileBackupTest` 5/5 incl. new `importConfirm_whenImportCancelled_reEnablesBackupButtons` (one launch flake "No compose hierarchies found" in combined run, clean alone), regressions `GeographyWorldMapTest` 1/1, `ProfilePersistenceTest` 3/3; host tests, assembleDebug, compileKotlinIosSimulatorArm64 green. The commit is marked "[WIP: build failing]" only because the workflow ran a non-existent task `:composeApp:testDebugUnitTest`. Evidence temp/verify/047/lixo_screenshots/045_import_cancelled_reenabled.png, temp/verify/047/verify046/*.png. Review LOW (not fixed): in CampaignMapScreen.kt:897, semantics `onClick(label = null) { onClick.invoke(); true }` shadows the `onClick` param name; bind it to a local val first._
