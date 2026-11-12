@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -132,7 +133,6 @@ class CampaignMapLevelNumberScrollTest {
         val swedishLevels = world(repo, Subject.SWEDISH)
         progress = done(swedishLevels.take(1), stars = 3)
         compose.waitForIdle()
-        val goldNode = compose.onNodeWithTag(MAP_LEVEL_NODE_TAG_PREFIX + swedishLevels.first().id)
         nodeShot(MAP_LEVEL_NODE_TAG_PREFIX + swedishLevels.first().id, "node_gold")
 
         // 100th math level: the only 3-digit case.
