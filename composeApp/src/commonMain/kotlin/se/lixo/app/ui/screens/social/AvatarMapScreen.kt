@@ -69,7 +69,6 @@ import se.lixo.app.domain.model.AddFriendException
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.FriendProfile
-import se.lixo.app.domain.social.Nickname
 import se.lixo.app.domain.social.buildFriendPayload
 import se.lixo.app.platform.QrScanResult
 import se.lixo.app.platform.QrScanner
@@ -110,7 +109,6 @@ fun AvatarMapScreen(
     prefilledFriendCode: String? = null,
     onConsumePrefilledFriendCode: () -> Unit = {},
     onOpenWardrobe: () -> Unit,
-    onShuffleNickname: suspend () -> Result<Nickname>,
     onCreateFriendCode: suspend () -> Result<FriendInvite>,
     onStopFriendCode: suspend () -> Unit,
     observeNewFriendsDuring: (String) -> Flow<FriendProfile>,
@@ -220,8 +218,7 @@ fun AvatarMapScreen(
                         OwnAvatarPodium(
                             profile = profile,
                             content = content,
-                            onClick = onOpenWardrobe,
-                            onShuffleNickname = onShuffleNickname
+                            onClick = onOpenWardrobe
                         )
                     }
 
@@ -1140,13 +1137,12 @@ private fun Modifier.avatarGround(face: Color, lip: Color): Modifier = this.draw
     )
 }
 
-/** The child's own avatar standing on a blue tactile podium, with a name pill + "Slumpa" below it. */
+/** The child's own avatar standing on a blue tactile podium, with a name pill below it. */
 @Composable
 private fun OwnAvatarPodium(
     profile: ChildProfile,
     content: ActiveContent,
-    onClick: () -> Unit,
-    onShuffleNickname: suspend () -> Result<Nickname>
+    onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -1155,64 +1151,41 @@ private fun OwnAvatarPodium(
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
         label = "lixo_own_avatar_podium_scale"
     )
-    val scope = rememberCoroutineScope()
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(
+    Column(
+        modifier = Modifier
+            .scale(scale)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
             modifier = Modifier
-                .scale(scale)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .size(190.dp)
+                .avatarGround(face = LixoColors.Blue, lip = LixoColors.BlueLip)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(190.dp)
-                    .avatarGround(face = LixoColors.Blue, lip = LixoColors.BlueLip)
-            ) {
-                AvatarViewport(
-                    content = content,
-                    appearance = profile.appearance,
-                    modifier = Modifier.fillMaxSize(),
-                    interactiveRotation = true
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(LixoColors.Blue)
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = "${LixoStrings.AVATAR_MAP_ME_PREFIX} · ${profile.displayName}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White
-                )
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "${LixoStrings.AVATAR_MAP_NICKNAME_PREFIX} @${profile.nickname?.render(content.nicknameWords).orEmpty()}",
-                style = MaterialTheme.typography.labelMedium,
-                color = LixoColors.TextSecondary
+            AvatarViewport(
+                content = content,
+                appearance = profile.appearance,
+                modifier = Modifier.fillMaxSize(),
+                interactiveRotation = true
             )
-            Spacer(Modifier.width(8.dp))
-            LixoButton(
-                onClick = { scope.launch { onShuffleNickname() } },
-                variant = LixoButtonVariant.GHOST,
-                height = 28.dp
-            ) {
-                Text(
-                    text = LixoStrings.AVATAR_MAP_SHUFFLE_NICKNAME_BTN,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = LixoColors.Blue
-                )
-            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(LixoColors.Blue)
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = "${LixoStrings.AVATAR_MAP_ME_PREFIX} · ${profile.displayName}",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White
+            )
         }
     }
 }

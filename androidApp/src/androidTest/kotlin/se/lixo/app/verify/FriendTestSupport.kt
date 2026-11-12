@@ -113,7 +113,8 @@ fun FriendVillageTestHost(
     repository: LixoRepository,
     qrScanner: QrScanner,
     nowMillis: () -> Long = { repository.nowMillis() },
-    prefilledFriendCode: String? = null
+    prefilledFriendCode: String? = null,
+    onOpenWardrobe: () -> Unit = {}
 ) {
     val profiles by repository.profiles.collectAsState()
     val activeProfileId by repository.activeProfileId.collectAsState()
@@ -139,8 +140,7 @@ fun FriendVillageTestHost(
                 nowMillis = nowMillis,
                 prefilledFriendCode = pendingCode,
                 onConsumePrefilledFriendCode = { pendingCode = null },
-                onOpenWardrobe = {},
-                onShuffleNickname = { repository.shuffleNickname() },
+                onOpenWardrobe = onOpenWardrobe,
                 onCreateFriendCode = { repository.createFriendCode() },
                 onStopFriendCode = { repository.stopFriendCode() },
                 observeNewFriendsDuring = { repository.observeNewFriendsDuring(it) },

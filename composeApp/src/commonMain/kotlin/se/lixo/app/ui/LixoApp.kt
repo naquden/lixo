@@ -543,7 +543,6 @@ fun LixoApp(
                                         FriendDeepLinkDispatcher.consumeIncomingFriendCode()
                                     },
                                     onOpenWardrobe = { currentDestination = LixoMainDestination.WARDROBE },
-                                    onShuffleNickname = { repository.shuffleNickname() },
                                     onCreateFriendCode = { repository.createFriendCode() },
                                     onStopFriendCode = { repository.stopFriendCode() },
                                     observeNewFriendsDuring = { repository.observeNewFriendsDuring(it) },

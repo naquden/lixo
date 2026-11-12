@@ -201,7 +201,7 @@ class LixoRepository(
 
     /**
      * doc/plans/030 review L4: profile ids whose own card failed to push (debounced upsert, or an
-     * offline [shuffleNickname]/[ensureMyCard]); retried from [refreshFriends] rather than lost.
+     * offline [ensureMyCard]); retried from [refreshFriends] rather than lost.
      */
     private val dirtyCardProfileIds = mutableSetOf<String>()
 
@@ -583,7 +583,7 @@ class LixoRepository(
 
     /**
      * doc/plans/030 review L4: retries this profile's own card push if [scheduleCardUpsertDebounced]
-     * (or [ensureMyCard]/[shuffleNickname]) previously failed. Called from [refreshFriends].
+     * (or [ensureMyCard]) previously failed. Called from [refreshFriends].
      */
     private suspend fun retryDirtyCardIfAny(profile: ChildProfile) {
         if (profile.id !in dirtyCardProfileIds) return
@@ -776,28 +776,6 @@ class LixoRepository(
             },
             onFailure = { cloudFailure(it) }
         )
-    }
-
-    /** Rerolls the active profile's generated nickname ("Slumpa") and upserts the card if it has one. */
-    suspend fun shuffleNickname(): Result<Nickname> {
-        val activeId = activeProfileOrNull()?.id ?: return Result.failure(IllegalStateException("No active profile"))
-        val newNick = randomNickname(content.active.value.nicknameWords, Random.Default)
-        updateProfiles { list -> list.map { if (it.id == activeId) it.copy(nickname = newNick) else it } }
-        // 041 review HIGH 1: never upsert onto a card id restored from another device's identity.
-        if (_cloudUid.value != null) ensureCloudIdentity().onFailure { return cloudFailure(it) }
-        val profile = _profiles.value.firstOrNull { it.id == activeId }
-            ?: return Result.failure(IllegalStateException("No active profile"))
-        return if (profile.friendCardId != null) {
-            friendCloud.upsertMyCard(profile.friendCardId, newNick, profile.appearance).fold(
-                onSuccess = { Result.success(newNick) },
-                onFailure = { cloudFailure(it) }
-            )
-        } else {
-            ensureMyCard().fold(
-                onSuccess = { Result.success(newNick) },
-                onFailure = { cloudFailure(it) }
-            )
-        }
     }
 
     /**

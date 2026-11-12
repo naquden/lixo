@@ -174,8 +174,6 @@ object LixoStrings {
     const val FRIENDS_NAME_SAVE_BTN = "Spara"
     const val FRIENDS_NAME_SKIP_BTN = "Hoppa över"
     const val FRIEND_SHEET_CHANGE_NAME_BTN = "Byt namn"
-    const val AVATAR_MAP_NICKNAME_PREFIX = "Ditt kompisnamn:"
-    const val AVATAR_MAP_SHUFFLE_NICKNAME_BTN = "Slumpa"
     const val FRIEND_REVEAL_TITLE = "Ny kompis!"
 
     /** "Koden gäller i 9:42" (doc/plans/030 §7); [remainingSeconds] is clamped to >= 0. */
