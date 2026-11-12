@@ -24,6 +24,9 @@ data class FriendRemovalTombstone(
     val createdAtEpochMillis: Long
 )
 
+/** Plain mirror of [UnlockedInventoryEntity], used by profile export/import (doc/plans/045). */
+data class UnlockedItemRecord(val itemId: String, val unlockedAtEpochMillis: Long, val source: String)
+
 interface ProfileStore {
     suspend fun loadProfiles(): List<ChildProfile>
     suspend fun loadActiveProfileId(): String?
@@ -33,6 +36,15 @@ interface ProfileStore {
     suspend fun saveActiveProfileId(profileId: String)
     suspend fun saveUnlockedItem(itemId: String, source: String)
     suspend fun saveLevelProgress(progress: LevelProgress)
+
+    /** Every row in the universal unlocked-item pool, with timestamp/source (doc/plans/045). */
+    suspend fun loadUnlockedItems(): List<UnlockedItemRecord>
+
+    /** Insert-ignore: never overwrites an existing row's timestamp/source (doc/plans/045). */
+    suspend fun saveUnlockedItems(items: List<UnlockedItemRecord>)
+
+    /** Atomically deletes [profileId]'s level_progress rows, then inserts [progress] (doc/plans/045). */
+    suspend fun replaceLevelProgress(profileId: String, progress: List<LevelProgress>)
 
     /** doc/plans/030 §5: every friend, for every profile, keyed by owning profile id. */
     suspend fun loadFriends(): Map<String, List<FriendProfile>>
@@ -83,6 +95,17 @@ class RoomProfileStore(private val dao: LixoDao) : ProfileStore {
 
     override suspend fun saveLevelProgress(progress: LevelProgress) {
         dao.upsertLevelProgress(progress.toEntity())
+    }
+
+    override suspend fun loadUnlockedItems(): List<UnlockedItemRecord> =
+        dao.getUnlockedInventory().map { UnlockedItemRecord(it.itemId, it.unlockedAtEpochMillis, it.unlockedBySource) }
+
+    override suspend fun saveUnlockedItems(items: List<UnlockedItemRecord>) {
+        dao.insertUnlockedItems(items.map { UnlockedInventoryEntity(it.itemId, it.unlockedAtEpochMillis, it.source) })
+    }
+
+    override suspend fun replaceLevelProgress(profileId: String, progress: List<LevelProgress>) {
+        dao.replaceLevelProgress(profileId, progress.map { it.toEntity() })
     }
 
     override suspend fun loadFriends(): Map<String, List<FriendProfile>> =

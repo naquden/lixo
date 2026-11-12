@@ -96,6 +96,53 @@ object AndroidPlatformContext {
         }
         return deferred.await()
     }
+
+    // --- SAF document picker (doc/plans/045), same CompletableDeferred activity-result pattern
+    // as pendingRecordAudio above.
+    private var createDocumentLauncher: ((String) -> Unit)? = null
+    private var openDocumentLauncher: ((Array<String>) -> Unit)? = null
+    private var pendingDocument: CompletableDeferred<android.net.Uri?>? = null
+
+    fun setDocumentLaunchers(createDocument: (String) -> Unit, openDocument: (Array<String>) -> Unit) {
+        createDocumentLauncher = createDocument
+        openDocumentLauncher = openDocument
+    }
+
+    fun clearDocumentLaunchers() {
+        createDocumentLauncher = null
+        openDocumentLauncher = null
+        pendingDocument?.complete(null)
+        pendingDocument = null
+    }
+
+    fun onDocumentResult(uri: android.net.Uri?) {
+        pendingDocument?.complete(uri)
+        pendingDocument = null
+    }
+
+    private suspend fun launchDocument(launch: () -> Unit): android.net.Uri? {
+        pendingDocument?.complete(null)
+        val deferred = CompletableDeferred<android.net.Uri?>()
+        pendingDocument = deferred
+        withContext(Dispatchers.Main.immediate) {
+            launch()
+        }
+        return try {
+            deferred.await()
+        } finally {
+            if (pendingDocument === deferred) pendingDocument = null
+        }
+    }
+
+    internal suspend fun createDocument(fileName: String): android.net.Uri? {
+        val launcher = createDocumentLauncher ?: throw IllegalStateException("No create-document launcher registered")
+        return launchDocument { launcher(fileName) }
+    }
+
+    internal suspend fun openDocument(mimeTypes: Array<String>): android.net.Uri? {
+        val launcher = openDocumentLauncher ?: throw IllegalStateException("No open-document launcher registered")
+        return launchDocument { launcher(mimeTypes) }
+    }
 }
 
 /**

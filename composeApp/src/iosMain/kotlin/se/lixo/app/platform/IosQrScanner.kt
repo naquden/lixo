@@ -88,20 +88,25 @@ internal class IosQrScanner : QrScanner {
             }
         }
     }
+}
 
-    private fun topViewController(): UIViewController? {
-        val scene = UIApplication.sharedApplication.connectedScenes
-            .filterIsInstance<UIWindowScene>()
-            .firstOrNull() ?: return null
-        var top = scene.windows
-            .filterIsInstance<UIWindow>()
-            .firstOrNull { it.isKeyWindow() }
-            ?.rootViewController ?: return null
-        while (true) {
-            top = top.presentedViewController ?: break
-        }
-        return top
+/**
+ * The frontmost presented view controller of the key window's scene, or null if there is none
+ * (e.g. no scene yet, or the app has no key window). Shared by [IosQrScanner] and
+ * `IosProfileFilePicker` (doc/plans/045) to present a modal view controller.
+ */
+internal fun topViewController(): UIViewController? {
+    val scene = UIApplication.sharedApplication.connectedScenes
+        .filterIsInstance<UIWindowScene>()
+        .firstOrNull() ?: return null
+    var top = scene.windows
+        .filterIsInstance<UIWindow>()
+        .firstOrNull { it.isKeyWindow() }
+        ?.rootViewController ?: return null
+    while (true) {
+        top = top.presentedViewController ?: break
     }
+    return top
 }
 
 /** A validated, ready-to-run capture session, built before any view controller is presented. */

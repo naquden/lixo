@@ -55,6 +55,12 @@ interface LixoDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertUnlockedItem(entity: UnlockedInventoryEntity)
 
+    @Query("SELECT * FROM unlocked_inventory")
+    suspend fun getUnlockedInventory(): List<UnlockedInventoryEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertUnlockedItems(entities: List<UnlockedInventoryEntity>)
+
     // --- Level Progress ---
     @Query("SELECT * FROM level_progress")
     suspend fun getAllLevelProgress(): List<LevelProgressEntity>
@@ -67,6 +73,19 @@ interface LixoDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertLevelProgress(progress: LevelProgressEntity)
+
+    @Query("DELETE FROM level_progress WHERE profileId = :profileId")
+    suspend fun deleteLevelProgressForProfile(profileId: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertLevelProgressList(rows: List<LevelProgressEntity>)
+
+    /** Atomically replaces every level_progress row for [profileId] (same pattern as [replaceLexicon]). */
+    @Transaction
+    suspend fun replaceLevelProgress(profileId: String, rows: List<LevelProgressEntity>) {
+        deleteLevelProgressForProfile(profileId)
+        upsertLevelProgressList(rows)
+    }
 
     // --- Daily Activity & Streak ---
     @Query("SELECT * FROM daily_activity_log WHERE profileId = :profileId ORDER BY calendarDateIso DESC")

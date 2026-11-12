@@ -24,6 +24,16 @@ class MainActivity : ComponentActivity() {
         AndroidPlatformContext.onRecordAudioPermissionResult(isGranted)
     }
 
+    /** doc/plans/045: SAF "save a file at a location the user picks" picker. */
+    private val createDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> AndroidPlatformContext.onDocumentResult(uri) }
+
+    /** doc/plans/045: SAF "open a file the user picks" picker. */
+    private val openDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> AndroidPlatformContext.onDocumentResult(uri) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -33,6 +43,10 @@ class MainActivity : ComponentActivity() {
         AndroidPlatformContext.init(applicationContext) {
             recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
+        AndroidPlatformContext.setDocumentLaunchers(
+            createDocument = { createDocumentLauncher.launch(it) },
+            openDocument = { openDocumentLauncher.launch(it) }
+        )
         installAppCheckProvider()
         handleIncomingEmailLinkIntent(intent)
         handleIncomingFriendDeepLinkIntent(intent)
@@ -43,6 +57,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         AndroidPlatformContext.clearPermissionRequester()
+        AndroidPlatformContext.clearDocumentLaunchers()
         super.onDestroy()
     }
 

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import se.lixo.app.data.local.FriendRemovalTombstone
 import se.lixo.app.data.local.ProfileStore
+import se.lixo.app.data.local.UnlockedItemRecord
 import se.lixo.app.data.local.toDomain
 import se.lixo.app.data.local.toEntity
 import se.lixo.app.data.remote.FirebaseSyncService
@@ -32,6 +33,7 @@ class FakeProfileStore : ProfileStore {
     private val profilesById = LinkedHashMap<String, ChildProfile>()
     var activeId: String? = null
     val unlocked = mutableSetOf<String>()
+    val unlockedMeta = LinkedHashMap<String, UnlockedItemRecord>()
     val savedProfileIds = mutableListOf<String>()
     val levelProgress = LinkedHashMap<Pair<String, String>, LevelProgress>()
     val friendsByProfile = LinkedHashMap<String, LinkedHashMap<String, FriendProfile>>()
@@ -61,10 +63,29 @@ class FakeProfileStore : ProfileStore {
 
     override suspend fun saveUnlockedItem(itemId: String, source: String) {
         unlocked.add(itemId)
+        unlockedMeta.getOrPut(itemId) { UnlockedItemRecord(itemId, 0L, source) }
     }
 
     override suspend fun saveLevelProgress(progress: LevelProgress) {
         levelProgress[progress.profileId to progress.levelId] = progress
+    }
+
+    override suspend fun loadUnlockedItems(): List<UnlockedItemRecord> =
+        unlocked.map { unlockedMeta[it] ?: UnlockedItemRecord(it, 0L, "UNKNOWN") }
+
+    override suspend fun saveUnlockedItems(items: List<UnlockedItemRecord>) {
+        for (record in items) {
+            if (record.itemId !in unlocked) {
+                unlocked.add(record.itemId)
+                unlockedMeta[record.itemId] = record
+            }
+        }
+    }
+
+    override suspend fun replaceLevelProgress(profileId: String, progress: List<LevelProgress>) {
+        val keysToRemove = levelProgress.keys.filter { it.first == profileId }
+        keysToRemove.forEach { levelProgress.remove(it) }
+        progress.forEach { levelProgress[it.profileId to it.levelId] = it }
     }
 
     override suspend fun loadFriends(): Map<String, List<FriendProfile>> =

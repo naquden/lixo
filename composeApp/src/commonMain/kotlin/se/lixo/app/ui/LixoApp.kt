@@ -45,6 +45,8 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
 import kotlin.time.Clock
 import se.lixo.app.data.local.createPlatformContentPackCache
+import se.lixo.app.data.local.decodeProfileBackup
+import se.lixo.app.data.local.encodeProfileBackup
 import se.lixo.app.data.remote.FirebaseSyncService
 import se.lixo.app.data.repository.ContentRepository
 import se.lixo.app.data.repository.LixoRepository
@@ -66,6 +68,7 @@ import se.lixo.app.platform.EmailLinkAuthDispatcher
 import se.lixo.app.platform.FriendDeepLinkDispatcher
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.PlatformFeatureFlags
+import se.lixo.app.platform.createPlatformProfileFilePicker
 import se.lixo.app.platform.createPlatformQrScanner
 import se.lixo.app.platform.createPlatformSpeechRecognitionEngine
 import se.lixo.app.platform.createPlatformTextToSpeechEngine
@@ -220,6 +223,11 @@ fun LixoApp(
     // constructor parameter (not resolved from a singleton inside the screen) so instrumented
     // tests can pass a `FakeQrScanner` instead.
     val qrScanner = remember { createPlatformQrScanner() }
+
+    // doc/plans/045: the system "save/open a file at a user-picked location" picker, injected
+    // into ParentGateAndDashboardScreen as a plain constructor parameter (same pattern as
+    // qrScanner above) so instrumented tests can pass an in-memory fake instead.
+    val profileFilePicker = remember { createPlatformProfileFilePicker() }
 
     // doc/plans/030 §7: `lixo://friend/<code>` only routes to the Avatar tab with the code
     // prefilled into "Lägg till kompis" -- nothing is ever redeemed automatically.
@@ -604,7 +612,17 @@ fun LixoApp(
                                     },
                                     onSwitchToLocalOnly = { repository.enableLocalOnlyMode() },
                                     onDeleteCloudAccount = { repository.deleteCloudAccountAndSwitchToLocalOnly() },
-                                    onToggleCrashlyticsConsent = { repository.setCrashlyticsConsent(it) }
+                                    onToggleCrashlyticsConsent = { repository.setCrashlyticsConsent(it) },
+                                    filePicker = profileFilePicker,
+                                    onBuildBackup = {
+                                        repository.buildProfileBackup(
+                                            repository.activeProfileId.value ?: activeProfile.id,
+                                            featureFlags.appVersionCode.takeIf { it > 0 }
+                                        )?.let(::encodeProfileBackup)
+                                    },
+                                    onPrepareImport = ::decodeProfileBackup,
+                                    onImportBackup = { backup, mode -> repository.importProfileBackup(backup, mode) },
+                                    backupConflicts = repository::backupConflictsWithExisting
                                 )
                             }
                             LixoMainDestination.CONTENT_PREVIEW -> {

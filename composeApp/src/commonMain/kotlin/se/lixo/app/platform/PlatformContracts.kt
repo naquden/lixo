@@ -199,6 +199,36 @@ interface QrScanner {
 /** Builds the platform's real [QrScanner]. */
 expect fun createPlatformQrScanner(): QrScanner
 
+/** Result of one [ProfileFilePicker.saveText] attempt (doc/plans/045). */
+sealed interface FileSaveResult {
+    data object Saved : FileSaveResult
+    data object Cancelled : FileSaveResult
+    data class Failed(val message: String) : FileSaveResult
+}
+
+/** Result of one [ProfileFilePicker.openText] attempt (doc/plans/045). */
+sealed interface FileOpenResult {
+    data class Opened(val text: String) : FileOpenResult
+    data object Cancelled : FileOpenResult
+    data class Failed(val message: String) : FileOpenResult
+}
+
+/**
+ * Cross-platform "save/open a text file at a user-picked location" contract (doc/plans/045),
+ * provided to [se.lixo.app.ui.screens.parent.ParentGateAndDashboardScreen] as a plain constructor
+ * parameter (same plain-param injection rationale as [QrScanner]) so instrumented tests can pass
+ * an in-memory fake instead of [createPlatformProfileFilePicker]. Android uses the Storage Access
+ * Framework (`CreateDocument`/`OpenDocument`, no storage permission needed); iOS uses
+ * `UIDocumentPickerViewController`.
+ */
+interface ProfileFilePicker {
+    suspend fun saveText(suggestedFileName: String, mimeType: String, text: String): FileSaveResult
+    suspend fun openText(mimeTypes: List<String>): FileOpenResult
+}
+
+/** Builds the platform's real [ProfileFilePicker]. */
+expect fun createPlatformProfileFilePicker(): ProfileFilePicker
+
 /**
  * Cross-platform dispatcher receiving incoming Firebase Email Link deep links from:
  * - Android App Links (`MainActivity.onCreate` / `MainActivity.onNewIntent`)

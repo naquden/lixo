@@ -207,6 +207,46 @@ object LixoStrings {
     const val PARENT_MATH_PATTERNS_TITLE = "Matteutmaningar (sparas enbart lokalt)"
     const val PARENT_MATH_PATTERNS_EMPTY = "Inga fel registrerade ännu"
     const val PARENT_FRIENDS_OVERSIGHT_TITLE = "Kompislista"
+
+    // Profile export/import ("Säkerhetskopia", doc/plans/045)
+    const val PARENT_BACKUP_TITLE = "Säkerhetskopia"
+
+    /** Swedish genitive ("-s", or nothing after s/x/z) of [name]. */
+    private fun genitive(name: String): String =
+        if (name.lowercase().endsWith("s") || name.lowercase().endsWith("x") || name.lowercase().endsWith("z")) {
+            name
+        } else {
+            "${name}s"
+        }
+
+    fun parentBackupNote(name: String): String =
+        "Spara ${genitive(name)} profil (nivåer, stjärnor, avatar och föremål) som en fil där du vill, t.ex. i Google Drive eller Filer. Kompisar följer inte med."
+
+    const val PARENT_BACKUP_EXPORT_BTN = "Exportera profil"
+    const val PARENT_BACKUP_IMPORT_BTN = "Importera profil"
+    const val PARENT_BACKUP_EXPORT_DONE = "Profilen sparades."
+    const val PARENT_BACKUP_EXPORT_FAILED = "Kunde inte spara filen."
+    const val PARENT_BACKUP_READ_FAILED = "Kunde inte läsa filen."
+    const val PARENT_BACKUP_NOT_A_BACKUP = "Filen är inte en Lixo-säkerhetskopia."
+    const val PARENT_BACKUP_NEWER_VERSION = "Filen är från en nyare version av Lixo."
+    const val PARENT_BACKUP_IMPORT_FAILED = "Kunde inte återställa profilen."
+
+    fun parentBackupRestoreTitle(name: String): String = "Återställ $name?"
+
+    fun parentBackupRestoreBody(stars: Int, clearedLevels: Int, replaces: Boolean): String {
+        val base = "Säkerhetskopian har $stars stjärnor och $clearedLevels klarade banor."
+        return if (replaces) {
+            "$base Nuvarande framsteg för profilen ersätts. Kompisar på den här enheten behålls."
+        } else {
+            base
+        }
+    }
+
+    fun parentBackupReplaceBtn(name: String): String = "Ersätt $name"
+    const val PARENT_BACKUP_ADD_BTN = "Lägg till"
+    const val PARENT_BACKUP_CANCEL_BTN = "Avbryt"
+    fun parentBackupRestored(name: String): String = "$name återställdes."
+
     const val PARENT_GDPR_TITLE = "Integritet & data (GDPR)"
     const val PARENT_GDPR_PRIVACY_NOTE =
         "Inga röstinspelningar sparas. All data lagras tryggt och lokalt på enheten."

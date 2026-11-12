@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -35,10 +36,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import se.lixo.app.data.local.ImportMode
+import se.lixo.app.data.local.PROFILE_BACKUP_MIME_TYPE
+import se.lixo.app.data.local.ProfileBackup
+import se.lixo.app.data.local.decodeProfileBackup
+import se.lixo.app.data.local.profileBackupFileName
 import se.lixo.app.data.repository.AppPrivacySettings
 import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.domain.engine.MathEngine
@@ -48,6 +55,9 @@ import se.lixo.app.domain.model.EMAIL_BACKUP_FEATURE_ENABLED
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.MathErrorLog
 import se.lixo.app.domain.model.StruggledWordLog
+import se.lixo.app.platform.FileOpenResult
+import se.lixo.app.platform.FileSaveResult
+import se.lixo.app.platform.ProfileFilePicker
 import se.lixo.app.ui.theme.LixoButton
 import se.lixo.app.ui.theme.LixoButtonVariant
 import se.lixo.app.ui.theme.LixoCard
@@ -55,6 +65,7 @@ import se.lixo.app.ui.theme.LixoColors
 import se.lixo.app.ui.theme.LixoIcon
 import se.lixo.app.ui.theme.LixoIcons
 import se.lixo.app.ui.theme.LixoStrings
+import kotlin.time.Clock
 
 /**
  * Duolingo-styled Parent Gate & Dashboard:
@@ -82,7 +93,12 @@ fun ParentGateAndDashboardScreen(
     onConnectOptionalEmailAccount: suspend (String, String) -> Result<Unit>,
     onSwitchToLocalOnly: () -> Unit,
     onDeleteCloudAccount: suspend () -> Result<Unit>,
-    onToggleCrashlyticsConsent: (Boolean) -> Unit
+    onToggleCrashlyticsConsent: (Boolean) -> Unit,
+    filePicker: ProfileFilePicker? = null,
+    onBuildBackup: suspend () -> String? = { null },
+    onPrepareImport: (String) -> Result<ProfileBackup> = ::decodeProfileBackup,
+    onImportBackup: suspend (ProfileBackup, ImportMode) -> Result<ChildProfile> = { _, _ -> Result.failure(UnsupportedOperationException()) },
+    backupConflicts: (ProfileBackup) -> Boolean = { false }
 ) {
     var isGateUnlocked by remember { mutableStateOf(false) }
     var challengeSeed by remember { mutableIntStateOf(7) }
@@ -103,6 +119,13 @@ fun ParentGateAndDashboardScreen(
         mutableStateOf(privacySettings.pendingIncomingEmailLink ?: "")
     }
     val scope = rememberCoroutineScope()
+
+    // Not keyed on activeProfile.id: a successful import switches the active profile, and keying
+    // this `remember` would wipe the "<namn> återställdes." message before anyone can see it
+    // (doc/plans/045).
+    var backupStatus by remember { mutableStateOf<String?>(null) }
+    var backupBusy by remember { mutableStateOf(false) }
+    var pendingImport by remember { mutableStateOf<ProfileBackup?>(null) }
 
     Column(
         modifier = Modifier
@@ -651,6 +674,112 @@ fun ParentGateAndDashboardScreen(
 
             Spacer(Modifier.height(20.dp))
 
+            // Säkerhetskopia (profile export/import, doc/plans/045)
+            if (filePicker != null) {
+                LixoCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 18.dp,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = LixoStrings.PARENT_BACKUP_TITLE,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = LixoColors.TextPrimary
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = LixoStrings.parentBackupNote(activeProfile.displayName),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LixoColors.TextSecondary
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        LixoButton(
+                            onClick = {
+                                scope.launch {
+                                    backupBusy = true
+                                    backupStatus = null
+                                    try {
+                                        val json = onBuildBackup()
+                                        if (json == null) {
+                                            backupStatus = LixoStrings.PARENT_BACKUP_EXPORT_FAILED
+                                        } else {
+                                            val fileName = profileBackupFileName(
+                                                activeProfile.displayName,
+                                                Clock.System.now().toEpochMilliseconds()
+                                            )
+                                            when (val result = filePicker.saveText(fileName, PROFILE_BACKUP_MIME_TYPE, json)) {
+                                                is FileSaveResult.Saved -> backupStatus = LixoStrings.PARENT_BACKUP_EXPORT_DONE
+                                                is FileSaveResult.Cancelled -> backupStatus = null
+                                                is FileSaveResult.Failed -> backupStatus = LixoStrings.PARENT_BACKUP_EXPORT_FAILED
+                                            }
+                                        }
+                                    } finally {
+                                        backupBusy = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp).testTag("parent_export_profile"),
+                            enabled = !backupBusy
+                        ) {
+                            Text(
+                                text = LixoStrings.PARENT_BACKUP_EXPORT_BTN,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White
+                            )
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        LixoButton(
+                            onClick = {
+                                scope.launch {
+                                    backupBusy = true
+                                    backupStatus = null
+                                    try {
+                                        when (val opened = filePicker.openText(listOf("application/json", "text/plain", "application/octet-stream"))) {
+                                            is FileOpenResult.Opened -> {
+                                                onPrepareImport(opened.text).fold(
+                                                    onSuccess = { backup -> pendingImport = backup },
+                                                    onFailure = { error ->
+                                                        backupStatus = if (error is se.lixo.app.data.local.ProfileBackupError.UnsupportedVersion) {
+                                                            LixoStrings.PARENT_BACKUP_NEWER_VERSION
+                                                        } else {
+                                                            LixoStrings.PARENT_BACKUP_NOT_A_BACKUP
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                            is FileOpenResult.Cancelled -> {}
+                                            is FileOpenResult.Failed -> backupStatus = LixoStrings.PARENT_BACKUP_READ_FAILED
+                                        }
+                                    } finally {
+                                        backupBusy = false
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(48.dp).testTag("parent_import_profile"),
+                            variant = LixoButtonVariant.SECONDARY,
+                            enabled = !backupBusy
+                        ) {
+                            Text(
+                                text = LixoStrings.PARENT_BACKUP_IMPORT_BTN,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                        backupStatus?.let { status ->
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                text = status,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = LixoColors.TextPrimary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+            }
+
             // GDPR & Data Security
             LixoCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -814,5 +943,57 @@ fun ParentGateAndDashboardScreen(
                 }
             }
         }
+    }
+
+    pendingImport?.let { backup ->
+        val conflict = backupConflicts(backup)
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text(LixoStrings.parentBackupRestoreTitle(backup.profile.displayName)) },
+            text = {
+                Text(
+                    LixoStrings.parentBackupRestoreBody(
+                        backup.profile.totalStars,
+                        backup.levelProgress.count { it.starsEarned > 0 },
+                        conflict
+                    )
+                )
+            },
+            confirmButton = {
+                LixoButton(
+                    onClick = {
+                        val mode = if (conflict) ImportMode.REPLACE_EXISTING else ImportMode.AS_NEW
+                        pendingImport = null
+                        scope.launch {
+                            backupBusy = true
+                            backupStatus = onImportBackup(backup, mode).fold(
+                                onSuccess = { restored -> LixoStrings.parentBackupRestored(restored.displayName) },
+                                onFailure = { LixoStrings.PARENT_BACKUP_IMPORT_FAILED }
+                            )
+                            backupBusy = false
+                        }
+                    },
+                    variant = if (conflict) LixoButtonVariant.DANGER else LixoButtonVariant.PRIMARY,
+                    modifier = Modifier.testTag("parent_import_confirm")
+                ) {
+                    Text(
+                        text = if (conflict) {
+                            LixoStrings.parentBackupReplaceBtn(backup.profile.displayName)
+                        } else {
+                            LixoStrings.PARENT_BACKUP_ADD_BTN
+                        },
+                        color = Color.White
+                    )
+                }
+            },
+            dismissButton = {
+                LixoButton(
+                    onClick = { pendingImport = null },
+                    variant = LixoButtonVariant.GHOST
+                ) {
+                    Text(text = LixoStrings.PARENT_BACKUP_CANCEL_BTN)
+                }
+            }
+        )
     }
 }

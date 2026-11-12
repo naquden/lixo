@@ -23,11 +23,19 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.random.Random
 import kotlin.time.Clock
+import se.lixo.app.data.local.BackupUnlockedItem
 import se.lixo.app.data.local.FriendRemovalTombstone
+import se.lixo.app.data.local.ImportMode
 import se.lixo.app.data.local.LexiconCache
+import se.lixo.app.data.local.ProfileBackup
 import se.lixo.app.data.local.ProfileStore
 import se.lixo.app.data.local.createPlatformLexiconCache
 import se.lixo.app.data.local.createPlatformProfileStore
+import se.lixo.app.data.local.toBackup
+import se.lixo.app.data.local.toBackupProfile
+import se.lixo.app.data.local.toChildProfile
+import se.lixo.app.data.local.toDomain
+import se.lixo.app.data.local.toUnlockedItemRecord
 import se.lixo.app.data.remote.CardState
 import se.lixo.app.data.remote.CloudSyncGateway
 import se.lixo.app.data.remote.FirebaseSyncService
@@ -600,6 +608,122 @@ class LixoRepository(
             map + (progress.profileId to currentForProfile)
         }
         enqueueProfileWrite { saveLevelProgress(progress) }
+    }
+
+    /**
+     * Builds a [ProfileBackup] for [profileId] from in-memory state (doc/plans/045 §C): the
+     * universal unlocked pool (`_unlockedItemIds`) is the source of truth for WHICH items are
+     * unlocked, Room only supplies a stored item's timestamp/source metadata. Waits on
+     * [awaitPendingProfileWrites] first so the latest unlock is already in Room. Null if
+     * [profileId] isn't a known profile.
+     */
+    suspend fun buildProfileBackup(profileId: String, appVersionCode: Int? = null): ProfileBackup? {
+        _profilesLoaded.first { it }
+        val profile = _profiles.value.firstOrNull { it.id == profileId } ?: return null
+        awaitPendingProfileWrites()
+        val stored = runCatching { profileStore?.loadUnlockedItems().orEmpty() }
+            .onFailure { println("LixoProfiles: WARN loadUnlockedItems failed: $it") }
+            .getOrDefault(emptyList())
+            .associateBy { it.itemId }
+        val unlockedItems = _unlockedItemIds.value.sorted().map { id ->
+            stored[id]?.toBackup() ?: BackupUnlockedItem(id, 0L, "UNKNOWN")
+        }
+        val levelProgress = _levelProgressByProfile.value[profileId].orEmpty().values
+            .sortedBy { it.levelOrder }
+            .map { it.toBackup() }
+        return ProfileBackup(
+            exportedAtEpochMillis = Clock.System.now().toEpochMilliseconds(),
+            appVersionCode = appVersionCode,
+            profile = profile.toBackupProfile(),
+            levelProgress = levelProgress,
+            unlockedItems = unlockedItems
+        )
+    }
+
+    /** Whether a profile with [backup]'s id already exists on this device (doc/plans/045 §C). */
+    fun backupConflictsWithExisting(backup: ProfileBackup): Boolean =
+        _profiles.value.any { it.id == backup.profile.id }
+
+    /**
+     * Restores [backup] per [mode] (doc/plans/045 §C). Never touches `_friendsByProfile`,
+     * tombstones or `_cloudUid`: [ImportMode.REPLACE_EXISTING] keeps the existing local
+     * `friendCardId` (and its nickname, since the cloud card was published under that nickname),
+     * so friends already added on this device are never orphaned; [ImportMode.AS_NEW] always
+     * imports with `friendCardId = null` (a new card is created later, if ever, by
+     * `ensureMyCard`). Unlocked items are unioned into the universal pool and never removed.
+     * Appearance is sanitized against the active content pack so an import from an
+     * older/newer/different pack can't crash rendering.
+     */
+    suspend fun importProfileBackup(backup: ProfileBackup, mode: ImportMode): Result<ChildProfile> {
+        _profilesLoaded.first { it }
+        val existing = _profiles.value.firstOrNull { it.id == backup.profile.id }
+        if (mode == ImportMode.REPLACE_EXISTING && existing == null) {
+            return Result.failure(IllegalStateException("No existing profile ${backup.profile.id} to replace"))
+        }
+        if (mode == ImportMode.AS_NEW && existing != null) {
+            return Result.failure(IllegalStateException("Profile ${backup.profile.id} already exists"))
+        }
+        val now = Clock.System.now().toEpochMilliseconds()
+
+        val incomingItems = backup.unlockedItems
+            .filter { it.itemId.isNotBlank() }
+            .distinctBy { it.itemId }
+            .map { if (it.unlockedAtEpochMillis == 0L) it.copy(unlockedAtEpochMillis = now) else it }
+        val newRecords = incomingItems.filter { it.itemId !in _unlockedItemIds.value }
+        val incomingIds = incomingItems.map { it.itemId }.toSet()
+        if (incomingIds.isNotEmpty()) _unlockedItemIds.update { it + incomingIds }
+        if (newRecords.isNotEmpty()) {
+            enqueueProfileWrite { saveUnlockedItems(newRecords.map { it.toUnlockedItemRecord() }) }
+        }
+
+        val active = content.active.value
+        val incomingAppearance = backup.profile.appearance
+        val avatarId = incomingAppearance.avatarId.takeIf { it in active.avatarsById } ?: active.defaultAvatar.id
+        val postUnionUnlocked = _unlockedItemIds.value
+        val equipped = incomingAppearance.equipped.mapNotNull { (slotName, itemId) ->
+            val slot = EquipmentSlot.entries.firstOrNull { it.name == slotName } ?: return@mapNotNull null
+            if (itemId !in postUnionUnlocked) return@mapNotNull null
+            val item = active.itemsById[itemId] ?: return@mapNotNull null
+            if (!slot.accepts(item.slot)) return@mapNotNull null
+            slot to itemId
+        }.toMap()
+        val sanitizedAppearance = AvatarAppearance(
+            avatarId = avatarId,
+            tintHex = incomingAppearance.tintHex,
+            eyeIndex = incomingAppearance.eyeIndex,
+            smileIndex = incomingAppearance.smileIndex,
+            equipped = equipped
+        )
+        val unlockedAvatarIds = backup.profile.unlockedAvatarIds.filter { it in active.avatarsById }.toSet() + active.defaultAvatarIds
+
+        val restoredBase = backup.profile.toChildProfile().copy(
+            appearance = sanitizedAppearance,
+            unlockedAvatarIds = unlockedAvatarIds,
+            updatedAtEpochMillis = now
+        )
+        val restored = if (mode == ImportMode.REPLACE_EXISTING) {
+            val keptNickname = if (existing!!.friendCardId != null) existing.nickname else backup.profile.nickname
+            restoredBase.copy(friendCardId = existing.friendCardId, nickname = keptNickname)
+        } else {
+            restoredBase.copy(friendCardId = null, nickname = backup.profile.nickname)
+        }
+
+        updateProfiles { list ->
+            if (mode == ImportMode.REPLACE_EXISTING) list.map { if (it.id == restored.id) restored else it }
+            else list + restored
+        }
+
+        val rows = backup.levelProgress
+            .filter { it.levelId.isNotBlank() }
+            .distinctBy { it.levelId }
+            .map { it.toDomain(restored.id) }
+        _levelProgressByProfile.update { it + (restored.id to rows.associateBy { row -> row.levelId }) }
+        enqueueProfileWrite { replaceLevelProgress(restored.id, rows) }
+
+        selectProfile(restored.id)
+        if (restored.friendCardId != null) scheduleCardUpsertDebounced()
+
+        return Result.success(restored)
     }
 
     fun saveDailyActivity(record: DailyActivityRecord) {

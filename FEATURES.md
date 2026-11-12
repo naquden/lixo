@@ -6,7 +6,7 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 - [ ] 044 — Avatar map: remove "Ditt kompisnamn: @…" + "Slumpa" row under own avatar (friends add via QR / 8-digit code; nickname still shown to friends) (feature) → [plan](doc/plans/044-remove-own-nickname-row.md)
 - [ ] 045 — Parent view: export active child profile (profile, level progress, unlocked items; no friends) to a JSON file at a user-picked location (Android SAF / iOS document picker) and import it to restore (replace existing or add as new) (feature) → [plan](doc/plans/045-profile-export-import.md)
-- [ ] 046 — Campaign map: world-local level number on each level node; on entering a world page (open map, return from level, switch/swipe world) auto-scroll to the next available level (feature) → [plan](doc/plans/046-map-level-numbers-autoscroll.md)
+- [ ] 046 — Campaign map: world-local level number on each level node (3D-shaded number replaces subject icon on unlocked nodes, lock + small number on locked); on entering a world page (open map, return from level, switch/swipe world) auto-scroll to the next available level (feature) → [plan](doc/plans/046-map-level-numbers-autoscroll.md)
 
 ## Done
 
