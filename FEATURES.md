@@ -4,11 +4,15 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
-- [ ] 044 — Avatar map: remove "Ditt kompisnamn: @…" + "Slumpa" row under own avatar (friends add via QR / 8-digit code; nickname still shown to friends) (feature) → [plan](doc/plans/044-remove-own-nickname-row.md)
-- [ ] 045 — Parent view: export active child profile (profile, level progress, unlocked items; no friends) to a JSON file at a user-picked location (Android SAF / iOS document picker) and import it to restore (replace existing or add as new) (feature) → [plan](doc/plans/045-profile-export-import.md)
 - [ ] 046 — Campaign map: world-local level number on each level node (3D-shaded number replaces subject icon on unlocked nodes, lock + small number on locked); on entering a world page (open map, return from level, switch/swipe world) auto-scroll to the next available level (feature) → [plan](doc/plans/046-map-level-numbers-autoscroll.md)
 
 ## Done
+
+- [x] 044 — Avatar map: remove "Ditt kompisnamn: @…" + "Slumpa" row under own avatar (friends add via QR / 8-digit code; nickname still shown to friends) (feature) → [plan](doc/plans/044-remove-own-nickname-row.md)  
+  _Verified 2026-11-12 on emulator-5554 (Pixel_10), run wf_31c61a54-6ba + manual re-verify: `OwnPodiumNoNicknameTest` 1/1, regressions `FriendLabelTest` 2/2, `FriendRevealTest` 4/4, `FriendCodeFlowTest` 7/7; host tests + assembleDebug green. Workflow marked commit 153e7de "[WIP: build failing]" only because `:composeApp:build` ran `iosSimulatorArm64Test` with the iOS simulator not booted (no code issue). Evidence temp/verify/044/044/own_podium.png._
+
+- [x] 045 — Parent view: export active child profile (profile, level progress, unlocked items; no friends) to a JSON file at a user-picked location (Android SAF / iOS document picker) and import it to restore (replace existing or add as new) (feature) → [plan](doc/plans/045-profile-export-import.md)  
+  _Verified 2026-11-12 on emulator-5554 (Pixel_10), run wf_31c61a54-6ba: `ProfileBackupTest` (instrumented) 4/4 (export, import replace, import as new, invalid file error); host `ProfileBackupTest` 7/7, `ProfileImportTest` 6/6, `ProfileStoreTest` 15/15; `compileKotlinIosSimulatorArm64` OK (iOS picker not run on simulator). Commit 5634c5c. Evidence temp/verify/045/lixo_screenshots/045_*.png. Review LOW (not fixed): import-confirm handler lacks try/finally around backupBusy; failed SAF export can leave empty 0-byte file; iOS saveText cleanup edge case._
 
 - [x] 043 — Reading: remove "Säg fel ord"/"Hoppa över ord" debug buttons; "Läs hela meningen" replaced by "Jag har läst klart", a last-word-missed fallback shown only when stuck on the final word (feature) → [plan](doc/plans/043-reading-last-word-fallback.md)  
   _Verified 2026-11-12 on emulator-5554 (Pixel_10): `ReadingLastWordFallbackTest` 3/3 (hidden at start, removed buttons gone; appears after 4.5 s stalled on last word and finishes the session without logging that word as struggled; with a yellow word left it moves to "Gå vidare"), `HeardWordPopupTest` 4/4 (now injects tokens via fake STT instead of the removed buttons; flaky "No compose hierarchies found" emulator-launch failure in combined runs, clean when run alone); host `LixoEnginesTest` 87/87 incl. 4 new last-word tests. Evidence temp/verify/043/*.png. Implemented directly, not committed._
