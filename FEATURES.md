@@ -4,6 +4,7 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
+- [ ] 048 — Set app version to 0.1.0 (Android versionName, iOS CFBundleShortVersionString; build number stays 1) (feature) → [plan](doc/plans/048-version-0-1-0.md)
 
 ## Done
 
