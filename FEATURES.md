@@ -4,9 +4,11 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
-- [ ] 047 — Fix LOW review findings from 045/046: import-confirm try/finally, delete empty SAF file on failed export, iOS picker cleanup on cancel, TalkBack "Bana 1, 1" double read (+ "låst" in locked CD), drop redundant WorldPage renderAvatar param (bug) → [plan](doc/plans/047-review-low-fixes-045-046.md)
 
 ## Done
+
+- [x] 047 — Fix LOW review findings from 045/046: import-confirm try/finally, delete empty SAF file on failed export, iOS picker cleanup on cancel, TalkBack "Bana 1, 1" double read (+ "låst" in locked CD), drop redundant WorldPage renderAvatar param (bug) → [plan](doc/plans/047-review-low-fixes-045-046.md)  
+  _Verified 2026-11-12 on emulator-5554 (Pixel_10), run wf_a1471e2b-5ae + manual re-verify: `CampaignMapLevelNumberScrollTest` 4/4 (no merged number text on node, locked CD "Bana 2, låst"), `ProfileBackupTest` 5/5 incl. new `importConfirm_whenImportCancelled_reEnablesBackupButtons` (one launch flake "No compose hierarchies found" in combined run, clean alone), regressions `GeographyWorldMapTest` 1/1, `ProfilePersistenceTest` 3/3; host tests, assembleDebug, compileKotlinIosSimulatorArm64 green. The commit is marked "[WIP: build failing]" only because the workflow ran a non-existent task `:composeApp:testDebugUnitTest`. Evidence temp/verify/047/lixo_screenshots/045_import_cancelled_reenabled.png, temp/verify/047/verify046/*.png. Review LOW (not fixed): in CampaignMapScreen.kt:897, semantics `onClick(label = null) { onClick.invoke(); true }` shadows the `onClick` param name; bind it to a local val first._
 
 - [x] 046 — Campaign map: world-local level number on each level node (3D-shaded number replaces subject icon on unlocked nodes, lock + small number on locked); on entering a world page (open map, return from level, switch/swipe world) auto-scroll to the next available level (feature) → [plan](doc/plans/046-map-level-numbers-autoscroll.md)  
   _Verified 2026-11-12 on emulator-5554 (Pixel_10), run wf_b46fec8f-591 (round 1 failed: test missing `getOrNull` import, fixed in 29a6815): `CampaignMapLevelNumberScrollTest` 4/4 (world-local numbers, scroll to next level on enter, on world switch, on return with new progress); host tests + assembleDebug green. Commits b4c128a, 29a6815. Evidence temp/verify/046/*.png (21 centred with START, 22/23 locked with numbers, "100" fits). Review LOW (not fixed): TalkBack reads node as "Bana 1, 1" (contentDescription + merged number text)._
