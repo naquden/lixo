@@ -4,6 +4,7 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
+- [ ] 047 — Fix LOW review findings from 045/046: import-confirm try/finally, delete empty SAF file on failed export, iOS picker cleanup on cancel, TalkBack "Bana 1, 1" double read (+ "låst" in locked CD), drop redundant WorldPage renderAvatar param (bug) → [plan](doc/plans/047-review-low-fixes-045-046.md)
 
 ## Done
 
