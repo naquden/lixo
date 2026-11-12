@@ -523,53 +523,13 @@ fun ReadingActivityScreen(
                                     color = Color.White
                                 )
                             }
+                        }
 
-                            Spacer(Modifier.height(10.dp))
-
+                        if (alignmentEngine.isLastWordMissedCandidate(sessionState, millisSinceLastWordAdvance)) {
+                            if (showDebugSimulationControls) Spacer(Modifier.height(10.dp))
                             LixoButton(
                                 onClick = {
-                                    val current = sessionState.currentWord ?: return@LixoButton
-                                    val wrong = current.normalizedText.take(1) + "xq"
-                                    sessionState = alignmentEngine.processRecognizedTokens(
-                                        sessionState,
-                                        listOf(
-                                            RecognizedSpeechToken(
-                                                rawWord = wrong,
-                                                normalizedWord = wrong,
-                                                confidence = 0.96f,
-                                                timestampMillis = sessionState.elapsedMillis
-                                            )
-                                        )
-                                    )
-                                },
-                                variant = LixoButtonVariant.OUTLINE,
-                                height = 46.dp,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = LixoStrings.READING_SIMULATE_WRONG_WORD_BTN,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = LixoColors.Blue
-                                )
-                            }
-
-                            Spacer(Modifier.height(10.dp))
-
-                            LixoButton(
-                                onClick = {
-                                    val next = sessionState.words.getOrNull(sessionState.currentWordIndex + 1)
-                                        ?: return@LixoButton
-                                    sessionState = alignmentEngine.processRecognizedTokens(
-                                        sessionState,
-                                        listOf(
-                                            RecognizedSpeechToken(
-                                                rawWord = next.displayText,
-                                                normalizedWord = next.normalizedText,
-                                                confidence = 0.96f,
-                                                timestampMillis = sessionState.elapsedMillis
-                                            )
-                                        )
-                                    )
+                                    sessionState = alignmentEngine.creditMissedLastWord(sessionState)
                                     millisSinceLastWordAdvance = 0L
                                 },
                                 variant = LixoButtonVariant.OUTLINE,
@@ -577,36 +537,7 @@ fun ReadingActivityScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = LixoStrings.READING_SIMULATE_SKIP_WORD_BTN,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = LixoColors.Blue
-                                )
-                            }
-
-                            Spacer(Modifier.height(10.dp))
-
-                            LixoButton(
-                                onClick = {
-                                    // Feeds every unread word (including yellow/flagged ones) so the debug
-                                    // simulator can also finish a story that is awaiting yellow words.
-                                    val unreadTokens = sessionState.words
-                                        .filter { !it.isCompleted }
-                                        .map {
-                                            RecognizedSpeechToken(
-                                                rawWord = it.displayText,
-                                                normalizedWord = it.normalizedText,
-                                                confidence = 0.95f,
-                                                timestampMillis = sessionState.elapsedMillis
-                                            )
-                                        }
-                                    sessionState = alignmentEngine.processRecognizedTokens(sessionState, unreadTokens)
-                                },
-                                variant = LixoButtonVariant.OUTLINE,
-                                height = 46.dp,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = LixoStrings.READING_SIMULATE_FULL_SENTENCE_BTN,
+                                    text = LixoStrings.READING_LAST_WORD_MISSED_BTN,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = LixoColors.Blue
                                 )

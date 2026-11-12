@@ -2061,6 +2061,74 @@ class LixoEnginesTest {
         assertEquals(12, repo.createProfile("B", 20).ageYears)
     }
 
+    private fun readAllButLast(story: String, skipIndex: Int? = null): ReadingAlignmentSessionState {
+        val start = alignmentEngine.startSession(story, ReadingMode.AI_LISTENING, false)
+        return alignmentEngine.processRecognizedTokens(
+            start,
+            start.words.dropLast(1).filter { it.index != skipIndex }.mapIndexed { i, w ->
+                RecognizedSpeechToken(w.displayText, w.normalizedText, 0.95f, (i + 1) * 100L)
+            }
+        )
+    }
+
+    @Test
+    fun lastWordMissed_candidateOnlyWhenStalledOnLastWord() {
+        val delay = BalanceConfig.LAST_WORD_MISSED_FALLBACK_DELAY_MS
+        val start = alignmentEngine.startSession("Katten Lixo hittar en stjärna.", ReadingMode.AI_LISTENING, false)
+        assertFalse(alignmentEngine.isLastWordMissedCandidate(start, delay * 10), "Not at session start")
+
+        val onLast = readAllButLast("Katten Lixo hittar en stjärna.")
+        assertEquals(onLast.words.lastIndex, onLast.currentWordIndex)
+        assertFalse(alignmentEngine.isLastWordMissedCandidate(onLast, delay - 1))
+        assertTrue(alignmentEngine.isLastWordMissedCandidate(onLast, delay))
+
+        val manual = alignmentEngine.startSession("Katten Lixo.", ReadingMode.MANUAL, false)
+            .copy(currentWordIndex = 1)
+        assertFalse(alignmentEngine.isLastWordMissedCandidate(manual, delay))
+
+        val awaiting = alignmentEngine.processRecognizedTokens(
+            readAllButLast("Katten Lixo hittar en stjärna.", skipIndex = 1),
+            listOf(RecognizedSpeechToken("stjärna", "stjärna", 0.95f, 900L))
+        )
+        assertTrue(awaiting.isAwaitingUnreadWords)
+        assertFalse(alignmentEngine.isLastWordMissedCandidate(awaiting, delay))
+    }
+
+    @Test
+    fun creditMissedLastWord_completesWhenNoYellowWords() {
+        val onLast = readAllButLast("Katten Lixo hittar en stjärna.")
+        // A stall flags the last word yellow first; crediting it must clear that.
+        val stalled = alignmentEngine.onTick(onLast, 250L, BalanceConfig.STUCK_WORD_PROMPT_DELAY_MS)
+        assertTrue(stalled.words.last().needsPractice)
+
+        val result = alignmentEngine.creditMissedLastWord(stalled)
+        assertTrue(result.isCompleted)
+        assertFalse(result.isAwaitingUnreadWords)
+        assertTrue(result.words.all { it.isCompleted })
+        assertFalse(result.words.last().needsPractice)
+        assertFalse("stjärna" in result.struggledWordsNormalized)
+    }
+
+    @Test
+    fun creditMissedLastWord_withYellowWordGoesToAwaiting() {
+        val onLast = readAllButLast("Katten Lixo hittar en stjärna.", skipIndex = 1)
+        assertTrue(onLast.words[1].needsPractice)
+        val before = onLast.words.dropLast(1)
+
+        val result = alignmentEngine.creditMissedLastWord(onLast)
+        assertFalse(result.isCompleted)
+        assertTrue(result.isAwaitingUnreadWords)
+        assertFalse(result.words[1].isCompleted)
+        assertTrue(result.words.last().isCompleted)
+        assertEquals(before, result.words.dropLast(1))
+    }
+
+    @Test
+    fun creditMissedLastWord_noOpWhenNotOnLastWord() {
+        val start = alignmentEngine.startSession("Katten Lixo hittar en stjärna.", ReadingMode.AI_LISTENING, false)
+        assertEquals(start, alignmentEngine.creditMissedLastWord(start))
+    }
+
     @Test
     fun forcedAlignment_finishWithUnreadWordsCompletesAndKeepsYellowUnread() {
         var session = alignmentEngine.startSession(

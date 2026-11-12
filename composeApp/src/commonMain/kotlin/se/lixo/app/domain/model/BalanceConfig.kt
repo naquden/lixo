@@ -117,6 +117,12 @@ object BalanceConfig {
      */
     const val STUCK_WORD_PROMPT_DELAY_MS = 4_500L
 
+    /**
+     * Milliseconds stalled on the final story word before offering "Jag har läst klart"
+     * (the recognizer probably missed the last word).
+     */
+    const val LAST_WORD_MISSED_FALLBACK_DELAY_MS = STUCK_WORD_PROMPT_DELAY_MS
+
     // --- Streak Rules (§2 "Streak") ---
     /**
      * A calendar day (00:00–24:00 local time) counts as a streak day when the child

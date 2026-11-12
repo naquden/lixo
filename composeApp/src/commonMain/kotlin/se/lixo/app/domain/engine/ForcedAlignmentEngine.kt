@@ -517,6 +517,54 @@ class ForcedAlignmentEngine {
         )
     }
 
+    /**
+     * True when the AI-Listening cursor sits on the very last story word and nothing has advanced for
+     * [BalanceConfig.LAST_WORD_MISSED_FALLBACK_DELAY_MS]: the child has most likely read everything and
+     * the recognizer missed the final word, so the "Jag har läst klart" fallback should be offered.
+     */
+    fun isLastWordMissedCandidate(
+        state: ReadingAlignmentSessionState,
+        millisSinceLastWordAdvance: Long
+    ): Boolean = isOnUnreadLastWord(state) &&
+        millisSinceLastWordAdvance >= BalanceConfig.LAST_WORD_MISSED_FALLBACK_DELAY_MS
+
+    /**
+     * Credits the final story word the recognizer missed ("Jag har läst klart"). No-op unless the cursor
+     * is on the unread last word. The word is completed without a practice flag (the stall that flagged
+     * it was the recognizer's fault, not the child's); earlier yellow words stay unread, so the session
+     * either completes or moves on to the "awaiting unread words" flow.
+     */
+    fun creditMissedLastWord(state: ReadingAlignmentSessionState): ReadingAlignmentSessionState {
+        if (!isOnUnreadLastWord(state)) return state
+        val last = state.words.lastIndex
+        val lastWord = state.words[last]
+        val words = state.words.toMutableList()
+        words[last] = lastWord.copy(isCompleted = true, needsPractice = false, heardText = null)
+        val stillFlagged = words.any { it.needsPractice && it.normalizedText == lastWord.normalizedText }
+        val allCompleted = words.all { it.isCompleted }
+        return state.copy(
+            words = words,
+            currentWordIndex = words.size,
+            isWordStuckSupportVisible = false,
+            struggledWordsNormalized = if (stillFlagged) {
+                state.struggledWordsNormalized
+            } else {
+                state.struggledWordsNormalized - lastWord.normalizedText
+            },
+            isCompleted = allCompleted,
+            isAwaitingUnreadWords = !allCompleted,
+            unmatchedSinceAdvance = emptyList()
+        )
+    }
+
+    private fun isOnUnreadLastWord(state: ReadingAlignmentSessionState): Boolean =
+        state.mode == ReadingMode.AI_LISTENING &&
+            !state.isCompleted &&
+            !state.isAwaitingUnreadWords &&
+            state.words.isNotEmpty() &&
+            state.currentWordIndex == state.words.lastIndex &&
+            !state.words.last().isCompleted
+
     companion object {
         fun normalizeForAlignment(raw: String): String {
             return raw

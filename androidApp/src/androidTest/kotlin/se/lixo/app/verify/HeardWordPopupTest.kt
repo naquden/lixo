@@ -97,6 +97,20 @@ class HeardWordPopupTest {
         }
     }
 
+    /** "lxq" is heard for "Lixo" (word 0), then "är" (word 1) skips past it, so "Lixo" turns yellow. */
+    private fun mishearFirstWordThenSkip(stt: SilentSttEngine) {
+        compose.runOnIdle {
+            assertTrue(stt.tokens.tryEmit(listOf(RecognizedSpeechToken("lxq", "lxq", 0.96f, 0L))))
+        }
+        compose.mainClock.advanceTimeBy(500)
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertTrue(stt.tokens.tryEmit(listOf(RecognizedSpeechToken("är", "är", 0.96f, 0L))))
+        }
+        compose.mainClock.advanceTimeBy(500)
+        compose.waitForIdle()
+    }
+
     private fun startAiSession() {
         compose.onNodeWithText("STARTA LÄSNING").performScrollTo()
         compose.onNodeWithText("STARTA LÄSNING").performClick()
@@ -134,13 +148,7 @@ class HeardWordPopupTest {
 
         startAiSession()
 
-        compose.onNodeWithText(LixoStrings.READING_SIMULATE_WRONG_WORD_BTN).performScrollTo()
-        compose.onNodeWithText(LixoStrings.READING_SIMULATE_WRONG_WORD_BTN).performClick()
-        compose.waitForIdle()
-
-        compose.onNodeWithText(LixoStrings.READING_SIMULATE_SKIP_WORD_BTN).performScrollTo()
-        compose.onNodeWithText(LixoStrings.READING_SIMULATE_SKIP_WORD_BTN).performClick()
-        compose.waitForIdle()
+        mishearFirstWordThenSkip(stt)
 
         compose.onAllNodesWithText("Lixo")[0].performClick()
         compose.waitForIdle()
@@ -227,13 +235,7 @@ class HeardWordPopupTest {
 
         startAiSession()
 
-        compose.onNodeWithText(LixoStrings.READING_SIMULATE_WRONG_WORD_BTN).performScrollTo()
-        compose.onNodeWithText(LixoStrings.READING_SIMULATE_WRONG_WORD_BTN).performClick()
-        compose.waitForIdle()
-
-        compose.onNodeWithText(LixoStrings.READING_SIMULATE_SKIP_WORD_BTN).performScrollTo()
-        compose.onNodeWithText(LixoStrings.READING_SIMULATE_SKIP_WORD_BTN).performClick()
-        compose.waitForIdle()
+        mishearFirstWordThenSkip(stt)
 
         compose.onAllNodesWithText("Lixo")[0].performClick()
         compose.waitForIdle()

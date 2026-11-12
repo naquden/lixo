@@ -70,11 +70,8 @@ object LixoStrings {
     const val READING_MODE_MANUAL_LABEL = "Läsa själv (1 stjärna)"
     const val READING_MODE_LOCKED_BADGE = "Läsläge"
     const val READING_SIMULATE_VOICE_BTN = "Läs nästa ord"
-    const val READING_SIMULATE_FULL_SENTENCE_BTN = "Läs hela meningen"
-    /** Debug-only simulation button that skips the current word to make it a yellow unread word. */
-    const val READING_SIMULATE_SKIP_WORD_BTN = "Hoppa över ord"
-    /** Debug-only simulation button that sends a deliberately wrong word for the current cursor word. */
-    const val READING_SIMULATE_WRONG_WORD_BTN = "Säg fel ord"
+    /** Fallback shown when stalled on the last word (the recognizer probably missed it). */
+    const val READING_LAST_WORD_MISSED_BTN = "Jag har läst klart"
     const val READING_HEARD_WORD_LABEL = "Ordet:"
     const val READING_HEARD_AI_LABEL = "Jag hörde:"
     const val READING_HEARD_AI_FIRST_LABEL = "Först hörde jag:"
