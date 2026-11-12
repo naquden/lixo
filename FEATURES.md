@@ -4,9 +4,11 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
-- [ ] 046 — Campaign map: world-local level number on each level node (3D-shaded number replaces subject icon on unlocked nodes, lock + small number on locked); on entering a world page (open map, return from level, switch/swipe world) auto-scroll to the next available level (feature) → [plan](doc/plans/046-map-level-numbers-autoscroll.md)
 
 ## Done
+
+- [x] 046 — Campaign map: world-local level number on each level node (3D-shaded number replaces subject icon on unlocked nodes, lock + small number on locked); on entering a world page (open map, return from level, switch/swipe world) auto-scroll to the next available level (feature) → [plan](doc/plans/046-map-level-numbers-autoscroll.md)  
+  _Verified 2026-11-12 on emulator-5554 (Pixel_10), run wf_b46fec8f-591 (round 1 failed: test missing `getOrNull` import, fixed in 29a6815): `CampaignMapLevelNumberScrollTest` 4/4 (world-local numbers, scroll to next level on enter, on world switch, on return with new progress); host tests + assembleDebug green. Commits b4c128a, 29a6815. Evidence temp/verify/046/*.png (21 centred with START, 22/23 locked with numbers, "100" fits). Review LOW (not fixed): TalkBack reads node as "Bana 1, 1" (contentDescription + merged number text)._
 
 - [x] 044 — Avatar map: remove "Ditt kompisnamn: @…" + "Slumpa" row under own avatar (friends add via QR / 8-digit code; nickname still shown to friends) (feature) → [plan](doc/plans/044-remove-own-nickname-row.md)  
   _Verified 2026-11-12 on emulator-5554 (Pixel_10), run wf_31c61a54-6ba + manual re-verify: `OwnPodiumNoNicknameTest` 1/1, regressions `FriendLabelTest` 2/2, `FriendRevealTest` 4/4, `FriendCodeFlowTest` 7/7; host tests + assembleDebug green. Workflow marked commit 153e7de "[WIP: build failing]" only because `:composeApp:build` ran `iosSimulatorArm64Test` with the iOS simulator not booted (no code issue). Evidence temp/verify/044/044/own_podium.png._
