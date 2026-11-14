@@ -1667,6 +1667,37 @@ class LixoEnginesTest {
     }
 
     @Test
+    fun mathCurriculum_promptEmphasisIsExpressionForArithmeticAndNullForClockMoneyWord() {
+        val promptPattern = Regex("""Vad blir (\d+) ([+-]) (\d+)\?""")
+        var expressionCount = 0
+        var nullCount = 0
+        for (n in 2..100) {
+            val problems = MathCurriculum.buildMathProblems(n, MathCurriculum.orderForMathIndex(n))
+            for (p in problems) {
+                val emphasis = p.promptEmphasisSv
+                if (emphasis != null) {
+                    assertTrue(p.promptSv.contains(emphasis), "n=$n ${p.id}: '$emphasis' not in '${p.promptSv}'")
+                    expressionCount++
+                } else {
+                    nullCount++
+                }
+                promptPattern.find(p.promptSv)?.let { m ->
+                    assertEquals(
+                        "${m.groupValues[1]} ${m.groupValues[2]} ${m.groupValues[3]}",
+                        emphasis,
+                        "n=$n ${p.id}: emphasis for '${p.promptSv}'"
+                    )
+                }
+                if (p.type == MathProblemType.CLOCK || p.type == MathProblemType.MONEY || p.type == MathProblemType.WORD_PROBLEM) {
+                    assertEquals(null, emphasis, "n=$n ${p.id}: non-expression prompt must not have emphasis")
+                }
+            }
+        }
+        assertTrue(expressionCount > 0, "expected some problems with emphasis")
+        assertTrue(nullCount > 0, "expected some problems without emphasis")
+    }
+
+    @Test
     fun progressionEngine_recordLevelCompletion_order150AdvancesTo151AndOrder190StaysCapped() {
         val wardrobe = BundledTestContent.content.items
         val levelAt150 = level(order = 150, subject = Subject.MATH)

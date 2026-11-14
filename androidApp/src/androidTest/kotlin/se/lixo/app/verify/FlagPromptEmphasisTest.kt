@@ -36,8 +36,9 @@ import se.lixo.app.ui.theme.LixoStrings
 import se.lixo.app.ui.theme.LixoTheme
 
 /**
- * Verifies plan 040: flag question prompts render with only the country name in ExtraBold while
- * the rest of the prompt is Normal weight, and that math prompts stay fully bold (regression).
+ * Verifies plans 040 and 051: flag question prompts render with only the country name in
+ * ExtraBold, and math prompts with only the expression in ExtraBold, while the rest of the
+ * prompt is Normal weight.
  */
 class FlagPromptEmphasisTest {
 
@@ -132,7 +133,7 @@ class FlagPromptEmphasisTest {
     }
 
     @Test
-    fun mathPrompt_staysFullyBold() {
+    fun mathPrompt_normalWeightWithBoldExpression() {
         val repo = DummyData.populatedRepository()
         val tasks = repo.tasksById.value
         val level = repo.levels.value.sortedBy { it.order }.first {
@@ -161,10 +162,10 @@ class FlagPromptEmphasisTest {
             }
         }
 
-        val annotated = compose.onNodeWithTag(MATH_PROMPT_TAG).fetchSemanticsNode()
-            .config[SemanticsProperties.Text].single()
-        assertEquals(task.mathProblems.first().promptSv, annotated.text)
-        assertTrue(annotated.spanStyles.isEmpty())
+        val problem = task.mathProblems.first()
+        val expression = problem.promptEmphasisSv
+        assertTrue("Expected an expression emphasis on '${problem.promptSv}'", expression != null)
+        assertBoldRangeOnly(problem.promptSv, expression!!)
         shot("math_prompt")
     }
 }

@@ -35,6 +35,23 @@ class PromptEmphasisTest {
     }
 
     @Test
+    fun mathExpression_boldsOnlyExpression() {
+        val prompt = "Vad blir 5 + 3?"
+        val result = promptWithEmphasis(prompt, "5 + 3")
+        assertTrue(result != null)
+        assertEquals(prompt, result!!.text)
+
+        val normalSpan = result.spanStyles.single { it.item.fontWeight == FontWeight.Normal }
+        assertEquals(0, normalSpan.start)
+        assertEquals(prompt.length, normalSpan.end)
+
+        val boldSpan = result.spanStyles.single { it.item.fontWeight == FontWeight.ExtraBold }
+        assertEquals(9, boldSpan.start)
+        assertEquals(14, boldSpan.end)
+        assertEquals("5 + 3", prompt.substring(boldSpan.start, boldSpan.end))
+    }
+
+    @Test
     fun nullEmphasis_returnsNull() {
         assertNull(promptWithEmphasis("Vad blir 1 + 1?", null))
     }

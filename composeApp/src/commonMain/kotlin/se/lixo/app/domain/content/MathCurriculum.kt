@@ -512,7 +512,8 @@ object MathCurriculum {
         val visualClockHour: Int? = null,
         val visualClockMinute: Int? = null,
         val visualMoneyBreakdownKr: List<Int> = emptyList(),
-        val distractors: List<String>
+        val distractors: List<String>,
+        val emphasis: String? = null
     )
 
     private fun render(kind: Kind, item: List<Int>, j: Int): Rendered {
@@ -525,7 +526,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Börja på $a och räkna $b steg framåt på tallinjen.",
                     hint2 = "$a + $b = $ans!",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a + $b"
                 )
             }
             Kind.TEN_FRIEND -> {
@@ -536,7 +538,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Räkna från $a upp till 10. Hur många steg blev det?",
                     hint2 = "$a + $b = 10, så det fattas $b!",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a + ? = 10"
                 )
             }
             Kind.DOUBLES -> {
@@ -547,7 +550,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Dubbelt betyder samma tal två gånger: $a och $a till.",
                     hint2 = "$a + $a = $ans!",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a + $a"
                 )
             }
             Kind.TEN_CROSS -> {
@@ -560,7 +564,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "$a behöver $need till för att bli ett helt tiotal (10).",
                     hint2 = "Dela upp $b i $need + $rest: $a + $need = 10, och 10 + $rest = $ans!",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a + $b"
                 )
             }
             Kind.ADD_PLACE -> {
@@ -571,7 +576,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Lägg ihop entalen först: ${a % 10} + ${b % 10} = ${a % 10 + b % 10}.",
                     hint2 = "Lägg sedan ihop tiotalen och hundratalen: $a + $b = $ans.",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a + $b"
                 )
             }
             Kind.ADD_CARRY -> {
@@ -582,7 +588,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Lägg ihop entalen först: ${a % 10} + ${b % 10} = ${a % 10 + b % 10}. Det blir ett nytt tiotal!",
                     hint2 = "Glöm inte växlingen: $a + $b = $ans.",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a + $b"
                 )
             }
             Kind.SUB_SMALL -> {
@@ -593,7 +600,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Starta på $a och backa $b steg bakåt.",
                     hint2 = "$a minus $b blir $ans!",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a - $b"
                 )
             }
             Kind.SUB_BRIDGE -> {
@@ -605,7 +613,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Backa först ner till 10: $a - $o = 10.",
                     hint2 = "Backa sedan ${b - o} steg till: 10 - ${b - o} = $ans!",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a - $b"
                 )
             }
             Kind.SUB_TENS -> {
@@ -616,7 +625,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Ta tiotal minus tiotal: ${(a / 10) * 10} - ${(b / 10) * 10} = ${(a / 10 - b / 10) * 10}.",
                     hint2 = "Ta ental minus ental: ${a % 10} - ${b % 10} = ${a % 10 - b % 10}. Svaret blir $ans!",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a - $b"
                 )
             }
             Kind.SUB_BORROW -> {
@@ -628,7 +638,8 @@ object MathCurriculum {
                     correctAnswer = "$ans",
                     hint1 = "Ta först bort tiotalen: $a - ${(b / 10) * 10} = $r.",
                     hint2 = "Ta sedan bort entalen: $r - ${b % 10} = $ans!",
-                    distractors = numericDistractors(ans)
+                    distractors = numericDistractors(ans),
+                    emphasis = "$a - $b"
                 )
             }
             Kind.CLOCK -> {
@@ -752,7 +763,8 @@ object MathCurriculum {
                     hintStep2Sv = rendered.hint2,
                     visualClockHour = rendered.visualClockHour,
                     visualClockMinute = rendered.visualClockMinute,
-                    visualMoneyBreakdownKr = rendered.visualMoneyBreakdownKr
+                    visualMoneyBreakdownKr = rendered.visualMoneyBreakdownKr,
+                    promptEmphasisSv = rendered.emphasis
                 )
             )
         }
