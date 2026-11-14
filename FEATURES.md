@@ -4,8 +4,19 @@ Task queue. Each task links to a plan in `doc/plans/`. Run all pending tasks in 
 
 ## Pending
 
-
 ## Done
+
+- [x] 052 — English prompt: normal weight with only the English word bold (e.g. Vad betyder ordet "**hat**"?) (feature) → [plan](doc/plans/052-english-prompt-bold-word.md)  
+  _Verified 2026-11-14 on emulator-5554 (Pixel_10): `EnglishPromptEmphasisTest` 1/1 (level_5, only the English word bold; screenshot lixo_screenshots/verify052/english_prompt.png); host tests 461/461. Commit f433c7a. Review LOW (not fixed): `promptWithEmphasis` matches the first occurrence anywhere, so a future very short English word could bold a letter inside the Swedish frame; anchor the search on the quoted word._
+
+- [x] 051 — Math prompt: normal weight with only the expression bold (e.g. "Vad blir **5 + 3**?"), same pattern as flag country emphasis (feature) → [plan](doc/plans/051-math-prompt-bold-expression.md)  
+  _Verified 2026-11-14 on emulator-5554 (Pixel_10): `FlagPromptEmphasisTest` 2/2 (math prompt normal weight with only the expression bold; flag case unchanged); host tests 460/460 incl. new `PromptEmphasisTest` and `LixoEnginesTest` emphasis cases. Commit 4f4c40d._
+
+- [x] 050 — Parent dashboard: rename the active child profile (avatar name), persisted in Room, max 20 chars, blank and duplicate names rejected (also when adding a sibling; backup import adds a " 2" suffix) (feature) → [plan](doc/plans/050-parent-rename-profile.md)  
+  _Verified 2026-11-14 on emulator-5554 (Pixel_10): `ParentRenameProfileTest` 5/5, `SiblingDuplicateNameTest` 1/1, regressions `ProfileBackupTest` 5/5 (one assertion loosened to `onAllNodesWithText("Ella")[0]`), `ProfilePersistenceTest` 3/3, `FirstProfileSetupTest` 2/2; host `ProfileStoreTest` 24 (9 new), `ProfileNamesTest` 6, `LixoEnginesTest` 87; iOS compile green. Commit 223a2b1. Review MEDIUM (not fixed): `createProfile` id (`Repositories.kt:477`) hashes the raw name, so two same-name profiles created in the same millisecond share an id; hash the uniquified name. LOW: blank-name import gives " 2", NBSP-only name passes the blank guard, `take(20)` can split a surrogate pair, `ProfileBackupTest` assertion weakened (use `assertCountEquals(2)`)._
+
+- [x] 049 — Friend rename field hidden by keyboard: scrollable bottom sheets, hide bottom nav while keyboard open, autofocus + Done action on friend name fields (bug) → [plan](doc/plans/049-friend-rename-keyboard.md)  
+  _Verified 2026-11-14 on emulator-5554 (Pixel_10): `FriendRenameKeyboardTest` 2/2 (rename field focused + displayed on a 420dp window, Done saves "Olle"; sheet scrolls to remove button), regressions `FriendLabelTest` 2/2, `FriendCodeFlowTest` 7/7, `FriendRevealTest` 4/4; assembleDebug + iOS compile green. Commit a9e489a. Deviation: keyboard check uses `WindowInsets.ime.getBottom(density) == 0` (`isImeVisible` doesn't compile on iOS). Review MEDIUM (not fixed): bottom nav is hidden for every keyboard app-wide, as the plan asked; may make tests that type then tap a nav item order-sensitive._
 
 - [x] 048 — Set app version to 0.1.0 (Android versionName, iOS CFBundleShortVersionString; build number stays 1) (feature) → [plan](doc/plans/048-version-0-1-0.md)  
   _Verified 2026-11-12, run wf_97683416-bb9: `AppVersionTest` 1/1 on emulator-5554 (Pixel_10); dumpsys `versionName=0.1.0`, `versionCode=1`; iOS `xcodebuild` BUILD SUCCEEDED, built Info.plist CFBundleShortVersionString 0.1.0 / CFBundleVersion 1. Commit 23e0c89. Evidence temp/verify/048/. Review: no findings._
