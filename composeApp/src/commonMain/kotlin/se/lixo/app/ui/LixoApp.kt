@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -469,36 +471,39 @@ fun LixoApp(
                     // Root Box already applies safeDrawingPadding; avoid double insets.
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
-                        LixoBottomNavBar(
-                            items = listOf(
-                                LixoNavItem(
-                                    icon = LixoIcons.LearnBook,
-                                    label = LixoStrings.NAV_LEARN,
-                                    selected = currentDestination == LixoMainDestination.MAP_HOME,
-                                    onClick = { currentDestination = LixoMainDestination.MAP_HOME }
-                                ),
-                                LixoNavItem(
-                                    icon = LixoIcons.Friends,
-                                    label = LixoStrings.NAV_AVATAR,
-                                    selected = currentDestination == LixoMainDestination.AVATAR_MAP ||
-                                        currentDestination == LixoMainDestination.WARDROBE ||
-                                        currentDestination == LixoMainDestination.CONTENT_PREVIEW,
-                                    onClick = { currentDestination = LixoMainDestination.AVATAR_MAP }
-                                ),
-                                LixoNavItem(
-                                    icon = LixoIcons.Trophy,
-                                    label = LixoStrings.NAV_TROPHIES,
-                                    selected = currentDestination == LixoMainDestination.TROPHIES,
-                                    onClick = { currentDestination = LixoMainDestination.TROPHIES }
-                                ),
-                                LixoNavItem(
-                                    icon = LixoIcons.Shield,
-                                    label = LixoStrings.NAV_PARENT_SETTINGS,
-                                    selected = currentDestination == LixoMainDestination.PARENT_SETTINGS,
-                                    onClick = { currentDestination = LixoMainDestination.PARENT_SETTINGS }
+                        // Hide the nav bar while the keyboard is open so text fields in sheets/screens get the room.
+                        if (WindowInsets.ime.getBottom(LocalDensity.current) == 0) {
+                            LixoBottomNavBar(
+                                items = listOf(
+                                    LixoNavItem(
+                                        icon = LixoIcons.LearnBook,
+                                        label = LixoStrings.NAV_LEARN,
+                                        selected = currentDestination == LixoMainDestination.MAP_HOME,
+                                        onClick = { currentDestination = LixoMainDestination.MAP_HOME }
+                                    ),
+                                    LixoNavItem(
+                                        icon = LixoIcons.Friends,
+                                        label = LixoStrings.NAV_AVATAR,
+                                        selected = currentDestination == LixoMainDestination.AVATAR_MAP ||
+                                            currentDestination == LixoMainDestination.WARDROBE ||
+                                            currentDestination == LixoMainDestination.CONTENT_PREVIEW,
+                                        onClick = { currentDestination = LixoMainDestination.AVATAR_MAP }
+                                    ),
+                                    LixoNavItem(
+                                        icon = LixoIcons.Trophy,
+                                        label = LixoStrings.NAV_TROPHIES,
+                                        selected = currentDestination == LixoMainDestination.TROPHIES,
+                                        onClick = { currentDestination = LixoMainDestination.TROPHIES }
+                                    ),
+                                    LixoNavItem(
+                                        icon = LixoIcons.Shield,
+                                        label = LixoStrings.NAV_PARENT_SETTINGS,
+                                        selected = currentDestination == LixoMainDestination.PARENT_SETTINGS,
+                                        onClick = { currentDestination = LixoMainDestination.PARENT_SETTINGS }
+                                    )
                                 )
                             )
-                        )
+                        }
                     }
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {

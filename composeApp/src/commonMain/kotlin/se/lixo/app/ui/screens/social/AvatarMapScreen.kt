@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -55,6 +57,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.alexzhirkevich.qrose.rememberQrCodePainter
@@ -462,12 +466,18 @@ private fun FriendNameStepSheet(
                 value = label,
                 onValueChange = { label = it },
                 placeholder = { Text(friend.nick.render(content.nicknameWords)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = { onSave(label.trim().ifBlank { null }) }),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = LixoColors.Blue,
                     unfocusedBorderColor = LixoColors.Border
                 ),
                 shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().testTag("friend_name_step_field")
             )
             Spacer(Modifier.height(8.dp))
             Text(
@@ -510,6 +520,14 @@ private fun FriendDetailSheetContent(
 ) {
     var editingLabel by remember(friend.userId) { mutableStateOf(false) }
     var labelInput by remember(friend.userId) { mutableStateOf(friend.label.orEmpty()) }
+    val labelFocusRequester = remember { FocusRequester() }
+    val saveLabel = {
+        onSetFriendLabel(friend.userId, labelInput.trim().ifBlank { null })
+        editingLabel = false
+    }
+    LaunchedEffect(editingLabel) {
+        if (editingLabel) labelFocusRequester.requestFocus()
+    }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -549,19 +567,25 @@ private fun FriendDetailSheetContent(
                 value = labelInput,
                 onValueChange = { labelInput = it },
                 placeholder = { Text(friend.nick.render(content.nicknameWords)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = { saveLabel() }),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = LixoColors.Blue,
                     unfocusedBorderColor = LixoColors.Border
                 ),
                 shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(labelFocusRequester)
+                    .testTag("friend_label_field")
             )
             Spacer(Modifier.height(8.dp))
             LixoButton(
-                onClick = {
-                    onSetFriendLabel(friend.userId, labelInput.trim().ifBlank { null })
-                    editingLabel = false
-                },
+                onClick = saveLabel,
                 variant = LixoButtonVariant.PRIMARY,
                 height = 44.dp,
                 modifier = Modifier.fillMaxWidth()
