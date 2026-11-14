@@ -133,6 +133,7 @@ fun MathActivityScreen(
                         id = item.id,
                         type = MathProblemType.WORD_PROBLEM,
                         promptSv = "Vad betyder ordet \"${item.englishWord}\"?\n(${item.simpleSentenceEn})",
+                        promptEmphasisSv = item.englishWord,
                         correctAnswer = item.swedishTranslation,
                         choices = choiceLists[idx],
                         hintStep1Sv = "\"${item.simpleSentenceEn}\" = \"${item.simpleSentenceSv}\"",

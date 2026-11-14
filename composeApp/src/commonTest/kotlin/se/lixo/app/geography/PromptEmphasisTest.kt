@@ -52,6 +52,24 @@ class PromptEmphasisTest {
     }
 
     @Test
+    fun englishWord_boldsOnlyQuotedWordNotSentenceOccurrence() {
+        val prompt = "Vad betyder ordet \"hat\"?\n(The cat has a blue hat.)"
+        val result = promptWithEmphasis(prompt, "hat")
+        assertTrue(result != null)
+        assertEquals(prompt, result!!.text)
+
+        val normalSpan = result.spanStyles.single { it.item.fontWeight == FontWeight.Normal }
+        assertEquals(0, normalSpan.start)
+        assertEquals(prompt.length, normalSpan.end)
+
+        val boldSpan = result.spanStyles.single { it.item.fontWeight == FontWeight.ExtraBold }
+        assertEquals(prompt.indexOf("hat"), boldSpan.start)
+        assertEquals(19, boldSpan.start)
+        assertEquals(22, boldSpan.end)
+        assertEquals("hat", prompt.substring(boldSpan.start, boldSpan.end))
+    }
+
+    @Test
     fun nullEmphasis_returnsNull() {
         assertNull(promptWithEmphasis("Vad blir 1 + 1?", null))
     }
