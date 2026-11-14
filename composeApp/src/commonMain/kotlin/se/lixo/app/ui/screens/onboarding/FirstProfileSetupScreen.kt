@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,8 @@ import se.lixo.app.ui.theme.TtsIconButton
 internal fun ProfileNameForm(
     name: String,
     onNameChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    errorText: String? = null
 ) {
     Column(modifier) {
         Text(
@@ -59,15 +61,19 @@ internal fun ProfileNameForm(
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = name,
-            onValueChange = onNameChange,
+            onValueChange = { onNameChange(it.take(BalanceConfig.PROFILE_NAME_MAX_LENGTH)) },
             placeholder = { Text(LixoStrings.PROFILE_NAME_PLACEHOLDER) },
             singleLine = true,
+            isError = errorText != null,
+            supportingText = errorText?.let { { Text(it) } },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = LixoColors.Blue,
                 unfocusedBorderColor = LixoColors.Border
             ),
             shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("profile_name_field")
         )
     }
 }

@@ -43,6 +43,7 @@ import se.lixo.app.domain.engine.ForcedAlignmentEngine
 import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.ReadingMode
+import se.lixo.app.domain.model.isProfileNameTaken
 import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.platform.PlatformBackHandler
 import se.lixo.app.platform.RecognizedSpeechToken
@@ -249,9 +250,11 @@ fun ProfileSelectAndTutorialScreen(
                     cornerRadius = 18.dp
                 ) {
                     Column {
+                        val nameTaken = isProfileNameTaken(profiles, newSiblingName)
                         ProfileNameForm(
                             name = newSiblingName,
-                            onNameChange = { newSiblingName = it }
+                            onNameChange = { newSiblingName = it },
+                            errorText = if (nameTaken) LixoStrings.PROFILE_NAME_TAKEN else null
                         )
                         Spacer(Modifier.height(14.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -264,13 +267,13 @@ fun ProfileSelectAndTutorialScreen(
                             }
                             LixoButton(
                                 onClick = {
-                                    if (newSiblingName.isNotBlank()) {
+                                    if (newSiblingName.isNotBlank() && !nameTaken) {
                                         onCreateSiblingProfile(newSiblingName)
                                         newSiblingName = ""
                                         showCreateSiblingForm = false
                                     }
                                 },
-                                enabled = newSiblingName.isNotBlank(),
+                                enabled = newSiblingName.isNotBlank() && !nameTaken,
                                 variant = LixoButtonVariant.PRIMARY,
                                 modifier = Modifier.weight(1f)
                             ) {

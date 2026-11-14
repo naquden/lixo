@@ -20,6 +20,8 @@ object BalanceConfig {
     const val PROFILE_MAX_AGE_YEARS = 12
     /** Default pre-selected age when creating a profile. */
     const val PROFILE_DEFAULT_AGE_YEARS = 8
+    /** Longest profile name (displayName) allowed, in characters. */
+    const val PROFILE_NAME_MAX_LENGTH = 20
 
     // --- Reading Star Thresholds (§2 "Poängsättning läsning") ---
     /**

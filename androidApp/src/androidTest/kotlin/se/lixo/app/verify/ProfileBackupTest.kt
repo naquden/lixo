@@ -311,7 +311,8 @@ class ProfileBackupTest {
         val ellaId = repoA.profiles.value.first { it.displayName == "Ella" }.id
         compose.waitUntil(5_000) { repoB.activeProfileId.value == ellaId }
         compose.onNodeWithText("Tom").assertExists()
-        compose.onNodeWithText("Ella").assertExists()
+        // "Ella" shows both as the sibling chip and in the name card (doc/plans/050).
+        compose.onAllNodesWithText("Ella")[0].assertExists()
         compose.onNodeWithText("7").assertExists()
         shot("import_as_new")
 

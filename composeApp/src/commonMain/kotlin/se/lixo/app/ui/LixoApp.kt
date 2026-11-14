@@ -605,6 +605,7 @@ fun LixoApp(
                                     mathEngine = mathEngine,
                                     onSelectProfile = { repository.selectProfile(it.id) },
                                     onUpdateProfileGoalsAndSettings = { repository.updateProfile(it) },
+                                    onRenameProfile = { id, name -> repository.renameProfile(id, name) },
                                     onRemoveFriend = { repository.removeFriend(it) },
                                     onSendEmailSignInLink = { email ->
                                         repository.sendEmailSignInLink(email)

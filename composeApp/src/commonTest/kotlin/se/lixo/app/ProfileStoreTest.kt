@@ -8,6 +8,7 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import se.lixo.app.data.local.FriendRemovalTombstone
+import se.lixo.app.data.local.ImportMode
 import se.lixo.app.data.local.ProfileStore
 import se.lixo.app.data.local.UnlockedItemRecord
 import se.lixo.app.data.local.toDomain
@@ -18,10 +19,12 @@ import se.lixo.app.domain.engine.ProgressionAndGiftEngine
 import se.lixo.app.data.repository.ContentRepository
 import se.lixo.app.domain.content.AvatarAppearance
 import se.lixo.app.domain.content.SampleContentPack
+import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.EquipmentSlot
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.LevelProgress
+import se.lixo.app.domain.model.RenameProfileResult
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.social.Nickname
 
@@ -479,5 +482,125 @@ class ProfileStoreTest {
         assertEquals(1, repoB.friendsByProfile.value[ella.id]?.size)
         assertEquals("Min vän", repoB.friendsByProfile.value[ella.id]?.first()?.label)
         assertTrue(repoB.friendsByProfile.value[kalle.id].orEmpty().isEmpty())
+    }
+
+    // --- doc/plans/050: rename profile ---
+
+    @Test
+    fun renameProfile_persistsAcrossRepositoryInstances() = runTest {
+        val store = FakeProfileStore()
+        val repoA = newRepo(store, isDebugBuild = false)
+        repoA.profilesLoaded.first { it }
+        val ella = repoA.createProfile("Ella", 7)
+        repoA.awaitPendingProfileWrites()
+
+        assertEquals(RenameProfileResult.RENAMED, repoA.renameProfile(ella.id, "  Elsa  "))
+        repoA.awaitPendingProfileWrites()
+
+        val repoB = newRepo(store, isDebugBuild = false)
+        repoB.profilesLoaded.first { it }
+        val reloaded = repoB.profiles.value.single()
+        assertEquals("Elsa", reloaded.displayName)
+        assertEquals(ella.id, reloaded.id)
+    }
+
+    @Test
+    fun renameProfile_blankName_isRejected() = runTest {
+        val repo = newRepo(FakeProfileStore(), isDebugBuild = false)
+        repo.profilesLoaded.first { it }
+        val ella = repo.createProfile("Ella", 7)
+
+        assertEquals(RenameProfileResult.BLANK, repo.renameProfile(ella.id, "   "))
+        assertEquals("Ella", repo.profiles.value.single().displayName)
+    }
+
+    @Test
+    fun renameProfile_unknownId_returnsUnknownProfile() = runTest {
+        val repo = newRepo(FakeProfileStore(), isDebugBuild = false)
+        repo.profilesLoaded.first { it }
+        repo.createProfile("Ella", 7)
+
+        assertEquals(RenameProfileResult.UNKNOWN_PROFILE, repo.renameProfile("nope", "Elsa"))
+        assertEquals("Ella", repo.profiles.value.single().displayName)
+    }
+
+    @Test
+    fun renameProfile_truncatesToMaxLength() = runTest {
+        val repo = newRepo(FakeProfileStore(), isDebugBuild = false)
+        repo.profilesLoaded.first { it }
+        val ella = repo.createProfile("Ella", 7)
+        val longName = "abcdefghij".repeat(3)
+
+        assertEquals(RenameProfileResult.RENAMED, repo.renameProfile(ella.id, longName))
+        assertEquals(longName.take(BalanceConfig.PROFILE_NAME_MAX_LENGTH), repo.profiles.value.single().displayName)
+    }
+
+    @Test
+    fun renameProfile_onlyTouchesTargetProfile() = runTest {
+        val repo = newRepo(FakeProfileStore(), isDebugBuild = false)
+        repo.profilesLoaded.first { it }
+        val ella = repo.createProfile("Ella", 7)
+        val olle = repo.createProfile("Olle", 8)
+
+        assertEquals(RenameProfileResult.RENAMED, repo.renameProfile(olle.id, "Elsa"))
+        val byId = repo.profiles.value.associateBy { it.id }
+        assertEquals("Ella", byId.getValue(ella.id).displayName)
+        assertEquals("Elsa", byId.getValue(olle.id).displayName)
+    }
+
+    @Test
+    fun renameProfile_duplicateName_isRejected() = runTest {
+        val store = FakeProfileStore()
+        val repo = newRepo(store, isDebugBuild = false)
+        repo.profilesLoaded.first { it }
+        val ella = repo.createProfile("Ella", 7)
+        val olle = repo.createProfile("Olle", 8)
+        repo.awaitPendingProfileWrites()
+        val writesBefore = store.savedProfileIds.size
+
+        assertEquals(RenameProfileResult.TAKEN, repo.renameProfile(olle.id, " ella "))
+        repo.awaitPendingProfileWrites()
+
+        val byId = repo.profiles.value.associateBy { it.id }
+        assertEquals("Ella", byId.getValue(ella.id).displayName)
+        assertEquals("Olle", byId.getValue(olle.id).displayName)
+        assertEquals(writesBefore, store.savedProfileIds.size)
+    }
+
+    @Test
+    fun renameProfile_caseChangeOfOwnName_isAllowed() = runTest {
+        val repo = newRepo(FakeProfileStore(), isDebugBuild = false)
+        repo.profilesLoaded.first { it }
+        val ella = repo.createProfile("ella", 7)
+
+        assertEquals(RenameProfileResult.RENAMED, repo.renameProfile(ella.id, "Ella"))
+        assertEquals("Ella", repo.profiles.value.single().displayName)
+    }
+
+    @Test
+    fun createProfile_duplicateName_getsSuffix() = runTest {
+        val repo = newRepo(FakeProfileStore(), isDebugBuild = false)
+        repo.profilesLoaded.first { it }
+
+        assertEquals("Ella", repo.createProfile("Ella", 7).displayName)
+        assertEquals("Ella 2", repo.createProfile("Ella", 7).displayName)
+        assertEquals("Ella 3", repo.createProfile("Ella", 7).displayName)
+    }
+
+    @Test
+    fun importAsNew_duplicateName_getsSuffix() = runTest {
+        val repoA = newRepo(FakeProfileStore(), isDebugBuild = false)
+        repoA.profilesLoaded.first { it }
+        val remoteElla = repoA.createProfile("Ella", 7)
+        val backup = repoA.buildProfileBackup(remoteElla.id)!!
+        val otherDeviceBackup = backup.copy(profile = backup.profile.copy(id = "profile_other_device_ella"))
+
+        val repoB = newRepo(FakeProfileStore(), isDebugBuild = false)
+        repoB.profilesLoaded.first { it }
+        repoB.createProfile("Ella", 7)
+
+        val imported = repoB.importProfileBackup(otherDeviceBackup, ImportMode.AS_NEW).getOrThrow()
+        assertEquals("Ella 2", imported.displayName)
+        assertEquals(listOf("Ella", "Ella 2"), repoB.profiles.value.map { it.displayName })
     }
 }

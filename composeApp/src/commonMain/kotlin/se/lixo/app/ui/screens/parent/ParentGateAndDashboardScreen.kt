@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +28,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -35,9 +38,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -49,12 +56,15 @@ import se.lixo.app.data.local.profileBackupFileName
 import se.lixo.app.data.repository.AppPrivacySettings
 import se.lixo.app.domain.content.ActiveContent
 import se.lixo.app.domain.engine.MathEngine
+import se.lixo.app.domain.model.BalanceConfig
 import se.lixo.app.domain.model.ChildProfile
 import se.lixo.app.domain.model.DailyActivityRecord
 import se.lixo.app.domain.model.EMAIL_BACKUP_FEATURE_ENABLED
 import se.lixo.app.domain.model.FriendProfile
 import se.lixo.app.domain.model.MathErrorLog
+import se.lixo.app.domain.model.RenameProfileResult
 import se.lixo.app.domain.model.StruggledWordLog
+import se.lixo.app.domain.model.isProfileNameTaken
 import se.lixo.app.platform.FileOpenResult
 import se.lixo.app.platform.FileSaveResult
 import se.lixo.app.platform.ProfileFilePicker
@@ -87,6 +97,7 @@ fun ParentGateAndDashboardScreen(
     mathEngine: MathEngine,
     onSelectProfile: (ChildProfile) -> Unit,
     onUpdateProfileGoalsAndSettings: (ChildProfile) -> Unit,
+    onRenameProfile: (profileId: String, newName: String) -> RenameProfileResult = { _, _ -> RenameProfileResult.UNCHANGED },
     onRemoveFriend: (String) -> Unit,
     onSendEmailSignInLink: suspend (String) -> Result<Unit> = { Result.success(Unit) },
     onCompleteEmailLinkSignIn: suspend (String, String?) -> Result<Unit> = { _, _ -> Result.success(Unit) },
@@ -276,6 +287,112 @@ fun ParentGateAndDashboardScreen(
                             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
                             color = if (isSelected) Color.White else LixoColors.TextPrimary
                         )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            // Rename the active child's profile (doc/plans/050)
+            var editingName by remember(activeProfile.id) { mutableStateOf(false) }
+            var nameInput by remember(activeProfile.id) { mutableStateOf(activeProfile.displayName) }
+            val nameFocusRequester = remember { FocusRequester() }
+            val nameTaken = isProfileNameTaken(profiles, nameInput, activeProfile.id)
+            val saveName = {
+                if (nameInput.isNotBlank() && !nameTaken) {
+                    val result = onRenameProfile(activeProfile.id, nameInput)
+                    if (result == RenameProfileResult.RENAMED || result == RenameProfileResult.UNCHANGED) {
+                        editingName = false
+                    }
+                }
+            }
+            LaunchedEffect(editingName) {
+                if (editingName) nameFocusRequester.requestFocus()
+            }
+            LixoCard(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 18.dp,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(18.dp)
+            ) {
+                Column {
+                    Text(
+                        text = LixoStrings.PARENT_PROFILE_NAME_TITLE,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = LixoColors.TextPrimary
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    if (editingName) {
+                        OutlinedTextField(
+                            value = nameInput,
+                            onValueChange = { nameInput = it.take(BalanceConfig.PROFILE_NAME_MAX_LENGTH) },
+                            placeholder = { Text(LixoStrings.PROFILE_NAME_PLACEHOLDER) },
+                            singleLine = true,
+                            isError = nameTaken,
+                            supportingText = if (nameTaken) {
+                                { Text(LixoStrings.PROFILE_NAME_TAKEN) }
+                            } else null,
+                            keyboardOptions = KeyboardOptions(
+                                capitalization = KeyboardCapitalization.Words,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(onDone = { saveName() }),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LixoColors.Blue,
+                                unfocusedBorderColor = LixoColors.Border
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRequester(nameFocusRequester)
+                                .testTag("parent_name_field")
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            LixoButton(
+                                onClick = { editingName = false },
+                                variant = LixoButtonVariant.GHOST,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(LixoStrings.PARENT_RENAME_CANCEL_BTN, style = MaterialTheme.typography.labelLarge)
+                            }
+                            LixoButton(
+                                onClick = { saveName() },
+                                enabled = nameInput.isNotBlank() && !nameTaken,
+                                variant = LixoButtonVariant.PRIMARY,
+                                modifier = Modifier.weight(1f).testTag("parent_name_save")
+                            ) {
+                                Text(
+                                    LixoStrings.PARENT_RENAME_SAVE_BTN,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = activeProfile.displayName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = LixoColors.TextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            LixoButton(
+                                onClick = {
+                                    nameInput = activeProfile.displayName
+                                    editingName = true
+                                },
+                                variant = LixoButtonVariant.SECONDARY,
+                                modifier = Modifier.testTag("parent_rename_btn")
+                            ) {
+                                Text(LixoStrings.PARENT_RENAME_BTN, style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
                     }
                 }
             }

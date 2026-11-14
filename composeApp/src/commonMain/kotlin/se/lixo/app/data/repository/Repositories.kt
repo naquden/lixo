@@ -70,12 +70,16 @@ import se.lixo.app.domain.model.HomeworkTask
 import se.lixo.app.domain.model.LevelProgress
 import se.lixo.app.domain.model.MathErrorLog
 import se.lixo.app.domain.model.MathProblemType
+import se.lixo.app.domain.model.RenameProfileResult
 import se.lixo.app.domain.model.StruggledWordLog
 import se.lixo.app.domain.model.Subject
 import se.lixo.app.domain.model.TaskType
 import se.lixo.app.domain.model.accepts
 import se.lixo.app.domain.model.achievementId
 import se.lixo.app.domain.model.isHand
+import se.lixo.app.domain.model.isProfileNameTaken
+import se.lixo.app.domain.model.normalizeProfileName
+import se.lixo.app.domain.model.uniqueProfileName
 import se.lixo.app.domain.model.requiresAiMode
 import se.lixo.app.domain.social.Nickname
 import se.lixo.app.domain.social.parseFriendCode
@@ -471,7 +475,7 @@ class LixoRepository(
         val now = Clock.System.now().toEpochMilliseconds()
         val newProfile = ChildProfile(
             id = "profile_${now}_${displayName.lowercase().hashCode().toUInt()}",
-            displayName = displayName.trim().ifBlank { "Syskon" },
+            displayName = uniqueProfileName(_profiles.value, normalizeProfileName(displayName).ifBlank { "Syskon" }),
             ageYears = ageYears.coerceIn(BalanceConfig.PROFILE_MIN_AGE_YEARS, BalanceConfig.PROFILE_MAX_AGE_YEARS),
             tutorialCompleted = false,
             appearance = AvatarAppearance(avatarId = content.active.value.defaultAvatar.id),
@@ -489,6 +493,36 @@ class LixoRepository(
         updateProfiles { list ->
             list.map { if (it.id == updated.id) updated else it }
         }
+    }
+
+    /**
+     * Renames a profile (doc/plans/050). The name is normalized (trimmed, capped) and must be
+     * unique among the other profiles, ignoring case. The profile id never changes.
+     */
+    fun renameProfile(profileId: String, newName: String): RenameProfileResult {
+        val name = normalizeProfileName(newName)
+        if (name.isEmpty()) return RenameProfileResult.BLANK
+        val current = _profiles.value.firstOrNull { it.id == profileId } ?: return RenameProfileResult.UNKNOWN_PROFILE
+        if (current.displayName == name) return RenameProfileResult.UNCHANGED
+        val now = Clock.System.now().toEpochMilliseconds()
+        var result = RenameProfileResult.RENAMED
+        updateProfiles { cur ->
+            when {
+                cur.none { it.id == profileId } -> {
+                    result = RenameProfileResult.UNKNOWN_PROFILE
+                    cur
+                }
+                isProfileNameTaken(cur, name, profileId) -> {
+                    result = RenameProfileResult.TAKEN
+                    cur
+                }
+                else -> {
+                    result = RenameProfileResult.RENAMED
+                    cur.map { if (it.id == profileId) it.copy(displayName = name, updatedAtEpochMillis = now) else it }
+                }
+            }
+        }
+        return result
     }
 
     fun unlockWardrobeItem(itemId: String) {
@@ -697,6 +731,7 @@ class LixoRepository(
         val unlockedAvatarIds = backup.profile.unlockedAvatarIds.filter { it in active.avatarsById }.toSet() + active.defaultAvatarIds
 
         val restoredBase = backup.profile.toChildProfile().copy(
+            displayName = uniqueProfileName(_profiles.value, backup.profile.displayName, excludingProfileId = backup.profile.id),
             appearance = sanitizedAppearance,
             unlockedAvatarIds = unlockedAvatarIds,
             updatedAtEpochMillis = now
